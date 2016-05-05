@@ -1,0 +1,12 @@
+all:
+	happy -gca ParEthver.y
+	alex -g LexEthver.x
+	ghc --make MakeEthver.hs -o MakeEthver
+
+clean:
+	-rm -f *.log *.aux *.hi *.o *.dvi
+
+distclean: clean
+	-rm -f DocEthver.* LexEthver.* ParEthver.* LayoutEthver.* SkelEthver.* PrintEthver.* TestEthver.* AbsEthver.* TestEthver ErrM.* SharedString.* ComposOp.* ethver.dtd XMLEthver.* Makefile*
+	
+
