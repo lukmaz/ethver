@@ -312,6 +312,9 @@ prismShowExp (EVar ident) =
 prismShowExp (EInt x) = 
   show x
 
+prismShowExp (EStr s) =
+  s
+
 prismShowExp (ECall (h:t) args) =
   foldl
     (\acc ident -> acc ++ "." ++ (prismShowIdent ident))

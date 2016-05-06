@@ -111,7 +111,8 @@ verScStm (SIfElse cond ifBlock elseBlock) = do
   world <- get
   put (world {currState = endIfState})
   
-      
+verScStm (SBlock stms) = do
+  mapM_ verScStm stms
 
 -----------
 -- ScExp --

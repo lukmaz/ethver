@@ -2,6 +2,9 @@ contract Bank {
     uint(3) potA;
     uint(3) potB;
     
+    function nothing() {
+    }
+
     function deposit() {
 //      if (msg.sender == "A" && msg.value + potA < 3) {
       if (msg.sender == "A") {
@@ -29,24 +32,30 @@ contract Bank {
       }
     }
 
+    
     function transfer(uint(3) val) {
 //      if (msg.sender == "A" && potA >= val && potB + val < 3) {
       if (msg.sender == "A") {
           potA = potA - val;
           potB = potB + val;
       }
-//      if (msg.sender == "B" && potB >= val && potA + val < 3) {
-//          potB = potB - val;
-//          potA = potA + val;
-//      }
+/*      if (msg.sender == "B" && potB >= val && potA + val < 3) {
+          potB = potB - val;
+          potA = potA + val;
+      }
+*/    
     }
+    
 }
+
+nothing.sendTransaction({from: "A", value: 0});
+nothing.sendTransaction({from: "B", value: 0});
 
 deposit.sendTransaction({from: "A", value: 2});
 transfer.sendTransaction(1, {from: "A", value: 0});
 withdraw.sendTransaction(1, {from: "A", value: 0});
 
 //wait ...
-withdraw.sendTransaction(1, {from: "B", value: 0});
+//withdraw.sendTransaction(1, {from: "B", value: 0});
 
 
