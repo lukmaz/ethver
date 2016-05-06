@@ -18,6 +18,7 @@ cabal.sandbox.config
 *.log
 *.pdf
 *.tex
+.*.swp
 .stack-work/
 MakeEthver
 src/AbsEthver.hs
@@ -29,3 +30,6 @@ src/ParEthver.hs
 src/PrintEthver.hs
 src/SkelEthver.hs
 src/TestEthver.hs
+examples/*.prism
+examples/*.props
+
