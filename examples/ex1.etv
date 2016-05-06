@@ -16,7 +16,7 @@ uint(5) y;
 x = 2;
 
 
-set.sendTransaction(x);
+set.sendTransaction(x, {from: "0xabcde", value: 0});
 
 y = get.call();
 

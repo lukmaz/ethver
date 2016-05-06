@@ -5,12 +5,13 @@ contract SimpleStorage {
         storedData = a;
     }
     
+    /*
     function increase() {
         if (storedData % 2 == 1)
             storedData = storedData + 1;
         storedData = 2 * storedData;
     }
-    
+    */
     
     function equal2(uint(5) b) returns (uint(2)) {
         if (b == 2)
@@ -31,10 +32,10 @@ uint(5) y;
 
 x = 2;
 
-set.sendTransaction(x);
+set.sendTransaction(x, {from: "0xab", value: 0});
 
-increase.sendTransaction();
+//increase.sendTransaction({from: "0xbc", value: 0});
 
 y = get.call();
 
-//y = equal2.call(2);
+y = equal2.call(2);
