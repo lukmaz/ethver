@@ -1,0 +1,40 @@
+contract SimpleStorage {
+    uint(5) storedData;
+    
+    function set(uint(5) a) {
+        storedData = a;
+    }
+    
+    function increase() {
+        if (storedData % 2 == 1)
+            storedData = storedData + 1;
+        storedData = 2 * storedData;
+    }
+    
+    
+    function equal2(uint(5) b) returns (uint(2)) {
+        if (b == 2)
+            return 1;
+        else
+            return 0;
+    }
+    
+    
+    function get() returns (uint(5)) {
+        return storedData;
+    }
+}
+
+uint(5) x;
+uint(5) y;
+//uint(5) z;
+
+x = 2;
+
+set.sendTransaction(x);
+
+increase.sendTransaction();
+
+y = get.call();
+
+//y = equal2.call(2);

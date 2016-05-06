@@ -1,0 +1,279 @@
+// Markov decision process (allows non-determinism)
+
+mdp
+
+
+// CONSTANTS
+
+// auto: states
+const int NUM_STATES = 4;
+// auto: variables ranges:
+const int MAX_BALANCE = 2;
+const int MAX_PLAYERS = 3;
+const int MAX_PLAYER_NUMBER = 1;
+const int MAX_CHOICE = 2;
+
+// user: constants
+const int BET = 1;
+const int TIMEOUT = 10;
+
+// timers
+global timer_started : bool init false;
+global time_elapsed : [0..TIMEOUT] init 0;	
+
+// GLOBAL VARIABLES
+
+// auto: balances
+global contract_balance : [0..MAX_BALANCE] init 0;
+global balanceAlice : [0..MAX_BALANCE] init BET;
+global balanceBob : [0..MAX_BALANCE] init BET;
+
+// auto: commitments
+global choice0 : [0..MAX_CHOICE];
+global choice1 : [0..MAX_CHOICE];
+// global committedA : bool init false;
+global choice0_committed : bool init false;
+// global committedB : bool init false;
+global choice1_committed : bool init false;
+// global has_revealedA : bool init false;
+global choice0_revealed : bool init false;
+// global has_revealedB : bool init false;
+global choice1_revealed : bool init false;
+
+// user: variables
+global num_players : [0..MAX_PLAYERS] init 0;
+global p0_address : [0..MAX_PLAYER_NUMBER];
+global p1_address : [0..MAX_PLAYER_NUMBER];
+global reward : [0..MAX_BALANCE] init 0;
+global finalized : bool init false;
+
+// user: arrays
+// 2 is draw
+formula check_winner = (choice0 = choice1) ? 2 :
+	(
+	 ((choice0 = 0 & choice1 = 2) |
+	  (choice0 = 2 & choice1 = 1) |
+	  (choice0 = 1 & choice1 = 0)) ? 0 : 1
+	);
+
+module timer
+	[] timer_started & time_elapsed = 0 -> (time_elapsed' = 1);
+
+	[] time_elapsed = 1 -> (time_elapsed' = 2);
+	[] time_elapsed = 2 -> (time_elapsed' = 3);
+	[] time_elapsed = 3 -> (time_elapsed' = 4);
+	[] time_elapsed = 4 -> (time_elapsed' = 5);
+	[] time_elapsed = 5 & choice0_revealed -> (time_elapsed' = 6);
+	[] time_elapsed = 6 -> (time_elapsed' = 7);
+	[] time_elapsed = 7 -> (time_elapsed' = 8);
+	[] time_elapsed = 8 -> (time_elapsed' = 9);
+	[] time_elapsed = 9 -> (time_elapsed' = 10);
+endmodule
+
+
+module playerA
+	// 1 - player_input
+	// 2 - open
+	// 3 - finalize
+	// 4 - end
+	stateA : [1..NUM_STATES] init 1;
+	valueA : [0..MAX_BALANCE] init BET;
+	
+	// t_player_input_1: player_input(commitment), first player
+	[] stateA = 1 & num_players = 0 & valueA = BET & reward + valueA <= MAX_BALANCE
+		  & balanceAlice >= BET & contract_balance + BET <= MAX_BALANCE -> 
+		(stateA' = 2) & (balanceAlice' = balanceAlice - BET)
+		  & (contract_balance' = contract_balance + BET)
+		  & (reward' = reward + valueA) & (num_players' = num_players + 1)
+		  & (p0_address' = 0) & (choice0_committed' = true);
+		
+	// t_player_input_2: player_input(commitment), second player 
+	[] stateA = 1 & num_players = 1 & valueA = BET & reward + valueA <= MAX_BALANCE
+		  & balanceAlice >= BET & contract_balance + BET <= MAX_BALANCE -> 
+		(stateA' = 2) & (balanceAlice' = balanceAlice - BET)
+		  & (contract_balance' = contract_balance + BET)
+		  & (reward' = reward + valueA) & (num_players' = num_players + 1)
+		  & (p1_address' = 0) & (choice0_committed' = true);
+		
+	// t_player_input_3: TODO: wrong valueA
+	
+	// t_open_1: waiting for second player to be commited, open, Alice is 0
+	[] stateA = 2 & choice1_committed & p0_address = 0 -> 
+		  1/3 : (stateA' = 3) & (choice0_revealed' = true) 
+			& (timer_started' = true) & (choice0' = 0)
+		+ 1/3 : (stateA' = 3) & (choice0_revealed' = true)
+			& (timer_started' = true) & (choice0' = 1)
+		+ 1/3 : (stateA' = 3) & (choice0_revealed' = true)
+			& (timer_started' = true) & (choice0' = 2);
+
+	// t_open_2: waiting for second player to be commited, open, Alice is 1
+	[] stateA = 2 & choice1_committed & p1_address = 0 -> 
+		  1/3 : (stateA' = 3) & (choice0_revealed' = true)
+			& (timer_started' = true) & (choice1' = 0) 
+		+ 1/3 : (stateA' = 3) & (choice0_revealed' = true)
+			& (timer_started' = true) & (choice1' = 1)
+		+ 1/3 : (stateA' = 3) & (choice0_revealed' = true)
+			& (timer_started' = true) & (choice1' = 2);
+
+	// t_finalize_1: already finalized
+	[] stateA = 3 & finalized ->
+		(stateA' = 4);
+
+	// t_finalize_2: alice wins
+	[] stateA = 3 & !finalized & time_elapsed >= TIMEOUT
+		 & choice0_revealed & choice1_revealed 
+		 & ((check_winner = 0 & p0_address = 0) | (check_winner = 1 & p1_address = 0))
+		 & contract_balance - reward >= 0 & balanceAlice + reward <= MAX_BALANCE -> 
+		(stateA' = 4) &
+		(contract_balance' = contract_balance - reward) &
+		(balanceAlice' = balanceAlice + reward) &
+		(finalized' = true);
+
+	// t_finalize_3: Bob wins
+	[] stateA = 3 & !finalized & time_elapsed >= TIMEOUT
+		 & choice0_revealed & choice1_revealed
+		 & ((check_winner = 0 & p0_address = 1) | (check_winner = 1 & p1_address = 1))
+		 & contract_balance - reward >= 0 & balanceBob + reward <= MAX_BALANCE -> 
+		(stateA' = 4) &
+		(contract_balance' = contract_balance - reward) &
+		(balanceBob' = balanceBob + reward) &
+		(finalized' = true);
+
+	// t_finalize_4: draw
+	[] stateA = 3 & !finalized & time_elapsed >= TIMEOUT
+		 & choice0_revealed & choice1_revealed
+		 & check_winner = 2 & contract_balance - reward >= 0 
+		 & balanceAlice + floor(reward/2) <= MAX_BALANCE 
+		 & balanceBob + floor(reward/2) <= MAX_BALANCE -> 
+		(stateA' = 4) &
+		(contract_balance' = contract_balance - reward) &
+		(balanceAlice' = balanceAlice + floor(reward/2)) &
+		(balanceBob' = balanceBob + floor(reward/2)) &
+		(finalized' = true);
+	
+	// t_finalize_5: Alice hasn't revealed
+	[] stateA = 3 & !finalized & time_elapsed >= TIMEOUT
+		 & (!choice0_revealed & choice1_revealed) 
+		 & contract_balance - reward >= 0
+		 & balanceBob + reward <= MAX_BALANCE ->
+		(stateA' = 4) &
+		(contract_balance' = contract_balance - reward) &
+		(balanceBob' = balanceBob + reward) &
+		(finalized' = true);
+	
+	// t_finalize_6: Bob hasn't revealed
+	[] stateA = 3 & !finalized & time_elapsed >= TIMEOUT
+		 & (choice0_revealed & !choice1_revealed) 
+		 & contract_balance - reward >= 0
+		 & balanceAlice + reward <= MAX_BALANCE ->
+		(stateA' = 4) &
+		(contract_balance' = contract_balance - reward) &
+		(balanceAlice' = balanceAlice + reward) & 
+		(finalized' = true);
+
+endmodule
+
+module playerB
+	// 0 - before choice
+	// 1 - player_input
+	// 2 - open
+	// 3 - finalize
+	// 4 - end
+	stateB : [0..NUM_STATES] init 0;
+	valueB : [0..MAX_BALANCE] init BET;
+	choiceB : [0..2];
+	
+	// non-deterministic choice of choiceB
+	[] stateB = 0 -> (stateB' = 1) & (choiceB' = 0);
+	[] stateB = 0 -> (stateB' = 1) & (choiceB' = 1);
+	[] stateB = 0 -> (stateB' = 1) & (choiceB' = 2);
+
+	// t_player_input_1: first player
+	[] stateB = 1 & num_players = 0 & valueB = BET & reward + valueB <= MAX_BALANCE
+		 & balanceBob >= BET & contract_balance + BET <= MAX_BALANCE ->
+		(stateB' = 2) & (balanceBob' = balanceBob - BET)
+		 & (contract_balance' = contract_balance + BET)
+		 & (reward' = reward + valueB) & (num_players' = num_players + 1)
+		 & (p0_address' = 1) & (choice1_committed' = true);
+
+	// t_player_input_2: second player
+	[] stateB = 1 & num_players = 1 & valueB = BET & reward + valueB <= MAX_BALANCE
+		 & balanceBob >= BET & contract_balance + BET <= MAX_BALANCE ->
+		(stateB' = 2) & (balanceBob' = balanceBob - BET)
+		 & (contract_balance' = contract_balance + BET)
+		 & (reward' = reward + valueB) & (num_players' = num_players + 1)
+		 & (p1_address' = 1) & (choice1_committed' = true);	
+
+	// t_player_input_3: TODO: wrong valueB
+	
+	// t_open_1: waiting for second player to be commited, open, Bob is 0
+	[] stateB = 2 & choice0_committed & p0_address = 1 -> 
+		(stateB' = 3) & (choice1_revealed' = true) & (choice0' = choiceB) &
+		(timer_started' = true);
+	// t_open_2: waiting for second player to be commited, open, Bob is 1
+	[] stateB = 2 & choice0_committed & p1_address = 1 -> 
+		(stateB' = 3) & (choice1_revealed' = true) & (choice1' = choiceB) &
+		(timer_started' = true);
+
+	// t_finalize_1: already finalized
+	[] stateB = 3 & finalized ->
+		(stateB' = 4);
+
+	// t_finalize_2: Alice wins
+	[] stateB = 3 & !finalized & time_elapsed >= TIMEOUT
+		 & choice0_revealed & choice1_revealed
+		 & ((check_winner = 0 & p0_address = 0) | (check_winner = 1 & p1_address = 0))
+		 & contract_balance - reward >= 0 & balanceAlice + reward <= MAX_BALANCE -> 
+		(stateB' = 4) &
+		(contract_balance' = contract_balance - reward) &
+		(balanceAlice' = balanceAlice + reward) &
+		(finalized' = true);
+
+	// t_finalize_3: Bob wins
+	[] stateB = 3 & !finalized & time_elapsed >= TIMEOUT
+		 & choice0_revealed & choice1_revealed
+		 & ((check_winner = 0 & p0_address = 1) | (check_winner = 1 & p1_address = 1))
+		 & contract_balance - reward >= 0 & balanceBob + reward <= MAX_BALANCE -> 
+		(stateB' = 4) &
+		(contract_balance' = contract_balance - reward) &
+		(balanceBob' = balanceBob + reward) &
+		(finalized' = true);
+
+	// t_finalize_4: draw
+	[] stateB = 3 & !finalized & time_elapsed >= TIMEOUT
+		 & choice0_revealed & choice1_revealed
+		 & check_winner = 2 & contract_balance - reward >= 0 
+		 & balanceAlice + floor(reward/2) <= MAX_BALANCE 
+		 & balanceBob + floor(reward/2) <= MAX_BALANCE -> 
+		(stateB'= 4) &
+		(contract_balance' = contract_balance - reward) &
+		(balanceAlice' = balanceAlice + floor(reward/2)) &
+		(balanceBob' = balanceBob + floor(reward/2)) &
+		(finalized' = true);
+
+	// t_finalize_5: Alice hasn't revealed
+	[] stateB = 3 & !finalized & time_elapsed >= TIMEOUT
+		 & (!choice0_revealed & choice1_revealed) 
+		 & contract_balance - reward >= 0
+		 & balanceBob + reward <= MAX_BALANCE ->
+		(stateB' = 4) &
+		(contract_balance' = contract_balance - reward) &
+		(balanceBob' = balanceBob + reward) &
+		(finalized' = true);
+
+	// t_finalize_6: Bob hasn't revealed
+	[] stateB = 3 & !finalized & time_elapsed >= TIMEOUT
+		 & (choice0_revealed & !choice1_revealed) 
+		 & contract_balance - reward >= 0
+		 & balanceAlice + reward <= MAX_BALANCE ->
+		(stateB' = 4) & 
+		(contract_balance' = contract_balance - reward) &
+		(balanceAlice' = balanceAlice + reward) &
+		(finalized' = true);
+endmodule
+
+
+// labels
+label "Alice_win" = (stateA = NUM_STATES & stateB = NUM_STATES & balanceAlice = 2 * BET); 
+label "Bob_win" = (stateA = NUM_STATES & stateB = NUM_STATES & balanceBob = 2 * BET);
+label "draw" = (stateA = NUM_STATES & stateB = NUM_STATES & balanceAlice = BET & balanceBob = BET);

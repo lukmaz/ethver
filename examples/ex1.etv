@@ -1,0 +1,23 @@
+contract SimpleStorage {
+    uint(5) storedData;
+    
+    function set(uint(5) a) {
+        storedData = a;
+    }
+    
+    function get() returns (uint(5)) {
+        return storedData;
+    }
+}
+
+uint(5) x;
+uint(5) y;
+
+x = 2;
+
+
+set.sendTransaction(x);
+
+y = get.call();
+
+// verify(x == y)
