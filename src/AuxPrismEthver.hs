@@ -13,19 +13,28 @@ type VerRes a = State VerWorld a
 
 data VerWorld = VerWorld {
   props :: String,
-  coVars :: Map.Map Ident Type,
-  scVars :: Map.Map Ident Type,
-  loVars :: Map.Map Ident Type,
+  bcVars :: Map.Map Ident Type,
+  contrGlobVars :: Map.Map Ident Type,
+  contrLocVars :: Map.Map Ident Type,
+  p0Vars :: Map.Map Ident Type,
+  p1Vars :: Map.Map Ident Type,
   funs :: Map.Map Ident Function,
-  argMap :: Map.Map Ident Exp,
   addresses :: Map.Map Integer Ident,
   numbers :: Map.Map String Integer,
   returnVar :: [Ident],
   sender :: [Exp],
   value :: [Exp],
-  currState :: Integer,
-  numStates :: Integer,
-  transs :: [Trans] }
+  currStateContr :: Integer,
+  numStatesContr :: Integer,
+  currStateP0 :: Integer,
+  numStatesP0 :: Integer,
+  currStateP1 :: Integer,
+  numStatesP1 :: Integer,
+  bcTranss :: [Trans],
+  contrTranss :: [Trans],
+  p0Transs :: [Trans],
+  p1Transs :: [Trans]
+  }
 
 type Trans = ([Exp], [(Ident, Exp)])
 
@@ -33,9 +42,11 @@ type Trans = ([Exp], [(Ident, Exp)])
 -- INITIALIZATION --
 
 emptyVerWorld :: VerWorld
-emptyVerWorld = VerWorld {props = "", coVars = Map.empty, scVars = Map.empty, loVars = Map.empty,
-  funs = Map.empty, argMap = Map.empty, addresses = Map.empty, numbers = Map.empty, returnVar = [], sender = [], value = [], 
-  currState = 1, numStates = 1, transs = []}
+emptyVerWorld = VerWorld {props = "", contrGlobVars = Map.empty, bcVars = Map.empty,
+  contrLocVars = Map.empty, p0Vars = Map.empty, p1Vars = Map.empty,
+  funs = Map.empty, addresses = Map.empty, numbers = Map.empty, returnVar = [], sender = [], value = [], 
+  currStateContr = 1, numStatesContr = 1, currStateP0 = 1, numStatesP0 = 1, currStateP1 = 1, numStatesP1 = 1,
+  bcTranss = [], contrTranss = [], p0Transs = [], p1Transs = []}
 
 
 -- WORLD MODIFICATION --
@@ -45,24 +56,34 @@ addProps text = do
   world <- get
   put (world {props = (props world) ++ text})
 
-addCoVar :: Type -> Ident -> VerRes ()
-addCoVar typ ident = do
+addBcVar :: Type -> Ident -> VerRes ()
+addBcVar typ ident = do
   world <- get
-  put (world {coVars = Map.insert ident typ (coVars world)})
+  put (world {bcVars = Map.insert ident typ (bcVars world)})
 
-addScVar :: Type -> Ident -> VerRes ()
-addScVar typ ident = do
+addContrGlobVar :: Type -> Ident -> VerRes ()
+addContrGlobVar typ ident = do
   world <- get
-  put (world {scVars = Map.insert ident typ (scVars world)})
+  put (world {contrGlobVars = Map.insert ident typ (contrGlobVars world)})
 
-addLoVar :: Type -> Ident -> VerRes ()
-addLoVar typ ident = do
+addContrLocVar :: Type -> Ident -> VerRes ()
+addContrLocVar typ ident = do
   world <- get
-  put (world {loVars = Map.insert ident typ (loVars world)})
+  put (world {contrLocVars = Map.insert ident typ (contrLocVars world)})
+
+addP0Var :: Type -> Ident -> VerRes ()
+addP0Var typ ident = do
+  world <- get
+  put (world {p0Vars = Map.insert ident typ (p0Vars world)})
+
+addP1Var :: Type -> Ident -> VerRes ()
+addP1Var typ ident = do
+  world <- get
+  put (world {p1Vars = Map.insert ident typ (p1Vars world)})
 
 -- TODO: ograniczyć deklaracje zmiennych tylko na początek funkcji
 -- i tutaj dodać wszystkie deklaracje do loVars
-addFun :: Function -> VerRes ()
+{-addFun :: Function -> VerRes ()
 addFun (Fun name args stms) = do
   world <- get
   put (world {funs = Map.insert name (Fun name args stms) (funs world)})
@@ -71,10 +92,25 @@ addFun (FunR name args retTyp stms) = do
   addLoVar retTyp (Ident (prismShowIdent name ++ "_retVal"))
   world <- get
   put (world {funs = Map.insert name (FunR name args retTyp stms) (funs world)})
+-}
+
+
+
+-- TODO: Na razie mamy jedną uniwersalną zmienną na argument
+
+{-
+addArg :: Ident -> Arg -> VerRes ()
+addArg (Ident funName) arg = do
+  case arg of
+    (Ar typ (Ident varName)) -> do
+      -- TODO: na pewno ten typ zmiennych?
+      addContrGlobVar typ (Ident (funName ++ "_" ++ varName))
+-}
+
 
 -- Może zrobić unikalne nazwy zmiennych będących argumentami funkcji?
 -- Chyba wystarczy zrobić stos map, żeby działało zagnieżdżanie wywołań
-addArgMap :: [Arg] -> [Exp] -> VerRes ()
+{-addArgMap :: [Arg] -> [Exp] -> VerRes ()
 addArgMap args argsVals = do
   world <- get
   put (world {argMap = Map.fromList $ zip argsNames argsVals})
@@ -84,6 +120,7 @@ clearArgMap :: VerRes ()
 clearArgMap = do
   world <- get
   put (world {argMap = Map.empty})
+-}
 
 addSender :: Exp -> VerRes ()
 addSender newSender = do
@@ -149,32 +186,71 @@ removeReturnVar = do
   world <- get
   put (world {returnVar = tail $ returnVar world})
 
+
+-----------
+-- Trans --
+-----------
+
 --TODO: wyodrebnic +1 w curr i numStates do nowej funkcji nextState czy cos
-addTrans :: [Exp] -> [(Ident, Exp)] -> VerRes ()
-addTrans guards updates = do
+addTransContr :: [Exp] -> [(Ident, Exp)] -> VerRes ()
+addTransContr guards updates = do
   world <- get
-  addCustomTrans (currState world) (numStates world + 1) guards updates
-  world <- get
-  put (world {
-    currState = (numStates world) + 1, 
-    numStates = (numStates world) + 1
-    })
-
-addCustomTrans :: Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
-addCustomTrans fromState toState guards updates = do
+  addCustomTransContr (currStateContr world) (numStatesContr world + 1) guards updates
   world <- get
   put (world {
-    transs = 
-      (
-        ((EEq (EVar (Ident "state")) (EInt fromState)):guards,
-        (Ident "state", EInt toState):updates)
-      )
-      :
-      (transs world)
+    currStateContr = (numStatesContr world) + 1, 
+    numStatesContr = (numStatesContr world) + 1
     })
 
+addTransP0 :: [Exp] -> [(Ident, Exp)] -> VerRes ()
+addTransP0 guards updates = do
+  world <- get
+  addCustomTransP0 (currStateP0 world) (numStatesP0 world + 1) guards updates
+  world <- get
+  put (world {
+    currStateP0 = (numStatesP0 world) + 1, 
+    numStatesP0 = (numStatesP0 world) + 1
+    })
 
+addTransP1 :: [Exp] -> [(Ident, Exp)] -> VerRes ()
+addTransP1 guards updates = do
+  world <- get
+  addCustomTransP1 (currStateP1 world) (numStatesP1 world + 1) guards updates
+  world <- get
+  put (world {
+    currStateP1 = (numStatesP1 world) + 1, 
+    numStatesP1 = (numStatesP1 world) + 1
+    })
+
+addCustomTransContr :: Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addCustomTransContr fromState toState guards updates = do
+  world <- get
+  let newContrTranss = newCustomTrans "cstate" fromState toState guards updates
+  put (world {contrTranss = newContrTranss:(contrTranss world)})
+
+addCustomTransP0 :: Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addCustomTransP0 fromState toState guards updates = do
+  world <- get
+  let newP0Transs = newCustomTrans "state0" fromState toState guards updates
+  put (world {p0Transs = newP0Transs:(p0Transs world)})
+
+addCustomTransP1 :: Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addCustomTransP1 fromState toState guards updates = do
+  world <- get
+  let newP1Transs = newCustomTrans "state1" fromState toState guards updates
+  put (world {p1Transs = newP1Transs:(p1Transs world)})
+
+
+newCustomTrans :: String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> Trans
+newCustomTrans stateVar fromState toState guards updates =
+  (
+    ((EEq (EVar (Ident stateVar)) (EInt fromState)):guards,
+    (Ident stateVar, EInt toState):updates)
+  )
+
+---------------------
 -- MONEY TRANSFERS --
+---------------------
 
 transferToContract :: Ident -> Exp -> VerRes ()
 transferToContract from value = do
@@ -187,7 +263,7 @@ transferFromContract to value = do
 
 transferMoney :: Ident -> Ident -> Exp -> Exp -> VerRes ()
 transferMoney from to maxTo value = do
-  addTrans
+  addTransContr
     [EGe (EVar from) value, ELe (EAdd (EVar to) value) maxTo]
     [(from, ESub (EVar from) value), (to, EAdd (EVar to) value)]
 
@@ -198,37 +274,43 @@ transferMoney from to maxTo value = do
 generatePrism :: VerWorld -> String
 generatePrism world = 
   "mdp\n\n" ++
-  "const int NUM_STATES = " ++
-  (show $ numStates world) ++
+  "const int NUM_STATES_CONTR = " ++
+  (show $ numStatesContr world) ++
   ";\n\n" ++
-  prismGlobals world ++
-  "\nmodule player\n" ++
-  prismTranss (reverse $ transs world) ++
+  "const int NUM_STATES_P0 = " ++
+  (show $ numStatesP0 world) ++
+  ";\n\n" ++
+  "const int NUM_STATES_P1 = " ++
+  (show $ numStatesP1 world) ++
+  ";\n\n" ++
+  "\nmodule blockchain\n" ++
+  (prismVars $ bcVars world) ++
+  prismTranss (reverse $ bcTranss world) ++
+  "endmodule" ++
+  "\nmodule contract\n" ++
+  "cstate : [1..NUM_STATES_CONTR];\n" ++
+  (prismVars $ contrGlobVars world) ++
+  (prismVars $ contrLocVars world) ++
+  prismTranss (reverse $ contrTranss world) ++
+  "endmodule" ++
+  "\nmodule player0\n" ++
+  "state0 : [1..NUM_STATES_P0];\n" ++
+  (prismVars $ p0Vars world) ++
+  prismTranss (reverse $ p0Transs world) ++
+  "endmodule" ++
+  "\nmodule player1\n" ++
+  "state1 : [1..NUM_STATES_P1];\n" ++
+  (prismVars $ p1Vars world) ++
+  prismTranss (reverse $ p1Transs world) ++
   "endmodule"
 
--- generates PRISM code for global variables
--- TODO: dodawanie przedrostków nazw zmiennych co_, sc_, lo_
-prismGlobals :: VerWorld -> String
-prismGlobals world = 
+prismVars :: Map.Map Ident Type -> String
+prismVars vars = 
   Map.foldlWithKey
-    (\code ident typ -> code ++ "global " ++ (prismShowIdent ident)
+    (\code ident typ -> code ++ (prismShowIdent ident)
       ++ " : " ++ (prismShowType typ) ++ ";\n")
     "" 
-    (coVars world)
-  ++ 
-  Map.foldlWithKey
-    (\code ident typ -> code ++ "global " ++ (prismShowIdent ident)
-      ++ " : " ++ (prismShowType typ) ++ ";\n")
-    "" 
-    (scVars world)
-  ++ 
-  Map.foldlWithKey
-    (\code ident typ -> code ++ "global " ++ (prismShowIdent ident)
-      ++ " : " ++ (prismShowType typ) ++ ";\n")
-    "" 
-    (loVars world)
-  ++
-  "global state : [1..NUM_STATES];\n"
+    vars
 
 -- generates PRISM code for all the transitions
 prismTranss :: [Trans] -> String
@@ -336,15 +418,18 @@ prismShowExp (ECall (h:t) args) =
 findVarType :: Ident -> VerRes (Maybe Type)
 findVarType ident = do
   world <- get
-  case Map.lookup ident (loVars world) of
+  case Map.lookup ident (contrGlobVars world) of
     Just typ -> return (Just typ)
     Nothing -> 
-      case Map.lookup ident (coVars world) of
+      case Map.lookup ident (contrLocVars world) of
         Just typ -> return (Just typ)
-        Nothing ->
-          case Map.lookup ident (scVars world) of
+        Nothing -> 
+          case Map.lookup ident (p0Vars world) of
             Just typ -> return (Just typ)
-            Nothing -> return Nothing
+            Nothing ->
+              case Map.lookup ident (p1Vars world) of
+                Just typ -> return (Just typ)
+                Nothing -> return Nothing
 
 minValue :: Ident -> VerRes Integer
 minValue ident = do

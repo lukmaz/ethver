@@ -32,11 +32,17 @@ verContract (Contr name decls funs) = do
 -- TODO: globalne, nieglobalne
 verCoDecl :: Decl -> VerRes ()
 verCoDecl (Dec typ ident) = do
-  addCoVar typ ident
+  addContrGlobVar typ ident
 
 verCoFun :: Function -> VerRes ()
-verCoFun fun =
-  addFun fun
+verCoFun (Fun name args stms) = do
+  --addFun fun
+  world <- get
+  -- TODO argumenty
+  -- mapM_ (addArg name) args
+  -- TODO: czy tu musi być verCoStm?
+  mapM_ verScStm stms
+
 
 
 --------------
@@ -48,10 +54,10 @@ verScenario (Scen decls stms) = do
   mapM_ verScDecl decls
   mapM_ verScStm stms
 
--- TODO: local variables
+-- TODO: Drugi gracz
 verScDecl :: Decl -> VerRes ()
 verScDecl (Dec typ ident) = do
-  addScVar typ ident
+  addP0Var typ ident
 
 -----------
 -- ScStm --
@@ -68,48 +74,50 @@ verScStm (SReturn exp) = do
   _ <- verExp (EAss (head $ returnVar world) evalExp)
   return ()
 
+-- TODO: drugi gracz
 -- TODO: zrobić, żeby return wychodziło z wykonania bieżącej funkcji
 verScStm (SIf cond ifBlock) = do
   evalCond <- verExp cond
   world <- get
-  let ifState = currState world
-  addTrans
+  let ifState = currStateP0 world
+  addTransP0
     [evalCond]
     []
   verScStm ifBlock
   world <- get
-  addCustomTrans
+  addCustomTransP0
     ifState
-    (currState world)
+    (currStateP0 world)
     [negateExp evalCond]
     []
 
+-- TODO: drugi gracz, kontrakt
 verScStm (SIfElse cond ifBlock elseBlock) = do
   evalCond <- verExp cond
   world <- get
-  let ifState = currState world
-  addTrans
+  let ifState = currStateP0 world
+  addTransP0
     [evalCond]
     []
   verScStm ifBlock
   world <- get
-  let endIfState = currState world
-  addCustomTrans
+  let endIfState = currStateP0 world
+  addCustomTransP0
     ifState
-    (numStates world + 1)
+    (numStatesP0 world + 1)
     [negateExp evalCond]
     []
   world <- get
-  put (world {currState = numStates world + 1, numStates = numStates world + 1})
+  put (world {currStateP0 = numStatesP0 world + 1, numStatesP0 = numStatesP0 world + 1})
   verScStm elseBlock
   world <- get
-  addCustomTrans
-    (currState world)
+  addCustomTransP0
+    (currStateP0 world)
     endIfState
     []
     []
   world <- get
-  put (world {currState = endIfState})
+  put (world {currStateP0 = endIfState})
   
 verScStm (SBlock stms) = do
   mapM_ verScStm stms
@@ -178,36 +186,34 @@ verMathExp (EMod exp1 exp2) = do
 ------------
 
 -- TODO: automatyczna generacja standardowego przejścia na nast. stan
+-- TODO: na razie tylko P0
 verValExp (EAss ident exp) = do
   evalExp <- verExp exp
   world <- get
   minV <- minValue ident
   maxV <- maxValue ident
-  addTrans 
+  addTransP0 
     [EGe evalExp (EInt minV), ELe evalExp (EInt maxV)]
     [(ident, evalExp)]
   return (EAss ident evalExp)
 
 verValExp (EVar ident) = do
   world <- get
-  case Map.lookup ident (argMap world) of
+  case Map.lookup ident (contrGlobVars world) of
     Just exp ->
-      verExp exp
-    Nothing -> return (EVar ident)
-    -- TODO: przedrostki nazw zmiennych lo_, co_, sc_
-    {-
-      case Map.lookup ident (loVars world) of
-        Just _ -> return (EVar (Ident ("lo_" ++ (prismShowIdent ident))))
-        Nothing -> 
-          case Map.lookup ident (coVars world) of
-            Just _ -> return (EVar (Ident ("co_" ++ (prismShowIdent ident))))
+      return (EVar ident)
+    Nothing ->
+      case Map.lookup ident (contrLocVars world) of
+        Just exp ->
+          return (EVar ident)
+        Nothing ->
+          case Map.lookup ident (p0Vars world) of
+            Just exp ->
+              return (EVar ident)
             Nothing ->
-              case Map.lookup ident (scVars world) of
-                Just _ -> return (EVar (Ident ("sc_" ++ (prismShowIdent ident))))
-                Nothing -> do
-                  addProps ("Var not found " ++ (prismShowIdent ident) ++ "\n")
+              case Map.lookup ident (p1Vars world) of
+                Just exp ->
                   return (EVar ident)
-    -}
 
 verValExp EValue = do
   value <- getValue
@@ -265,12 +271,11 @@ verCallAux funName argsVals = do
 verFunCall :: Function -> [CallArg] -> VerRes Exp
 verFunCall (FunR name args ret stms) argsVals = do
   let expArgsVals = map (\(AExp exp) -> exp) argsVals
-  addArgMap args expArgsVals
+  mapM_ addArg $ zip args expArgsVals
   let retVarIdent = Ident ((prismShowIdent name) ++ "_retVal")
   addReturnVar retVarIdent
   mapM_ verScStm stms
   removeReturnVar
-  clearArgMap
   return (EVar retVarIdent)
 --TODO: to jest przepisane z verScFunSendT
 
@@ -290,7 +295,7 @@ verFunSendT :: Function -> [CallArg] -> VerRes ()
 verFunSendT (Fun name args stms) argsVals = do
   let expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
   let (ABra sender value) = last argsVals
-  addArgMap args expArgsVals
+  mapM_ addArg $ zip args expArgsVals
   addSender sender
   addValue value
   case sender of
@@ -305,9 +310,13 @@ verFunSendT (Fun name args stms) argsVals = do
       mapM_ verScStm stms
   removeValue
   removeSender
-  clearArgMap
 
 verFunSendT (FunR name args ret stms) argsVals =
   verFunSendT (Fun name args stms) argsVals
 
 
+addArg :: (Arg, Exp) -> VerRes ()
+addArg (_, exp) = do
+  -- TODO: sztywna nazwa "arg"
+  verExp (EAss (Ident "arg") exp)
+  return ()
