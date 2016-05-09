@@ -1,0 +1,151 @@
+mdp
+
+const int NUM_CONTRACT_STATES = 12;
+const int NUM_PLAYER_STATES = 5;
+
+const int MAX_CONTRACT_BALANCE = 2;
+const int MAX_USER_BALANCE = 2;
+
+module contract
+ cstate : [0..NUM_CONTRACT_STATES] init 1;
+ balance0 : [0..2] init 2;
+ balance1 : [0..2] init 0;
+ contract_balance : [0..2];
+ pot0 : [0..2];
+ pot1 : [0..2];
+ next_state : [0..NUM_CONTRACT_STATES];
+
+//Exec transaction
+[] (cstate = 0)
+ & (sender = 0)
+ & (balance0 >= val)
+ & (contract_balance + val <= MAX_CONTRACT_BALANCE)
+  ->
+   (cstate' = next_state)
+ & (balance0' = balance0 - val)
+ & (contract_balance' = contract_balance + val);
+
+[] (cstate = 0)
+ & (sender = 1)
+ & (balance1 >= val)
+ & (contract_balance + val <= MAX_CONTRACT_BALANCE)
+  ->
+   (cstate' = next_state)
+ & (balance1' = balance1 - val)
+ & (contract_balance' = contract_balance + val);
+
+
+//Deposit:
+[broadcast_deposit] (cstate = 1) -> (next_state' = 2) & (cstate' = 0);
+
+[] (cstate = 2)
+ & (sender = 0)
+  ->
+   (cstate' = 3);
+
+[] (cstate = 3)
+ & (pot0 + val >= 0)
+ & (pot0 + val <= 2)
+  ->
+   (cstate' = 1)
+ & (pot0' = pot0 + val);
+
+[] (cstate = 2)
+ & (sender != 0)
+  ->
+   (cstate' = 1);
+
+//Transfer:
+[broadcast_transfer] (cstate = 1) -> (next_state' = 4) & (cstate' = 0);
+
+[] (cstate = 4)
+ & (sender = 0)
+  ->
+   (cstate' = 5);
+
+[] (cstate = 5)
+ & (pot0 - arg >= 0)
+ & (pot0 - arg <= 2)
+  ->
+   (cstate' = 6)
+ & (pot0' = pot0 - arg);
+
+[] (cstate = 6)
+ & (pot1 + arg >= 0)
+ & (pot1 + arg <= 2)
+  ->
+   (cstate' = 1)
+ & (pot1' = pot1 + arg);
+
+[] (cstate = 4)
+ & (sender != 0)
+  ->
+   (cstate' = 1);
+
+//Withdraw:
+[broadcast_withdraw] (cstate = 1) -> (next_state' = 7) & (cstate' = 0);
+
+[] (cstate = 7)
+ & (sender = 0)
+  ->
+   (cstate' = 8);
+
+[] (cstate = 8)
+ & (contract_balance >= arg)
+ & (balance0 + arg <= MAX_USER_BALANCE)
+  ->
+   (cstate' = 9)
+ & (contract_balance' = contract_balance - arg)
+ & (balance0' = balance0 + arg);
+
+[] (cstate = 9)
+ & (pot0 - arg >= 0)
+ & (pot0 - arg <= 2)
+  ->
+   (cstate' = 10)
+ & (pot0' = pot0 - arg);
+
+[] (cstate = 7)
+ & (sender != 0)
+  ->
+   (cstate' = 10);
+
+[] (cstate = 10)
+ & (sender = 1)
+  ->
+   (cstate' = 11);
+
+[] (cstate = 11)
+ & (contract_balance >= arg)
+ & (balance1 + arg <= MAX_USER_BALANCE)
+  ->
+   (cstate' = 12)
+ & (contract_balance' = contract_balance - arg)
+ & (balance1' = balance1 + arg);
+
+[] (cstate = 12)
+ & (pot1 - arg >= 0)
+ & (pot1 - arg <= 2)
+  ->
+   (cstate' = 1)	//reset
+ & (pot1' = pot1 - arg);
+
+[] (cstate = 10)
+ & (sender != 1)
+  ->
+   (cstate' = 1);	//reset
+
+endmodule
+
+module player
+ state : [1..NUM_PLAYER_STATES];
+ sender : [0..1];
+ val : [0..2];
+ arg : [0..2];
+
+ [broadcast_deposit]  (cstate = 1) & (state = 1) -> (sender' = 0) & (val' = 2) & (state' = 2);
+ [broadcast_transfer] (cstate = 1) & (state = 2) -> (sender' = 0) & (val' = 0) & (arg' = 1) & (state' = 3);
+ [broadcast_withdraw] (cstate = 1) & (state = 3) -> (sender' = 0) & (val' = 0) & (arg' = 1) & (state' = 4);
+ [broadcast_withdraw] (cstate = 1) & (state = 4) -> (sender' = 1) & (val' = 0) & (arg' = 1) & (state' = 5);
+
+endmodule
