@@ -225,7 +225,7 @@ verValExp (EStr s) =
 
 
 ----------------
--- VerCallExp --
+-- CallExp --
 ----------------
 
 -- TODO: na razie możemy mieć tylko jeden kontrakt
@@ -291,10 +291,10 @@ verScFunSendT (Fun name args stms) argsVals = do
   senderEval <- verScExp sender
   case senderEval of
     EStr str -> do
+      addAddress str
       when 
         (value /= (EInt 0)) 
         (do
-          addAddress str
           balance <- getAddressBalance str
           transferToContract balance value)
       mapM_ verScStm stms

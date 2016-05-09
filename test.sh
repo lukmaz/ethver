@@ -1,1 +1,1 @@
-./MakeEthver examples/ex3.etv
+./MakeEthver examples/bank1.etv
