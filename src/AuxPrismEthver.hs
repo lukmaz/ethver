@@ -18,7 +18,8 @@ data VerWorld = VerWorld {
   loVars :: Map.Map Ident Type,
   funs :: Map.Map Ident Function,
   argMap :: Map.Map Ident Exp,
-  addresses :: Map.Map String Ident,
+  addresses :: Map.Map Integer Ident,
+  numbers :: Map.Map String Integer,
   returnVar :: [Ident],
   sender :: [Exp],
   value :: [Exp],
@@ -33,7 +34,7 @@ type Trans = ([Exp], [(Ident, Exp)])
 
 emptyVerWorld :: VerWorld
 emptyVerWorld = VerWorld {props = "", coVars = Map.empty, scVars = Map.empty, loVars = Map.empty,
-  funs = Map.empty, argMap = Map.empty, addresses = Map.empty, returnVar = [], sender = [], value = [], 
+  funs = Map.empty, argMap = Map.empty, addresses = Map.empty, numbers = Map.empty, returnVar = [], sender = [], value = [], 
   currState = 1, numStates = 1, transs = []}
 
 
@@ -117,19 +118,25 @@ removeValue = do
 addAddress :: String -> VerRes ()
 addAddress str = do
   world <- get
-  case Map.lookup str $ addresses world of
+  case Map.lookup str $ numbers world of
     Nothing -> do
       let size = Map.size $ addresses world
       let name = "balance" ++ (show (size + 1))
-      put (world {addresses = Map.insert str (Ident name) $ addresses world})
+      put (world {numbers = Map.insert str (fromIntegral (size + 1)) $ numbers world, 
+        addresses = Map.insert (fromIntegral (size + 1)) (Ident name) $ addresses world})
     Just _ -> return ()
 
-getAddressBalance :: String -> VerRes Ident
-getAddressBalance str = do
+getAddressNumber :: String -> VerRes Integer
+getAddressNumber str = do
   world <- get
-  case Map.lookup str $ addresses world of
-    Just name -> return name
+  case Map.lookup str $ numbers world of
+    Just number -> return number
 
+getNumberBalance :: Integer -> VerRes Ident
+getNumberBalance number = do
+  world <- get
+  case Map.lookup number $ addresses world of
+    Just name -> return name
 
 -- TODO: stos dla zagnieżdżonych wywołań?
 addReturnVar :: Ident -> VerRes ()

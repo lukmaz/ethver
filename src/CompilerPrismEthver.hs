@@ -220,8 +220,9 @@ verValExp ESender = do
 verValExp (EInt x) =
   return (EInt x)
 
-verValExp (EStr s) =
-  return (EStr s)
+verValExp (EStr s) = do
+  number <- getAddressNumber s
+  return (EInt number)
 
 
 ----------------
@@ -243,7 +244,11 @@ verCallExp (ESend receiverExp args) = do
       receiverEval <- verExp receiverExp
       case receiverEval of
         EStr receiverAddress -> do
-          receiverBalance <- getAddressBalance receiverAddress
+          receiverNumber <- getAddressNumber receiverAddress
+          receiverBalance <- getNumberBalance receiverNumber
+          transferFromContract receiverBalance val
+        EInt receiverNumber -> do
+          receiverBalance <- getNumberBalance receiverNumber
           transferFromContract receiverBalance val
   return (ESend receiverExp args)
 
@@ -288,14 +293,14 @@ verFunSendT (Fun name args stms) argsVals = do
   addArgMap args expArgsVals
   addSender sender
   addValue value
-  senderEval <- verExp sender
-  case senderEval of
+  case sender of
     EStr str -> do
       addAddress str
       when 
         (value /= (EInt 0)) 
         (do
-          balance <- getAddressBalance str
+          number <- getAddressNumber str
+          balance <- getNumberBalance number
           transferToContract balance value)
       mapM_ verScStm stms
   removeValue
