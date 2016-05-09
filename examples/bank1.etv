@@ -1,61 +1,43 @@
 contract Bank {
+    user "A";
+    user "B";
+
     uint(3) potA;
     uint(3) potB;
     
-    function nothing() {
-    }
-
     function deposit() {
-//      if (msg.sender == "A" && msg.value + potA < 3) {
       if (msg.sender == "A") {
         potA = potA + msg.value;
       }
-//      else {
-//        if (msg.sender == "B" && msg.value + potB < 3) {
-//          potB = potB + msg.value;
-//        }
-//        else
-//          msg.sender.send(msg.value);
-//      }
     }
     
-    function withdraw(uint(3) val) {
-//      if (msg.sender == "A" && potA >= val) {
+    
+    function withdraw(uint(3) w) {
       if (msg.sender == "A") {
-          msg.sender.send(val);
-          potA = potA - val;
+          //msg.sender.send(w);
+          potA = potA - 0;
       }
-//      if (msg.sender == "B" && potB >= val) {
       if (msg.sender == "B") {
-          msg.sender.send(val);
-          potB = potB - val;
+          //msg.sender.send(w);
+          potB = potB - 0;
       }
     }
 
-    
+  /*  
     function transfer(uint(3) val) {
-//      if (msg.sender == "A" && potA >= val && potB + val < 3) {
       if (msg.sender == "A") {
           potA = potA - val;
           potB = potB + val;
       }
-/*      if (msg.sender == "B" && potB >= val && potA + val < 3) {
-          potB = potB - val;
-          potA = potA + val;
-      }
-*/    
     }
-    
+    */
 }
 
-nothing.sendTransaction({from: "A", value: 0});
-nothing.sendTransaction({from: "B", value: 0});
-
-deposit.sendTransaction({from: "A", value: 2});
-transfer.sendTransaction(1, {from: "A", value: 0});
-withdraw.sendTransaction(1, {from: "A", value: 0});
+//deposit.sendTransaction({from: "A", value: 2});
+//transfer.sendTransaction(1, {from: "A", value: 0});
+//withdraw.sendTransaction(1, {from: "A", value: 0});
 
 //wait ...
-withdraw.sendTransaction(1, {from: "B", value: 0});
+//withdraw.sendTransaction(1, {from: "B", value: 0});
 
 

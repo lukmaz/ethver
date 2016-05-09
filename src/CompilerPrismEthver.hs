@@ -25,7 +25,8 @@ verProgram (Prog contract scenario) = do
 --------------
 
 verContract :: Contract -> VerRes ()
-verContract (Contr name decls funs) = do
+verContract (Contr name users decls funs) = do
+  mapM_ addUser users
   mapM_ verCoDecl decls
   mapM_ verCoFun funs
 
@@ -39,11 +40,14 @@ verCoFun (Fun name args stms) = do
   --addFun fun
   world <- get
   -- TODO argumenty
-  -- mapM_ (addArg name) args
+  mapM_ addArg args
   -- TODO: czy tu musi być verCoStm?
   mapM_ verScStm stms
 
 
+addUser :: UserDecl -> VerRes ()
+addUser (UDec name) = do
+  addAddress name
 
 --------------
 -- SCENARIO --
@@ -216,18 +220,17 @@ verValExp (EVar ident) = do
                   return (EVar ident)
 
 verValExp EValue = do
-  value <- getValue
-  verExp value
+  return EValue
 
 verValExp ESender = do
-  sender <- getSender
-  verExp sender
+  return ESender
 
 verValExp (EInt x) =
   return (EInt x)
 
 verValExp (EStr s) = do
   number <- getAddressNumber s
+  addProps ("getAddress Number " ++ s ++ " = " ++ (show number) ++ "\n")
   return (EInt number)
 
 
@@ -271,7 +274,7 @@ verCallAux funName argsVals = do
 verFunCall :: Function -> [CallArg] -> VerRes Exp
 verFunCall (FunR name args ret stms) argsVals = do
   let expArgsVals = map (\(AExp exp) -> exp) argsVals
-  mapM_ addArg $ zip args expArgsVals
+  mapM_ addArgMap $ zip args expArgsVals
   let retVarIdent = Ident ((prismShowIdent name) ++ "_retVal")
   addReturnVar retVarIdent
   mapM_ verScStm stms
@@ -295,9 +298,9 @@ verFunSendT :: Function -> [CallArg] -> VerRes ()
 verFunSendT (Fun name args stms) argsVals = do
   let expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
   let (ABra sender value) = last argsVals
-  mapM_ addArg $ zip args expArgsVals
-  addSender sender
-  addValue value
+  mapM_ addArgMap $ zip args expArgsVals
+  --addSender sender
+  --addValue value
   case sender of
     EStr str -> do
       addAddress str
@@ -308,15 +311,19 @@ verFunSendT (Fun name args stms) argsVals = do
           balance <- getNumberBalance number
           transferToContract balance value)
       mapM_ verScStm stms
-  removeValue
-  removeSender
+  --removeValue
+  --removeSender
 
 verFunSendT (FunR name args ret stms) argsVals =
   verFunSendT (Fun name args stms) argsVals
 
 
-addArg :: (Arg, Exp) -> VerRes ()
-addArg (_, exp) = do
+addArg :: Arg -> VerRes ()
+addArg (Ar typ ident) = do
   -- TODO: sztywna nazwa "arg"
-  verExp (EAss (Ident "arg") exp)
+  addBcVar typ ident
+
+addArgMap :: (Arg, Exp) -> VerRes ()
+addArgMap ((Ar typ ident), exp) = do
+  verExp (EAss ident exp)
   return ()

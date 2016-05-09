@@ -20,8 +20,9 @@ ethProgram (Prog contract scenario) = do
 
 -- Contract
 
+-- TODO: UserDecl
 ethContract :: Contract -> EthRes ()
-ethContract (Contr ident decls funs) = do
+ethContract (Contr ident _ decls funs) = do
   addContr "contract "
   ethIdent ident
   addContr " {\n"

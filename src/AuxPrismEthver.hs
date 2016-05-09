@@ -22,8 +22,8 @@ data VerWorld = VerWorld {
   addresses :: Map.Map Integer Ident,
   numbers :: Map.Map String Integer,
   returnVar :: [Ident],
-  sender :: [Exp],
-  value :: [Exp],
+  --sender :: [Exp],
+  --value :: [Exp],
   currStateContr :: Integer,
   numStatesContr :: Integer,
   currStateP0 :: Integer,
@@ -44,7 +44,7 @@ type Trans = ([Exp], [(Ident, Exp)])
 emptyVerWorld :: VerWorld
 emptyVerWorld = VerWorld {props = "", contrGlobVars = Map.empty, bcVars = Map.empty,
   contrLocVars = Map.empty, p0Vars = Map.empty, p1Vars = Map.empty,
-  funs = Map.empty, addresses = Map.empty, numbers = Map.empty, returnVar = [], sender = [], value = [], 
+  funs = Map.empty, addresses = Map.empty, numbers = Map.empty, returnVar = [], 
   currStateContr = 1, numStatesContr = 1, currStateP0 = 1, numStatesP0 = 1, currStateP1 = 1, numStatesP1 = 1,
   bcTranss = [], contrTranss = [], p0Transs = [], p1Transs = []}
 
@@ -110,6 +110,7 @@ addArg (Ident funName) arg = do
 
 -- Może zrobić unikalne nazwy zmiennych będących argumentami funkcji?
 -- Chyba wystarczy zrobić stos map, żeby działało zagnieżdżanie wywołań
+
 {-addArgMap :: [Arg] -> [Exp] -> VerRes ()
 addArgMap args argsVals = do
   world <- get
@@ -122,6 +123,7 @@ clearArgMap = do
   put (world {argMap = Map.empty})
 -}
 
+{-
 addSender :: Exp -> VerRes ()
 addSender newSender = do
   world <- get
@@ -136,7 +138,9 @@ removeSender :: VerRes ()
 removeSender = do
   world <- get
   put (world {sender = tail $ sender world})
+-}
 
+{-
 addValue :: Exp -> VerRes ()
 addValue newValue = do
   world <- get
@@ -151,6 +155,8 @@ removeValue :: VerRes ()
 removeValue = do
   world <- get
   put (world {value = tail $ value world})
+-}
+
 
 addAddress :: String -> VerRes ()
 addAddress str = do
@@ -276,28 +282,28 @@ generatePrism world =
   "mdp\n\n" ++
   "const int NUM_STATES_CONTR = " ++
   (show $ numStatesContr world) ++
-  ";\n\n" ++
+  ";\n" ++
   "const int NUM_STATES_P0 = " ++
   (show $ numStatesP0 world) ++
-  ";\n\n" ++
+  ";\n" ++
   "const int NUM_STATES_P1 = " ++
   (show $ numStatesP1 world) ++
   ";\n\n" ++
   "\nmodule blockchain\n" ++
   (prismVars $ bcVars world) ++
   prismTranss (reverse $ bcTranss world) ++
-  "endmodule" ++
+  "endmodule\n" ++
   "\nmodule contract\n" ++
   "cstate : [1..NUM_STATES_CONTR];\n" ++
   (prismVars $ contrGlobVars world) ++
   (prismVars $ contrLocVars world) ++
   prismTranss (reverse $ contrTranss world) ++
-  "endmodule" ++
+  "endmodule\n" ++
   "\nmodule player0\n" ++
   "state0 : [1..NUM_STATES_P0];\n" ++
   (prismVars $ p0Vars world) ++
   prismTranss (reverse $ p0Transs world) ++
-  "endmodule" ++
+  "endmodule\n" ++
   "\nmodule player1\n" ++
   "state1 : [1..NUM_STATES_P1];\n" ++
   (prismVars $ p1Vars world) ++
@@ -403,6 +409,12 @@ prismShowExp (EInt x) =
 
 prismShowExp (EStr s) =
   s
+
+prismShowExp ESender =
+  "sender"
+
+prismShowExp EValue =
+  "value"
 
 prismShowExp (ECall (h:t) args) =
   foldl
