@@ -42,7 +42,7 @@ verCoFun (Fun name args stms) = do
   -- TODO argumenty
   mapM_ addArg args
   -- TODO: czy tu musi być verCoStm?
-  mapM_ verCoStm stms
+  mapM_ (verStm modifyContract) stms
 
 
 addUser :: UserDecl -> VerRes ()
@@ -67,97 +67,110 @@ verScDecl (Dec typ ident) = do
 -- CoStm --
 -----------
 
-verCoStm :: Stm -> VerRes ()
-verCoStm (SExp exp) = do
-  _ <- verCoExp exp
+verStm :: ModifyModuleType -> Stm -> VerRes ()
+verStm modifyModule (SExp exp) = do
+  _ <- verExp modifyModule exp
   return ()
   
-verCoStm (SReturn exp) = do
-  evalExp <- verCoExp exp
+verStm modifyModule (SReturn exp) = do
+  evalExp <- verExp modifyModule exp
   world <- get
-  _ <- verCoExp (EAss (head $ returnVar world) evalExp)
+  _ <- verExp modifyModule (EAss (head $ returnVar world) evalExp)
   return ()
 
 -- TODO: drugi gracz
 -- TODO: zrobić, żeby return wychodziło z wykonania bieżącej funkcji
-verCoStm (SIf cond ifBlock) = do
-  evalCond <- verCoExp cond
+verStm modifyModule (SIf cond ifBlock) = do
+  evalCond <- verExp modifyModule cond
   world <- get
-  -- TODO: P0
-  let ifState = currState $ player0 world
-  --TODO: P0
-  addTransToNewStateP0
+  mod <- modifyModule id
+  let ifState = currState mod
+  addTransToNewState
+    modifyModule
     ""
     [evalCond]
     []
-  verCoStm ifBlock
+  verStm modifyModule ifBlock
   world <- get
-  --TODO: P0
-  addCustomTransP0
+  mod <- modifyModule id
+  addCustomTrans
+    modifyModule
     ""
     ifState
-    --TODO: P0
-    (currState $ player0 world)
+    (currState mod)
     [negateExp evalCond]
     []
 
 -- TODO: drugi gracz, kontrakt
-verCoStm (SIfElse cond ifBlock elseBlock) = do
-  evalCond <- verCoExp cond
+verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
+  evalCond <- verExp modifyModule cond
   world <- get
-  -- TODO: P0
-  let ifState = currState $ player0 world
-  --TODO: P0
-  addTransToNewStateP0
+  mod <- modifyModule id
+  let ifState = currState mod
+  addTransToNewState
+    modifyModule
     ""
     [evalCond]
     []
-  verCoStm ifBlock
+  verStm modifyModule ifBlock
   world <- get
-  -- TODO: P0
-  let endIfState = currState $ player0 world
-  -- TODO: P0
-  addCustomTransP0
+  mod <- modifyModule id
+  let endIfState = currState mod 
+  addCustomTrans
+    modifyModule
     ""
     ifState
-    -- TODO: P0
-    (numStates (player0 world) + 1)
+    (numStates mod + 1)
     [negateExp evalCond]
     []
-  -- TODO: P0
   world <- get
-  let newState = numStates (player0 world) + 1
-  -- TODO: P0
-  modifyPlayer0 (setCurrState newState)
-  modifyPlayer0 (setNumStates newState)
-  verCoStm elseBlock
+  mod <- modifyModule id
+  let newState = numStates mod + 1
+  modifyModule (setCurrState newState)
+  modifyModule (setNumStates newState)
+  verStm modifyModule elseBlock
   world <- get
-  addCustomTransP0
+  mod <- modifyModule id
+  addCustomTrans
+    modifyModule
     ""
-    -- TODO: P0
-    (currState $ player0 world)
+    (currState mod)
     endIfState
     []
     []
-  -- TODO: P0
-  _ <- modifyPlayer0 (setCurrState endIfState)
+  _ <- modifyModule (setCurrState endIfState)
   return ()
   
-verCoStm (SBlock stms) = do
-  mapM_ verCoStm stms
+verStm modifyModule (SBlock stms) = do
+  mapM_ (verStm modifyModule) stms
 
 
 -----------
 -- CoExp --
 -----------
 
--- TODO
-verCoExp :: Exp -> VerRes Exp
-verCoExp exp = verScExp exp
+-- TODO: SKASOWAĆ
+--verCoExp :: Exp -> VerRes Exp
+--verCoExp exp = verScExp exp
+
+
+
+
 
 -----------
 -- ScStm --
 -----------
+
+-- TODO: drugi gracz
+verScStm :: Stm -> VerRes ()
+verScStm stm = verStm modifyPlayer0 stm
+
+
+
+
+
+
+{- STARE ScStm do skasowania: 
 
 verScStm :: Stm -> VerRes ()
 verScStm (SExp exp) = do
@@ -234,62 +247,75 @@ verScStm (SIfElse cond ifBlock elseBlock) = do
 verScStm (SBlock stms) = do
   mapM_ verScStm stms
 
+-}
+
+
+
+
+
+
+
+
+
+
 -----------
 -- Exp --
 -----------
 
-verScExp :: Exp -> VerRes Exp
+verExp :: ModifyModuleType -> Exp -> VerRes Exp
 
-verScExp (EEq exp1 exp2) = verScMathExp (EEq exp1 exp2)
-verScExp (EAdd exp1 exp2) = verScMathExp (EAdd exp1 exp2)
-verScExp (ESub exp1 exp2) = verScMathExp (ESub exp1 exp2)
-verScExp (EMul exp1 exp2) = verScMathExp (EMul exp1 exp2)
-verScExp (EDiv exp1 exp2) = verScMathExp (EDiv exp1 exp2)
-verScExp (EMod exp1 exp2) = verScMathExp (EMod exp1 exp2)
+verExp modifyModule (EEq exp1 exp2) = verMathExp modifyModule (EEq exp1 exp2)
+verExp modifyModule (EAdd exp1 exp2) = verMathExp modifyModule (EAdd exp1 exp2)
+verExp modifyModule (ESub exp1 exp2) = verMathExp modifyModule (ESub exp1 exp2)
+verExp modifyModule (EMul exp1 exp2) = verMathExp modifyModule (EMul exp1 exp2)
+verExp modifyModule (EDiv exp1 exp2) = verMathExp modifyModule (EDiv exp1 exp2)
+verExp modifyModule (EMod exp1 exp2) = verMathExp modifyModule (EMod exp1 exp2)
 
-verScExp (EAss ident exp) = verScValExp (EAss ident exp)
-verScExp (EVar ident) = verScValExp (EVar ident)
-verScExp EValue = verScValExp EValue
-verScExp ESender = verScValExp ESender
-verScExp (EInt x) = verScValExp (EInt x)
-verScExp (EStr s) = verScValExp (EStr s)
+verExp modifyModule (EAss ident exp) = verValExp modifyModule (EAss ident exp)
+verExp modifyModule (EVar ident) = verValExp modifyModule (EVar ident)
+verExp modifyModule EValue = verValExp modifyModule EValue
+verExp modifyModule ESender = verValExp modifyModule ESender
+verExp modifyModule (EInt x) = verValExp modifyModule (EInt x)
+verExp modifyModule (EStr s) = verValExp modifyModule (EStr s)
 
-verScExp (ECall idents exps) = verScCallExp (ECall idents exps)
-verScExp (ESend receiver args) = verScCallExp (ESend receiver args)
+verExp modifyModule (ECall idents exps) = verCallExp modifyModule (ECall idents exps)
+verExp modifyModule (ESend receiver args) = verCallExp modifyModule (ESend receiver args)
 
 
 -------------
 -- MathExp --
 -------------
 
-verScMathExp (EEq exp1 exp2) = do
-  evalExp1 <- verScExp exp1
-  evalExp2 <- verScExp exp2
+verMathExp :: ModifyModuleType -> Exp -> VerRes Exp
+
+verMathExp modifyModule (EEq exp1 exp2) = do
+  evalExp1 <- verExp modifyModule exp1
+  evalExp2 <- verExp modifyModule exp2
   return (EEq evalExp1 evalExp2)
 
-verScMathExp (EAdd exp1 exp2) = do
-  evalExp1 <- verScExp exp1
-  evalExp2 <- verScExp exp2
+verMathExp modifyModule (EAdd exp1 exp2) = do
+  evalExp1 <- verExp modifyModule exp1
+  evalExp2 <- verExp modifyModule exp2
   return (EAdd evalExp1 evalExp2)
 
-verScMathExp (ESub exp1 exp2) = do
-  evalExp1 <- verScExp exp1
-  evalExp2 <- verScExp exp2
+verMathExp modifyModule (ESub exp1 exp2) = do
+  evalExp1 <- verExp modifyModule exp1
+  evalExp2 <- verExp modifyModule exp2
   return (ESub evalExp1 evalExp2)
 
-verScMathExp (EMul exp1 exp2) = do
-  evalExp1 <- verScExp exp1
-  evalExp2 <- verScExp exp2
+verMathExp modifyModule (EMul exp1 exp2) = do
+  evalExp1 <- verExp modifyModule exp1
+  evalExp2 <- verExp modifyModule exp2
   return (EMul evalExp1 evalExp2)
 
-verScMathExp (EDiv exp1 exp2) = do
-  evalExp1 <- verScExp exp1
-  evalExp2 <- verScExp exp2
+verMathExp modifyModule (EDiv exp1 exp2) = do
+  evalExp1 <- verExp modifyModule exp1
+  evalExp2 <- verExp modifyModule exp2
   return (EDiv evalExp1 evalExp2)
 
-verScMathExp (EMod exp1 exp2) = do
-  evalExp1 <- verScExp exp1
-  evalExp2 <- verScExp exp2
+verMathExp modifyModule (EMod exp1 exp2) = do
+  evalExp1 <- verExp modifyModule exp1
+  evalExp2 <- verExp modifyModule exp2
   return (EMod evalExp1 evalExp2)
 
 
@@ -299,19 +325,21 @@ verScMathExp (EMod exp1 exp2) = do
 
 -- TODO: automatyczna generacja standardowego przejścia na nast. stan
 -- TODO: na razie tylko P0
-verScValExp (EAss ident exp) = do
-  evalExp <- verScExp exp
+verValExp :: ModifyModuleType -> Exp -> VerRes Exp
+
+verValExp modifyModule (EAss ident exp) = do
+  evalExp <- verExp modifyModule exp
   world <- get
   minV <- minValue ident
   maxV <- maxValue ident
-  --TODO: P0
-  addTransToNewStateP0 
+  addTransToNewState
+    modifyModule
     ""
     [EGe evalExp (EInt minV), ELe evalExp (EInt maxV)]
     [(ident, evalExp)]
   return (EAss ident evalExp)
 
-verScValExp (EVar ident) = do
+verValExp modifyModule (EVar ident) = do
   world <- get
   case Map.lookup ident (contrGlobVars world) of
     Just exp ->
@@ -329,16 +357,16 @@ verScValExp (EVar ident) = do
                 Just exp ->
                   return (EVar ident)
 
-verScValExp EValue = do
+verValExp modifyModule EValue = do
   return EValue
 
-verScValExp ESender = do
+verValExp modifyModule ESender = do
   return ESender
 
-verScValExp (EInt x) =
+verValExp modifyModule (EInt x) =
   return (EInt x)
 
-verScValExp (EStr s) = do
+verValExp modifyModule (EStr s) = do
   number <- getAddressNumber s
   addProps ("getAddress Number " ++ s ++ " = " ++ (show number) ++ "\n")
   return (EInt number)
@@ -349,18 +377,20 @@ verScValExp (EStr s) = do
 ----------------
 
 -- TODO: na razie możemy mieć tylko jeden kontrakt
-verScCallExp (ECall idents exps) = do
+verCallExp :: ModifyModuleType -> Exp -> VerRes Exp
+
+verCallExp modifyModule (ECall idents exps) = do
   case idents of
     [funName, (Ident "sendTransaction")] -> do 
-      verScSendTAux funName exps
+      verSendTAux modifyModule funName exps
       return (ECall idents exps)
     [funName, (Ident "call")] -> do
-      verScCallAux funName exps
+      verCallAux modifyModule funName exps
 
-verScCallExp (ESend receiverExp args) = do
+verCallExp modifyModule (ESend receiverExp args) = do
   case args of
     [AExp val] -> do
-      receiverEval <- verScExp receiverExp
+      receiverEval <- verExp modifyModule receiverExp
       case receiverEval of
         EStr receiverAddress -> do
           receiverNumber <- getAddressNumber receiverAddress
@@ -371,20 +401,21 @@ verScCallExp (ESend receiverExp args) = do
           transferFromContract receiverBalance val
   return (ESend receiverExp args)
 
-
--- Call --
+-----------------------------
+-- Call auxilary functions --
+-----------------------------
 
 -- TODO: chyba powinno być najpierw kopiowanie coVars i scVars (?) na lokalne
-verScCallAux :: Ident -> [CallArg] -> VerRes Exp
-verScCallAux funName argsVals = do
+verCallAux :: ModifyModuleType -> Ident -> [CallArg] -> VerRes Exp
+verCallAux modifyModule funName argsVals = do
   world <- get
   case Map.lookup funName (funs world) of
-    Just fun -> verScFunCall fun argsVals
+    Just fun -> verFunCall modifyModule fun argsVals
 
-verScFunCall :: Function -> [CallArg] -> VerRes Exp
-verScFunCall (FunR name args ret stms) argsVals = do
+verFunCall :: ModifyModuleType -> Function -> [CallArg] -> VerRes Exp
+verFunCall modifyModule (FunR name args ret stms) argsVals = do
   let expArgsVals = map (\(AExp exp) -> exp) argsVals
-  mapM_ addArgMap $ zip args expArgsVals
+  mapM_ (addArgMap modifyModule) $ zip args expArgsVals
   let retVarIdent = Ident ((prismShowIdent name) ++ "_retVal")
   addReturnVar retVarIdent
   mapM_ verScStm stms
@@ -395,20 +426,20 @@ verScFunCall (FunR name args ret stms) argsVals = do
 
 -- ScSendT --
 
-verScSendTAux :: Ident -> [CallArg] -> VerRes ()
-verScSendTAux funName argsVals = do
+verSendTAux :: ModifyModuleType -> Ident -> [CallArg] -> VerRes ()
+verSendTAux modifyModule funName argsVals = do
   world <- get
   case Map.lookup funName (funs world) of
-    Just fun -> verScFunSendT fun argsVals
+    Just fun -> verFunSendT modifyModule fun argsVals
 
 -- TODO: nie działają zagnieżdżone funkcje. 
 -- Chyba musi być wielopoziomowy argMap
 -- To jest wersja dla sendTransaction, dla call powinno być co innego
-verScFunSendT :: Function -> [CallArg] -> VerRes ()
-verScFunSendT (Fun name args stms) argsVals = do
+verFunSendT :: ModifyModuleType -> Function -> [CallArg] -> VerRes ()
+verFunSendT modifyModule (Fun name args stms) argsVals = do
   let expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
   let (ABra sender value) = last argsVals
-  mapM_ addArgMap $ zip args expArgsVals
+  mapM_ (addArgMap modifyModule) $ zip args expArgsVals
   --addSender sender
   --addValue value
   case sender of
@@ -420,12 +451,12 @@ verScFunSendT (Fun name args stms) argsVals = do
           number <- getAddressNumber str
           balance <- getNumberBalance number
           transferToContract balance value)
-      mapM_ verScStm stms
+      mapM_ (verStm modifyModule) stms
   --removeValue
   --removeSender
 
-verScFunSendT (FunR name args ret stms) argsVals =
-  verScFunSendT (Fun name args stms) argsVals
+verFunSendT modifyModule (FunR name args ret stms) argsVals =
+  verFunSendT modifyModule (Fun name args stms) argsVals
 
 
 addArg :: Arg -> VerRes ()
@@ -433,7 +464,7 @@ addArg (Ar typ ident) = do
   -- TODO: sztywna nazwa "arg"
   addBcVar typ ident
 
-addArgMap :: (Arg, Exp) -> VerRes ()
-addArgMap ((Ar typ ident), exp) = do
-  verScExp (EAss ident exp)
+addArgMap :: ModifyModuleType -> (Arg, Exp) -> VerRes ()
+addArgMap modifyModule ((Ar typ ident), exp) = do
+  verExp modifyModule (EAss ident exp)
   return ()

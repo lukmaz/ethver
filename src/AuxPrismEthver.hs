@@ -11,6 +11,7 @@ import ErrM
 
 type VerRes a = State VerWorld a
 type Trans = (String, [Exp], [(Ident, Exp)])
+type ModifyModuleType = (Module -> Module) -> VerRes Module
 
 data VerWorld = VerWorld {
   props :: String,
@@ -30,6 +31,7 @@ data VerWorld = VerWorld {
   }
 
 data Module = Module {
+  stateVar :: String,
   vars :: Map.Map Ident Type,
   currState :: Integer,
   numStates :: Integer,
@@ -41,13 +43,25 @@ data Module = Module {
 -- INITIALIZATION --
 
 emptyVerWorld :: VerWorld
-emptyVerWorld = VerWorld {props = "", contrGlobVars = Map.empty, bcVars = Map.empty,
-  contrLocVars = Map.empty, p0Vars = Map.empty, p1Vars = Map.empty,
-  funs = Map.empty, addresses = Map.empty, numbers = Map.empty, returnVar = [], 
-  blockchain = emptyModule, contract = emptyModule, player0 = emptyModule, player1 = emptyModule}
+emptyVerWorld = VerWorld {
+  props = "", 
+  contrGlobVars = Map.empty, 
+  bcVars = Map.empty,
+  contrLocVars = Map.empty, 
+  p0Vars = Map.empty, 
+  p1Vars = Map.empty,
+  funs = Map.empty, 
+  addresses = Map.empty, 
+  numbers = Map.empty, 
+  returnVar = [], 
+  blockchain = emptyModule {stateVar = "bcstate"}, 
+  contract = emptyModule {stateVar = "cstate"}, 
+  player0 = emptyModule {stateVar = "state0"}, 
+  player1 = emptyModule {stateVar = "state1"}
+  } 
 
 emptyModule :: Module
-emptyModule = Module {vars = Map.empty, currState = 1, numStates = 1, transs = []}
+emptyModule = Module {stateVar = "emptyState", vars = Map.empty, currState = 1, numStates = 1, transs = []}
 
 -- WORLD MODIFICATION --
 
@@ -175,43 +189,48 @@ modifyPlayer1 fun = do
 -----------
 
 --TODO: wyodrebnic +1 w curr i numStates do nowej funkcji nextState czy cos
+--TODO: te 3 funkcje chyba do wywalenia
 addTransToNewStateContr :: String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 addTransToNewStateContr transName guards updates =
-  addTransToNewState transName "cstate" guards updates contract modifyContract
+  addTransToNewState modifyContract transName guards updates
 
 addTransToNewStateP0 :: String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 addTransToNewStateP0 transName guards updates =
-  addTransToNewState transName "state0" guards updates player0 modifyPlayer0
+  addTransToNewState modifyPlayer0 transName guards updates
 
 addTransToNewStateP1 :: String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 addTransToNewStateP1 transName guards updates =
-  addTransToNewState transName "state1" guards updates player1 modifyPlayer1
+  addTransToNewState modifyPlayer1 transName guards updates
 
-addTransToNewState :: String -> String -> [Exp] -> [(Ident, Exp)] -> (VerWorld -> Module) -> ((Module -> Module) -> VerRes Module) -> VerRes ()
-addTransToNewState transName stateVar guards updates moduleName modifyModuleFun = do
+addTransToNewState :: ModifyModuleType -> String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addTransToNewState modifyModule transName guards updates = do
   world <- get
-  let newState = numStates (moduleName world) + 1
-  addCustomTrans transName stateVar (currState $ moduleName world) newState guards updates modifyModuleFun
-  _ <- modifyModuleFun (setCurrState newState)
-  _ <- modifyModuleFun (setNumStates newState)
+  mod <- modifyModule id
+  let newState = numStates mod + 1
+  addCustomTrans modifyModule transName (currState mod) newState guards updates
+  _ <- modifyModule (setCurrState newState)
+  _ <- modifyModule (setNumStates newState)
   return ()
 
+--TODO: te 3 funkcje chyba też do wywalenia
 addCustomTransContr :: String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 addCustomTransContr transName fromState toState guards updates = do
-  addCustomTrans transName "cstate" fromState toState guards updates modifyContract
+  addCustomTrans modifyContract transName fromState toState guards updates
 
 addCustomTransP0 :: String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 addCustomTransP0 transName fromState toState guards updates = 
-  addCustomTrans transName "state0" fromState toState guards updates modifyPlayer0
+  addCustomTrans modifyPlayer0 transName fromState toState guards updates
 
 addCustomTransP1 :: String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 addCustomTransP1 transName fromState toState guards updates = 
-  addCustomTrans transName "state1" fromState toState guards updates modifyPlayer1
+  addCustomTrans modifyPlayer1 transName fromState toState guards updates
 
-addCustomTrans :: String -> String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> ((Module -> Module) -> VerRes Module) -> VerRes ()
-addCustomTrans transName stateVar fromState toState guards updates modifyModuleFun = do
-  let newTrans = newCustomTrans transName stateVar fromState toState guards updates
-  _ <- modifyModuleFun (addTransToModule newTrans)
+addCustomTrans :: ModifyModuleType -> String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addCustomTrans modifyModule transName fromState toState guards updates = do
+  world <- get
+  mod <- modifyModule id
+  let newTrans = newCustomTrans (stateVar mod) transName fromState toState guards updates
+  _ <- modifyModule (addTransToModule newTrans)
   return ()
 
 addTransToModule :: Trans -> Module -> Module
@@ -219,7 +238,7 @@ addTransToModule tr mod =
   mod {transs = tr:(transs mod)}
 
 newCustomTrans :: String -> String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> Trans
-newCustomTrans transName stateVar fromState toState guards updates =
+newCustomTrans stateVar transName fromState toState guards updates =
   (
     transName,
     (EEq (EVar (Ident stateVar)) (EInt fromState)):guards,
@@ -246,8 +265,9 @@ transferMoney from to maxTo value = do
     [EGe (EVar from) value, ELe (EAdd (EVar to) value) maxTo]
     [(from, ESub (EVar from) value), (to, EAdd (EVar to) value)]
 
-
+--------------------------------
 -- CODE GENERATION FROM WORLD --
+--------------------------------
 
 -- generates PRISM model code from VerWorld
 generatePrism :: VerWorld -> String
