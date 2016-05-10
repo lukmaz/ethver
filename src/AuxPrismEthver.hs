@@ -178,22 +178,52 @@ addTransP1 transName guards updates = do
 
 addCustomTransContr :: String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 addCustomTransContr transName fromState toState guards updates = do
-  world <- get
-  let newContrTranss = newCustomTrans transName "cstate" fromState toState guards updates
-  put (world {contrTranss = newContrTranss:(contrTranss world)})
+  addCustomTrans transName "cstate" fromState toState guards updates modifyContract
 
 addCustomTransP0 :: String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
-addCustomTransP0 transName fromState toState guards updates = do
-  world <- get
-  let newP0Transs = newCustomTrans transName "state0" fromState toState guards updates
-  put (world {p0Transs = newP0Transs:(p0Transs world)})
+addCustomTransP0 transName fromState toState guards updates = 
+  addCustomTrans transName "state0" fromState toState guards updates modifyPlayer0
 
 addCustomTransP1 :: String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
-addCustomTransP1 transName fromState toState guards updates = do
-  world <- get
-  let newP1Transs = newCustomTrans transName "state1" fromState toState guards updates
-  put (world {p1Transs = newP1Transs:(p1Transs world)})
+addCustomTransP1 transName fromState toState guards updates = 
+  addCustomTrans transName "state0" fromState toState guards updates modifyPlayer1
 
+addCustomTrans :: String -> String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> ((Module -> Module) -> VerRes ()) -> VerRes ()
+addCustomTrans transName stateVar fromState toState guards updates modifyFun = do
+  let newTrans = newCustomTrans transName stateVar fromState toState guards updates
+  modifyFun (addTransToModule newTrans)
+
+setCurrState :: Integer -> Module -> Module
+setCurrState curr mod = 
+  mod {currState = curr}
+
+setNumStates :: Integer -> Module -> Module
+setNumStates num mod =
+  mod {numStates = num}
+
+modifyBlockchain :: (Module -> Module) -> VerRes ()
+modifyBlockchain fun = do
+  world <- get
+  put (world {blockchain = fun $ blockchain world})
+
+modifyContract :: (Module -> Module) -> VerRes ()
+modifyContract fun = do
+  world <- get
+  put (world {contract = fun $ contract world})
+
+modifyPlayer0 :: (Module -> Module) -> VerRes ()
+modifyPlayer0 fun = do
+  world <- get
+  put (world {player0 = fun $ player0 world})
+
+modifyPlayer1 :: (Module -> Module) -> VerRes ()
+modifyPlayer1 fun = do
+  world <- get
+  put (world {player1 = fun $ player1 world})
+
+addTransToModule :: Trans -> Module -> Module
+addTransToModule tr mod = 
+  mod {transs = tr:(transs mod)}
 
 newCustomTrans :: String -> String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> Trans
 newCustomTrans transName stateVar fromState toState guards updates =
