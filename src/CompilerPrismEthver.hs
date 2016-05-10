@@ -42,7 +42,7 @@ verCoFun (Fun name args stms) = do
   -- TODO argumenty
   mapM_ addArg args
   -- TODO: czy tu musi być verCoStm?
-  mapM_ verScStm stms
+  mapM_ verCoStm stms
 
 
 addUser :: UserDecl -> VerRes ()
@@ -64,32 +64,111 @@ verScDecl (Dec typ ident) = do
   addP0Var typ ident
 
 -----------
+-- CoStm --
+-----------
+
+verCoStm :: Stm -> VerRes ()
+verCoStm (SExp exp) = do
+  _ <- verCoExp exp
+  return ()
+  
+verCoStm (SReturn exp) = do
+  evalExp <- verCoExp exp
+  world <- get
+  _ <- verCoExp (EAss (head $ returnVar world) evalExp)
+  return ()
+
+-- TODO: drugi gracz
+-- TODO: zrobić, żeby return wychodziło z wykonania bieżącej funkcji
+verCoStm (SIf cond ifBlock) = do
+  evalCond <- verCoExp cond
+  world <- get
+  let ifState = currStateP0 world
+  addTransP0
+    ""
+    [evalCond]
+    []
+  verCoStm ifBlock
+  world <- get
+  addCustomTransP0
+    ""
+    ifState
+    (currStateP0 world)
+    [negateExp evalCond]
+    []
+
+-- TODO: drugi gracz, kontrakt
+verCoStm (SIfElse cond ifBlock elseBlock) = do
+  evalCond <- verCoExp cond
+  world <- get
+  let ifState = currStateP0 world
+  addTransP0
+    ""
+    [evalCond]
+    []
+  verCoStm ifBlock
+  world <- get
+  let endIfState = currStateP0 world
+  addCustomTransP0
+    ""
+    ifState
+    (numStatesP0 world + 1)
+    [negateExp evalCond]
+    []
+  world <- get
+  put (world {currStateP0 = numStatesP0 world + 1, numStatesP0 = numStatesP0 world + 1})
+  verCoStm elseBlock
+  world <- get
+  addCustomTransP0
+    ""
+    (currStateP0 world)
+    endIfState
+    []
+    []
+  world <- get
+  put (world {currStateP0 = endIfState})
+  
+verCoStm (SBlock stms) = do
+  mapM_ verCoStm stms
+
+
+-----------
+-- CoExp --
+-----------
+
+-- TODO
+verCoExp :: Exp -> VerRes Exp
+verCoExp exp = verScExp exp
+
+-----------
 -- ScStm --
 -----------
 
 verScStm :: Stm -> VerRes ()
 verScStm (SExp exp) = do
-  _ <- verExp exp
+  _ <- verScExp exp
   return ()
   
 verScStm (SReturn exp) = do
-  evalExp <- verExp exp
+  evalExp <- verScExp exp
   world <- get
-  _ <- verExp (EAss (head $ returnVar world) evalExp)
+  _ <- verScExp (EAss (head $ returnVar world) evalExp)
   return ()
 
 -- TODO: drugi gracz
 -- TODO: zrobić, żeby return wychodziło z wykonania bieżącej funkcji
 verScStm (SIf cond ifBlock) = do
-  evalCond <- verExp cond
+  evalCond <- verScExp cond
   world <- get
   let ifState = currStateP0 world
   addTransP0
+    ""
     [evalCond]
     []
   verScStm ifBlock
   world <- get
   addCustomTransP0
+    ""
     ifState
     (currStateP0 world)
     [negateExp evalCond]
@@ -97,16 +176,18 @@ verScStm (SIf cond ifBlock) = do
 
 -- TODO: drugi gracz, kontrakt
 verScStm (SIfElse cond ifBlock elseBlock) = do
-  evalCond <- verExp cond
+  evalCond <- verScExp cond
   world <- get
   let ifState = currStateP0 world
   addTransP0
+    ""
     [evalCond]
     []
   verScStm ifBlock
   world <- get
   let endIfState = currStateP0 world
   addCustomTransP0
+    ""
     ifState
     (numStatesP0 world + 1)
     [negateExp evalCond]
@@ -116,6 +197,7 @@ verScStm (SIfElse cond ifBlock elseBlock) = do
   verScStm elseBlock
   world <- get
   addCustomTransP0
+    ""
     (currStateP0 world)
     endIfState
     []
@@ -130,58 +212,58 @@ verScStm (SBlock stms) = do
 -- Exp --
 -----------
 
-verExp :: Exp -> VerRes Exp
+verScExp :: Exp -> VerRes Exp
 
-verExp (EEq exp1 exp2) = verMathExp (EEq exp1 exp2)
-verExp (EAdd exp1 exp2) = verMathExp (EAdd exp1 exp2)
-verExp (ESub exp1 exp2) = verMathExp (ESub exp1 exp2)
-verExp (EMul exp1 exp2) = verMathExp (EMul exp1 exp2)
-verExp (EDiv exp1 exp2) = verMathExp (EDiv exp1 exp2)
-verExp (EMod exp1 exp2) = verMathExp (EMod exp1 exp2)
+verScExp (EEq exp1 exp2) = verScMathExp (EEq exp1 exp2)
+verScExp (EAdd exp1 exp2) = verScMathExp (EAdd exp1 exp2)
+verScExp (ESub exp1 exp2) = verScMathExp (ESub exp1 exp2)
+verScExp (EMul exp1 exp2) = verScMathExp (EMul exp1 exp2)
+verScExp (EDiv exp1 exp2) = verScMathExp (EDiv exp1 exp2)
+verScExp (EMod exp1 exp2) = verScMathExp (EMod exp1 exp2)
 
-verExp (EAss ident exp) = verValExp (EAss ident exp)
-verExp (EVar ident) = verValExp (EVar ident)
-verExp EValue = verValExp EValue
-verExp ESender = verValExp ESender
-verExp (EInt x) = verValExp (EInt x)
-verExp (EStr s) = verValExp (EStr s)
+verScExp (EAss ident exp) = verScValExp (EAss ident exp)
+verScExp (EVar ident) = verScValExp (EVar ident)
+verScExp EValue = verScValExp EValue
+verScExp ESender = verScValExp ESender
+verScExp (EInt x) = verScValExp (EInt x)
+verScExp (EStr s) = verScValExp (EStr s)
 
-verExp (ECall idents exps) = verCallExp (ECall idents exps)
-verExp (ESend receiver args) = verCallExp (ESend receiver args)
+verScExp (ECall idents exps) = verScCallExp (ECall idents exps)
+verScExp (ESend receiver args) = verScCallExp (ESend receiver args)
 
 
 -------------
 -- MathExp --
 -------------
 
-verMathExp (EEq exp1 exp2) = do
-  evalExp1 <- verExp exp1
-  evalExp2 <- verExp exp2
+verScMathExp (EEq exp1 exp2) = do
+  evalExp1 <- verScExp exp1
+  evalExp2 <- verScExp exp2
   return (EEq evalExp1 evalExp2)
 
-verMathExp (EAdd exp1 exp2) = do
-  evalExp1 <- verExp exp1
-  evalExp2 <- verExp exp2
+verScMathExp (EAdd exp1 exp2) = do
+  evalExp1 <- verScExp exp1
+  evalExp2 <- verScExp exp2
   return (EAdd evalExp1 evalExp2)
 
-verMathExp (ESub exp1 exp2) = do
-  evalExp1 <- verExp exp1
-  evalExp2 <- verExp exp2
+verScMathExp (ESub exp1 exp2) = do
+  evalExp1 <- verScExp exp1
+  evalExp2 <- verScExp exp2
   return (ESub evalExp1 evalExp2)
 
-verMathExp (EMul exp1 exp2) = do
-  evalExp1 <- verExp exp1
-  evalExp2 <- verExp exp2
+verScMathExp (EMul exp1 exp2) = do
+  evalExp1 <- verScExp exp1
+  evalExp2 <- verScExp exp2
   return (EMul evalExp1 evalExp2)
 
-verMathExp (EDiv exp1 exp2) = do
-  evalExp1 <- verExp exp1
-  evalExp2 <- verExp exp2
+verScMathExp (EDiv exp1 exp2) = do
+  evalExp1 <- verScExp exp1
+  evalExp2 <- verScExp exp2
   return (EDiv evalExp1 evalExp2)
 
-verMathExp (EMod exp1 exp2) = do
-  evalExp1 <- verExp exp1
-  evalExp2 <- verExp exp2
+verScMathExp (EMod exp1 exp2) = do
+  evalExp1 <- verScExp exp1
+  evalExp2 <- verScExp exp2
   return (EMod evalExp1 evalExp2)
 
 
@@ -191,17 +273,18 @@ verMathExp (EMod exp1 exp2) = do
 
 -- TODO: automatyczna generacja standardowego przejścia na nast. stan
 -- TODO: na razie tylko P0
-verValExp (EAss ident exp) = do
-  evalExp <- verExp exp
+verScValExp (EAss ident exp) = do
+  evalExp <- verScExp exp
   world <- get
   minV <- minValue ident
   maxV <- maxValue ident
   addTransP0 
+    ""
     [EGe evalExp (EInt minV), ELe evalExp (EInt maxV)]
     [(ident, evalExp)]
   return (EAss ident evalExp)
 
-verValExp (EVar ident) = do
+verScValExp (EVar ident) = do
   world <- get
   case Map.lookup ident (contrGlobVars world) of
     Just exp ->
@@ -219,16 +302,16 @@ verValExp (EVar ident) = do
                 Just exp ->
                   return (EVar ident)
 
-verValExp EValue = do
+verScValExp EValue = do
   return EValue
 
-verValExp ESender = do
+verScValExp ESender = do
   return ESender
 
-verValExp (EInt x) =
+verScValExp (EInt x) =
   return (EInt x)
 
-verValExp (EStr s) = do
+verScValExp (EStr s) = do
   number <- getAddressNumber s
   addProps ("getAddress Number " ++ s ++ " = " ++ (show number) ++ "\n")
   return (EInt number)
@@ -239,18 +322,18 @@ verValExp (EStr s) = do
 ----------------
 
 -- TODO: na razie możemy mieć tylko jeden kontrakt
-verCallExp (ECall idents exps) = do
+verScCallExp (ECall idents exps) = do
   case idents of
     [funName, (Ident "sendTransaction")] -> do 
-      verSendTAux funName exps
+      verScSendTAux funName exps
       return (ECall idents exps)
     [funName, (Ident "call")] -> do
-      verCallAux funName exps
+      verScCallAux funName exps
 
-verCallExp (ESend receiverExp args) = do
+verScCallExp (ESend receiverExp args) = do
   case args of
     [AExp val] -> do
-      receiverEval <- verExp receiverExp
+      receiverEval <- verScExp receiverExp
       case receiverEval of
         EStr receiverAddress -> do
           receiverNumber <- getAddressNumber receiverAddress
@@ -265,14 +348,14 @@ verCallExp (ESend receiverExp args) = do
 -- Call --
 
 -- TODO: chyba powinno być najpierw kopiowanie coVars i scVars (?) na lokalne
-verCallAux :: Ident -> [CallArg] -> VerRes Exp
-verCallAux funName argsVals = do
+verScCallAux :: Ident -> [CallArg] -> VerRes Exp
+verScCallAux funName argsVals = do
   world <- get
   case Map.lookup funName (funs world) of
-    Just fun -> verFunCall fun argsVals
+    Just fun -> verScFunCall fun argsVals
 
-verFunCall :: Function -> [CallArg] -> VerRes Exp
-verFunCall (FunR name args ret stms) argsVals = do
+verScFunCall :: Function -> [CallArg] -> VerRes Exp
+verScFunCall (FunR name args ret stms) argsVals = do
   let expArgsVals = map (\(AExp exp) -> exp) argsVals
   mapM_ addArgMap $ zip args expArgsVals
   let retVarIdent = Ident ((prismShowIdent name) ++ "_retVal")
@@ -285,17 +368,17 @@ verFunCall (FunR name args ret stms) argsVals = do
 
 -- ScSendT --
 
-verSendTAux :: Ident -> [CallArg] -> VerRes ()
-verSendTAux funName argsVals = do
+verScSendTAux :: Ident -> [CallArg] -> VerRes ()
+verScSendTAux funName argsVals = do
   world <- get
   case Map.lookup funName (funs world) of
-    Just fun -> verFunSendT fun argsVals
+    Just fun -> verScFunSendT fun argsVals
 
 -- TODO: nie działają zagnieżdżone funkcje. 
 -- Chyba musi być wielopoziomowy argMap
 -- To jest wersja dla sendTransaction, dla call powinno być co innego
-verFunSendT :: Function -> [CallArg] -> VerRes ()
-verFunSendT (Fun name args stms) argsVals = do
+verScFunSendT :: Function -> [CallArg] -> VerRes ()
+verScFunSendT (Fun name args stms) argsVals = do
   let expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
   let (ABra sender value) = last argsVals
   mapM_ addArgMap $ zip args expArgsVals
@@ -314,8 +397,8 @@ verFunSendT (Fun name args stms) argsVals = do
   --removeValue
   --removeSender
 
-verFunSendT (FunR name args ret stms) argsVals =
-  verFunSendT (Fun name args stms) argsVals
+verScFunSendT (FunR name args ret stms) argsVals =
+  verScFunSendT (Fun name args stms) argsVals
 
 
 addArg :: Arg -> VerRes ()
@@ -325,5 +408,5 @@ addArg (Ar typ ident) = do
 
 addArgMap :: (Arg, Exp) -> VerRes ()
 addArgMap ((Ar typ ident), exp) = do
-  verExp (EAss ident exp)
+  verScExp (EAss ident exp)
   return ()

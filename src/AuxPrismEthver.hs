@@ -36,7 +36,7 @@ data VerWorld = VerWorld {
   p1Transs :: [Trans]
   }
 
-type Trans = ([Exp], [(Ident, Exp)])
+type Trans = (String, [Exp], [(Ident, Exp)])
 
 
 -- INITIALIZATION --
@@ -94,70 +94,6 @@ addFun (FunR name args retTyp stms) = do
   put (world {funs = Map.insert name (FunR name args retTyp stms) (funs world)})
 -}
 
-
-
--- TODO: Na razie mamy jedną uniwersalną zmienną na argument
-
-{-
-addArg :: Ident -> Arg -> VerRes ()
-addArg (Ident funName) arg = do
-  case arg of
-    (Ar typ (Ident varName)) -> do
-      -- TODO: na pewno ten typ zmiennych?
-      addContrGlobVar typ (Ident (funName ++ "_" ++ varName))
--}
-
-
--- Może zrobić unikalne nazwy zmiennych będących argumentami funkcji?
--- Chyba wystarczy zrobić stos map, żeby działało zagnieżdżanie wywołań
-
-{-addArgMap :: [Arg] -> [Exp] -> VerRes ()
-addArgMap args argsVals = do
-  world <- get
-  put (world {argMap = Map.fromList $ zip argsNames argsVals})
-  where argsNames = map (\(Ar typ ident) -> ident) args
-
-clearArgMap :: VerRes ()
-clearArgMap = do
-  world <- get
-  put (world {argMap = Map.empty})
--}
-
-{-
-addSender :: Exp -> VerRes ()
-addSender newSender = do
-  world <- get
-  put (world {sender = newSender:(sender world)})
-
-getSender :: VerRes Exp
-getSender = do
-  world <- get
-  return $ head $ sender world
-
-removeSender :: VerRes ()
-removeSender = do
-  world <- get
-  put (world {sender = tail $ sender world})
--}
-
-{-
-addValue :: Exp -> VerRes ()
-addValue newValue = do
-  world <- get
-  put (world {value = newValue:(value world)})
-
-getValue :: VerRes Exp
-getValue = do
-  world <- get
-  return $ head $ value world
-
-removeValue :: VerRes ()
-removeValue = do
-  world <- get
-  put (world {value = tail $ value world})
--}
-
-
 addAddress :: String -> VerRes ()
 addAddress str = do
   world <- get
@@ -198,60 +134,61 @@ removeReturnVar = do
 -----------
 
 --TODO: wyodrebnic +1 w curr i numStates do nowej funkcji nextState czy cos
-addTransContr :: [Exp] -> [(Ident, Exp)] -> VerRes ()
-addTransContr guards updates = do
+addTransContr :: String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addTransContr transName guards updates = do
   world <- get
-  addCustomTransContr (currStateContr world) (numStatesContr world + 1) guards updates
+  addCustomTransContr transName (currStateContr world) (numStatesContr world + 1) guards updates
   world <- get
   put (world {
     currStateContr = (numStatesContr world) + 1, 
     numStatesContr = (numStatesContr world) + 1
     })
 
-addTransP0 :: [Exp] -> [(Ident, Exp)] -> VerRes ()
-addTransP0 guards updates = do
+addTransP0 :: String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addTransP0 transName guards updates = do
   world <- get
-  addCustomTransP0 (currStateP0 world) (numStatesP0 world + 1) guards updates
+  addCustomTransP0 transName (currStateP0 world) (numStatesP0 world + 1) guards updates
   world <- get
   put (world {
     currStateP0 = (numStatesP0 world) + 1, 
     numStatesP0 = (numStatesP0 world) + 1
     })
 
-addTransP1 :: [Exp] -> [(Ident, Exp)] -> VerRes ()
-addTransP1 guards updates = do
+addTransP1 :: String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addTransP1 transName guards updates = do
   world <- get
-  addCustomTransP1 (currStateP1 world) (numStatesP1 world + 1) guards updates
+  addCustomTransP1 transName (currStateP1 world) (numStatesP1 world + 1) guards updates
   world <- get
   put (world {
     currStateP1 = (numStatesP1 world) + 1, 
     numStatesP1 = (numStatesP1 world) + 1
     })
 
-addCustomTransContr :: Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
-addCustomTransContr fromState toState guards updates = do
+addCustomTransContr :: String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addCustomTransContr transName fromState toState guards updates = do
   world <- get
-  let newContrTranss = newCustomTrans "cstate" fromState toState guards updates
+  let newContrTranss = newCustomTrans transName "cstate" fromState toState guards updates
   put (world {contrTranss = newContrTranss:(contrTranss world)})
 
-addCustomTransP0 :: Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
-addCustomTransP0 fromState toState guards updates = do
+addCustomTransP0 :: String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addCustomTransP0 transName fromState toState guards updates = do
   world <- get
-  let newP0Transs = newCustomTrans "state0" fromState toState guards updates
+  let newP0Transs = newCustomTrans transName "state0" fromState toState guards updates
   put (world {p0Transs = newP0Transs:(p0Transs world)})
 
-addCustomTransP1 :: Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
-addCustomTransP1 fromState toState guards updates = do
+addCustomTransP1 :: String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addCustomTransP1 transName fromState toState guards updates = do
   world <- get
-  let newP1Transs = newCustomTrans "state1" fromState toState guards updates
+  let newP1Transs = newCustomTrans transName "state1" fromState toState guards updates
   put (world {p1Transs = newP1Transs:(p1Transs world)})
 
 
-newCustomTrans :: String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> Trans
-newCustomTrans stateVar fromState toState guards updates =
+newCustomTrans :: String -> String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> Trans
+newCustomTrans transName stateVar fromState toState guards updates =
   (
-    ((EEq (EVar (Ident stateVar)) (EInt fromState)):guards,
-    (Ident stateVar, EInt toState):updates)
+    transName,
+    (EEq (EVar (Ident stateVar)) (EInt fromState)):guards,
+    (Ident stateVar, EInt toState):updates
   )
 
 ---------------------
@@ -270,6 +207,7 @@ transferFromContract to value = do
 transferMoney :: Ident -> Ident -> Exp -> Exp -> VerRes ()
 transferMoney from to maxTo value = do
   addTransContr
+    ""
     [EGe (EVar from) value, ELe (EAdd (EVar to) value) maxTo]
     [(from, ESub (EVar from) value), (to, EAdd (EVar to) value)]
 
@@ -327,14 +265,14 @@ prismTranss transs =
     transs
   
 prismTrans :: Trans -> String
-prismTrans (guards, updates) =
-  prismGuards guards ++ "  ->\n" ++ prismUpdates updates ++ ";\n"
+prismTrans (transName, guards, updates) =
+  "[" ++ transName ++ "] " ++ (prismGuards guards) ++ "  ->\n" ++ prismUpdates updates ++ ";\n"
 
 prismGuards :: [Exp] -> String
 prismGuards [] = ""
 
 prismGuards (h:t) = 
-  "[] (" ++ prismShowExp h ++ ")\n" ++
+  "(" ++ prismShowExp h ++ ")\n" ++
     foldl 
       (\acc exp -> acc ++ " & (" ++ (prismShowExp exp) ++ ")\n")
       ""
