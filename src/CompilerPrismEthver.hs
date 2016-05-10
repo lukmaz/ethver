@@ -84,7 +84,8 @@ verCoStm (SIf cond ifBlock) = do
   evalCond <- verCoExp cond
   world <- get
   let ifState = currStateP0 world
-  addTransP0
+  --TODO: P0
+  addTransToNewStateP0
     ""
     [evalCond]
     []
@@ -102,7 +103,8 @@ verCoStm (SIfElse cond ifBlock elseBlock) = do
   evalCond <- verCoExp cond
   world <- get
   let ifState = currStateP0 world
-  addTransP0
+  --TODO: P0
+  addTransToNewStateP0
     ""
     [evalCond]
     []
@@ -161,7 +163,8 @@ verScStm (SIf cond ifBlock) = do
   evalCond <- verScExp cond
   world <- get
   let ifState = currStateP0 world
-  addTransP0
+  --TODO: P0
+  addTransToNewStateP0
     ""
     [evalCond]
     []
@@ -179,7 +182,8 @@ verScStm (SIfElse cond ifBlock elseBlock) = do
   evalCond <- verScExp cond
   world <- get
   let ifState = currStateP0 world
-  addTransP0
+  --TODO: P0
+  addTransToNewStateP0
     ""
     [evalCond]
     []
@@ -278,7 +282,8 @@ verScValExp (EAss ident exp) = do
   world <- get
   minV <- minValue ident
   maxV <- maxValue ident
-  addTransP0 
+  --TODO: P0
+  addTransToNewStateP0 
     ""
     [EGe evalExp (EInt minV), ELe evalExp (EInt maxV)]
     [(ident, evalExp)]

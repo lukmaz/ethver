@@ -146,35 +146,25 @@ removeReturnVar = do
 -----------
 
 --TODO: wyodrebnic +1 w curr i numStates do nowej funkcji nextState czy cos
-addTransContr :: String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
-addTransContr transName guards updates = do
-  world <- get
-  addCustomTransContr transName (currStateContr world) (numStatesContr world + 1) guards updates
-  world <- get
-  put (world {
-    currStateContr = (numStatesContr world) + 1, 
-    numStatesContr = (numStatesContr world) + 1
-    })
+addTransToNewStateContr :: String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addTransToNewStateContr transName guards updates =
+  addTransToNewState transName "cstate" guards updates contract modifyContract
 
-addTransP0 :: String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
-addTransP0 transName guards updates = do
-  world <- get
-  addCustomTransP0 transName (currStateP0 world) (numStatesP0 world + 1) guards updates
-  world <- get
-  put (world {
-    currStateP0 = (numStatesP0 world) + 1, 
-    numStatesP0 = (numStatesP0 world) + 1
-    })
+addTransToNewStateP0 :: String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addTransToNewStateP0 transName guards updates =
+  addTransToNewState transName "state0" guards updates player0 modifyPlayer0
 
-addTransP1 :: String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
-addTransP1 transName guards updates = do
+addTransToNewStateP1 :: String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addTransToNewStateP1 transName guards updates =
+  addTransToNewState transName "state1" guards updates player1 modifyPlayer1
+
+addTransToNewState :: String -> String -> [Exp] -> [(Ident, Exp)] -> (VerWorld -> Module) -> ((Module -> Module) -> VerRes ()) -> VerRes ()
+addTransToNewState transName stateVar guards updates moduleName modifyModuleFun = do
   world <- get
-  addCustomTransP1 transName (currStateP1 world) (numStatesP1 world + 1) guards updates
-  world <- get
-  put (world {
-    currStateP1 = (numStatesP1 world) + 1, 
-    numStatesP1 = (numStatesP1 world) + 1
-    })
+  let newState = numStates (moduleName world) + 1
+  addCustomTrans transName stateVar (currState $ moduleName world) newState guards updates modifyModuleFun
+  modifyModuleFun (setCurrState newState)
+  modifyModuleFun (setNumStates newState)
 
 addCustomTransContr :: String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 addCustomTransContr transName fromState toState guards updates = do
@@ -186,12 +176,12 @@ addCustomTransP0 transName fromState toState guards updates =
 
 addCustomTransP1 :: String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 addCustomTransP1 transName fromState toState guards updates = 
-  addCustomTrans transName "state0" fromState toState guards updates modifyPlayer1
+  addCustomTrans transName "state1" fromState toState guards updates modifyPlayer1
 
 addCustomTrans :: String -> String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> ((Module -> Module) -> VerRes ()) -> VerRes ()
-addCustomTrans transName stateVar fromState toState guards updates modifyFun = do
+addCustomTrans transName stateVar fromState toState guards updates modifyModuleFun = do
   let newTrans = newCustomTrans transName stateVar fromState toState guards updates
-  modifyFun (addTransToModule newTrans)
+  modifyModuleFun (addTransToModule newTrans)
 
 setCurrState :: Integer -> Module -> Module
 setCurrState curr mod = 
@@ -248,7 +238,7 @@ transferFromContract to value = do
 
 transferMoney :: Ident -> Ident -> Exp -> Exp -> VerRes ()
 transferMoney from to maxTo value = do
-  addTransContr
+  addTransToNewStateContr
     ""
     [EGe (EVar from) value, ELe (EAdd (EVar to) value) maxTo]
     [(from, ESub (EVar from) value), (to, EAdd (EVar to) value)]
@@ -271,23 +261,23 @@ generatePrism world =
   ";\n\n" ++
   "\nmodule blockchain\n" ++
   (prismVars $ bcVars world) ++
-  prismTranss (reverse $ bcTranss world) ++
+  prismTranss (reverse $ transs $ blockchain world) ++
   "endmodule\n" ++
   "\nmodule contract\n" ++
   "cstate : [1..NUM_STATES_CONTR];\n" ++
   (prismVars $ contrGlobVars world) ++
   (prismVars $ contrLocVars world) ++
-  prismTranss (reverse $ contrTranss world) ++
+  prismTranss (reverse $ transs $ contract world) ++
   "endmodule\n" ++
   "\nmodule player0\n" ++
   "state0 : [1..NUM_STATES_P0];\n" ++
   (prismVars $ p0Vars world) ++
-  prismTranss (reverse $ p0Transs world) ++
+  prismTranss (reverse $ transs $ player0 world) ++
   "endmodule\n" ++
   "\nmodule player1\n" ++
   "state1 : [1..NUM_STATES_P1];\n" ++
   (prismVars $ p1Vars world) ++
-  prismTranss (reverse $ p1Transs world) ++
+  prismTranss (reverse $ transs $ player1 world) ++
   "endmodule"
 
 prismVars :: Map.Map Ident Type -> String
