@@ -146,13 +146,14 @@ addTransToNewStateP1 :: String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 addTransToNewStateP1 transName guards updates =
   addTransToNewState transName "state1" guards updates player1 modifyPlayer1
 
-addTransToNewState :: String -> String -> [Exp] -> [(Ident, Exp)] -> (VerWorld -> Module) -> ((Module -> Module) -> VerRes ()) -> VerRes ()
+addTransToNewState :: String -> String -> [Exp] -> [(Ident, Exp)] -> (VerWorld -> Module) -> ((Module -> Module) -> VerRes Module) -> VerRes ()
 addTransToNewState transName stateVar guards updates moduleName modifyModuleFun = do
   world <- get
   let newState = numStates (moduleName world) + 1
   addCustomTrans transName stateVar (currState $ moduleName world) newState guards updates modifyModuleFun
-  modifyModuleFun (setCurrState newState)
-  modifyModuleFun (setNumStates newState)
+  _ <- modifyModuleFun (setCurrState newState)
+  _ <- modifyModuleFun (setNumStates newState)
+  return ()
 
 addCustomTransContr :: String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 addCustomTransContr transName fromState toState guards updates = do
@@ -166,10 +167,11 @@ addCustomTransP1 :: String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> V
 addCustomTransP1 transName fromState toState guards updates = 
   addCustomTrans transName "state1" fromState toState guards updates modifyPlayer1
 
-addCustomTrans :: String -> String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> ((Module -> Module) -> VerRes ()) -> VerRes ()
+addCustomTrans :: String -> String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> ((Module -> Module) -> VerRes Module) -> VerRes ()
 addCustomTrans transName stateVar fromState toState guards updates modifyModuleFun = do
   let newTrans = newCustomTrans transName stateVar fromState toState guards updates
-  modifyModuleFun (addTransToModule newTrans)
+  _ <- modifyModuleFun (addTransToModule newTrans)
+  return ()
 
 setCurrState :: Integer -> Module -> Module
 setCurrState curr mod = 
@@ -179,25 +181,33 @@ setNumStates :: Integer -> Module -> Module
 setNumStates num mod =
   mod {numStates = num}
 
-modifyBlockchain :: (Module -> Module) -> VerRes ()
+modifyBlockchain :: (Module -> Module) -> VerRes Module
 modifyBlockchain fun = do
   world <- get
   put (world {blockchain = fun $ blockchain world})
+  world <- get
+  return $ blockchain world
 
-modifyContract :: (Module -> Module) -> VerRes ()
+modifyContract :: (Module -> Module) -> VerRes Module
 modifyContract fun = do
   world <- get
   put (world {contract = fun $ contract world})
+  world <- get
+  return $ contract world
 
-modifyPlayer0 :: (Module -> Module) -> VerRes ()
+modifyPlayer0 :: (Module -> Module) -> VerRes Module
 modifyPlayer0 fun = do
   world <- get
   put (world {player0 = fun $ player0 world})
+  world <- get
+  return $ player0 world
 
-modifyPlayer1 :: (Module -> Module) -> VerRes ()
+modifyPlayer1 :: (Module -> Module) -> VerRes Module
 modifyPlayer1 fun = do
   world <- get
   put (world {player1 = fun $ player1 world})
+  world <- get
+  return $ player1 world
 
 addTransToModule :: Trans -> Module -> Module
 addTransToModule tr mod = 

@@ -140,7 +140,8 @@ verCoStm (SIfElse cond ifBlock elseBlock) = do
     []
     []
   -- TODO: P0
-  modifyPlayer0 (setCurrState endIfState)
+  _ <- modifyPlayer0 (setCurrState endIfState)
+  return ()
   
 verCoStm (SBlock stms) = do
   mapM_ verCoStm stms
@@ -227,7 +228,8 @@ verScStm (SIfElse cond ifBlock elseBlock) = do
     []
     []
   -- TODO: P0
-  modifyPlayer0 (setCurrState endIfState)
+  _ <- modifyPlayer0 (setCurrState endIfState)
+  return ()
   
 verScStm (SBlock stms) = do
   mapM_ verScStm stms
