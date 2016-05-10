@@ -33,7 +33,7 @@ verContract (Contr name users decls funs) = do
 -- TODO: globalne, nieglobalne
 verCoDecl :: Decl -> VerRes ()
 verCoDecl (Dec typ ident) = do
-  addContrGlobVar typ ident
+  addContrVar typ ident
 
 verCoFun :: Function -> VerRes ()
 verCoFun (Fun name args stms) = do
@@ -341,19 +341,19 @@ verValExp modifyModule (EAss ident exp) = do
 
 verValExp modifyModule (EVar ident) = do
   world <- get
-  case Map.lookup ident (contrGlobVars world) of
+  case Map.lookup ident (vars $ blockchain world) of
     Just exp ->
       return (EVar ident)
     Nothing ->
-      case Map.lookup ident (contrLocVars world) of
+      case Map.lookup ident (vars $ contract world) of
         Just exp ->
           return (EVar ident)
         Nothing ->
-          case Map.lookup ident (p0Vars world) of
+          case Map.lookup ident (vars $ player0 world) of
             Just exp ->
               return (EVar ident)
             Nothing ->
-              case Map.lookup ident (p1Vars world) of
+              case Map.lookup ident (vars $ player1 world) of
                 Just exp ->
                   return (EVar ident)
 

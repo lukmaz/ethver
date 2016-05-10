@@ -15,11 +15,6 @@ type ModifyModuleType = (Module -> Module) -> VerRes Module
 
 data VerWorld = VerWorld {
   props :: String,
-  bcVars :: Map.Map Ident Type,
-  contrGlobVars :: Map.Map Ident Type,
-  contrLocVars :: Map.Map Ident Type,
-  p0Vars :: Map.Map Ident Type,
-  p1Vars :: Map.Map Ident Type,
   funs :: Map.Map Ident Function,
   addresses :: Map.Map Integer Ident,
   numbers :: Map.Map String Integer,
@@ -33,6 +28,7 @@ data VerWorld = VerWorld {
 data Module = Module {
   stateVar :: String,
   vars :: Map.Map Ident Type,
+  --TODO: local variables in contract
   currState :: Integer,
   numStates :: Integer,
   transs :: [Trans]
@@ -45,11 +41,6 @@ data Module = Module {
 emptyVerWorld :: VerWorld
 emptyVerWorld = VerWorld {
   props = "", 
-  contrGlobVars = Map.empty, 
-  bcVars = Map.empty,
-  contrLocVars = Map.empty, 
-  p0Vars = Map.empty, 
-  p1Vars = Map.empty,
   funs = Map.empty, 
   addresses = Map.empty, 
   numbers = Map.empty, 
@@ -63,50 +54,33 @@ emptyVerWorld = VerWorld {
 emptyModule :: Module
 emptyModule = Module {stateVar = "emptyState", vars = Map.empty, currState = 1, numStates = 1, transs = []}
 
+------------------------
 -- WORLD MODIFICATION --
+------------------------
 
 addProps :: String -> VerRes ()
 addProps text = do
   world <- get
   put (world {props = (props world) ++ text})
 
+-- TODO: czy te 4 funkcje są potrzebne?
 addBcVar :: Type -> Ident -> VerRes ()
-addBcVar typ ident = do
-  world <- get
-  put (world {bcVars = Map.insert ident typ (bcVars world)})
+addBcVar = addVar modifyBlockchain
 
-addContrGlobVar :: Type -> Ident -> VerRes ()
-addContrGlobVar typ ident = do
-  world <- get
-  put (world {contrGlobVars = Map.insert ident typ (contrGlobVars world)})
-
-addContrLocVar :: Type -> Ident -> VerRes ()
-addContrLocVar typ ident = do
-  world <- get
-  put (world {contrLocVars = Map.insert ident typ (contrLocVars world)})
+addContrVar :: Type -> Ident -> VerRes ()
+addContrVar = addVar modifyContract
 
 addP0Var :: Type -> Ident -> VerRes ()
-addP0Var typ ident = do
-  world <- get
-  put (world {p0Vars = Map.insert ident typ (p0Vars world)})
+addP0Var = addVar modifyPlayer0
 
 addP1Var :: Type -> Ident -> VerRes ()
-addP1Var typ ident = do
-  world <- get
-  put (world {p1Vars = Map.insert ident typ (p1Vars world)})
+addP1Var = addVar modifyPlayer1
 
--- TODO: ograniczyć deklaracje zmiennych tylko na początek funkcji
--- i tutaj dodać wszystkie deklaracje do loVars
-{-addFun :: Function -> VerRes ()
-addFun (Fun name args stms) = do
-  world <- get
-  put (world {funs = Map.insert name (Fun name args stms) (funs world)})
-
-addFun (FunR name args retTyp stms) = do
-  addLoVar retTyp (Ident (prismShowIdent name ++ "_retVal"))
-  world <- get
-  put (world {funs = Map.insert name (FunR name args retTyp stms) (funs world)})
--}
+-- General addVar
+addVar :: ModifyModuleType -> Type -> Ident -> VerRes ()
+addVar modifyModule typ ident = do
+  _ <- modifyModule (addVarToModule typ ident)
+  return ()
 
 addAddress :: String -> VerRes ()
 addAddress str = do
@@ -155,6 +129,10 @@ setNumStates :: Integer -> Module -> Module
 setNumStates num mod =
   mod {numStates = num}
 
+addVarToModule :: Type -> Ident -> Module -> Module
+addVarToModule typ ident mod = do
+  mod {vars = Map.insert ident typ (vars mod)}
+
 modifyBlockchain :: (Module -> Module) -> VerRes Module
 modifyBlockchain fun = do
   world <- get
@@ -188,20 +166,6 @@ modifyPlayer1 fun = do
 -- Trans --
 -----------
 
---TODO: wyodrebnic +1 w curr i numStates do nowej funkcji nextState czy cos
---TODO: te 3 funkcje chyba do wywalenia
-addTransToNewStateContr :: String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
-addTransToNewStateContr transName guards updates =
-  addTransToNewState modifyContract transName guards updates
-
-addTransToNewStateP0 :: String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
-addTransToNewStateP0 transName guards updates =
-  addTransToNewState modifyPlayer0 transName guards updates
-
-addTransToNewStateP1 :: String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
-addTransToNewStateP1 transName guards updates =
-  addTransToNewState modifyPlayer1 transName guards updates
-
 addTransToNewState :: ModifyModuleType -> String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 addTransToNewState modifyModule transName guards updates = do
   world <- get
@@ -211,19 +175,6 @@ addTransToNewState modifyModule transName guards updates = do
   _ <- modifyModule (setCurrState newState)
   _ <- modifyModule (setNumStates newState)
   return ()
-
---TODO: te 3 funkcje chyba też do wywalenia
-addCustomTransContr :: String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
-addCustomTransContr transName fromState toState guards updates = do
-  addCustomTrans modifyContract transName fromState toState guards updates
-
-addCustomTransP0 :: String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
-addCustomTransP0 transName fromState toState guards updates = 
-  addCustomTrans modifyPlayer0 transName fromState toState guards updates
-
-addCustomTransP1 :: String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
-addCustomTransP1 transName fromState toState guards updates = 
-  addCustomTrans modifyPlayer1 transName fromState toState guards updates
 
 addCustomTrans :: ModifyModuleType -> String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 addCustomTrans modifyModule transName fromState toState guards updates = do
@@ -260,7 +211,9 @@ transferFromContract to value = do
 
 transferMoney :: Ident -> Ident -> Exp -> Exp -> VerRes ()
 transferMoney from to maxTo value = do
-  addTransToNewStateContr
+  addTransToNewState
+    --TODO: czy to przypadkiem nie ma być w BC?
+    modifyContract
     ""
     [EGe (EVar from) value, ELe (EAdd (EVar to) value) maxTo]
     [(from, ESub (EVar from) value), (to, EAdd (EVar to) value)]
@@ -283,23 +236,22 @@ generatePrism world =
   (show $ numStates $ player1 world) ++
   ";\n\n" ++
   "\nmodule blockchain\n" ++
-  (prismVars $ bcVars world) ++
+  (prismVars $ vars $ blockchain world) ++
   prismTranss (reverse $ transs $ blockchain world) ++
   "endmodule\n" ++
   "\nmodule contract\n" ++
   "cstate : [1..NUM_STATES_CONTR];\n" ++
-  (prismVars $ contrGlobVars world) ++
-  (prismVars $ contrLocVars world) ++
+  (prismVars $ vars $ contract world) ++
   prismTranss (reverse $ transs $ contract world) ++
   "endmodule\n" ++
   "\nmodule player0\n" ++
   "state0 : [1..NUM_STATES_P0];\n" ++
-  (prismVars $ p0Vars world) ++
+  (prismVars $ vars $ player0 world) ++
   prismTranss (reverse $ transs $ player0 world) ++
   "endmodule\n" ++
   "\nmodule player1\n" ++
   "state1 : [1..NUM_STATES_P1];\n" ++
-  (prismVars $ p1Vars world) ++
+  (prismVars $ vars $ player1 world) ++
   prismTranss (reverse $ transs $ player1 world) ++
   "endmodule"
 
@@ -423,16 +375,16 @@ prismShowExp (ECall (h:t) args) =
 findVarType :: Ident -> VerRes (Maybe Type)
 findVarType ident = do
   world <- get
-  case Map.lookup ident (contrGlobVars world) of
+  case Map.lookup ident (vars $ blockchain world) of
     Just typ -> return (Just typ)
     Nothing -> 
-      case Map.lookup ident (contrLocVars world) of
+      case Map.lookup ident (vars $ contract world) of
         Just typ -> return (Just typ)
         Nothing -> 
-          case Map.lookup ident (p0Vars world) of
+          case Map.lookup ident (vars $ player0 world) of
             Just typ -> return (Just typ)
             Nothing ->
-              case Map.lookup ident (p1Vars world) of
+              case Map.lookup ident (vars $ player1 world) of
                 Just typ -> return (Just typ)
                 Nothing -> return Nothing
 
