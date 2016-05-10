@@ -83,7 +83,8 @@ verCoStm (SReturn exp) = do
 verCoStm (SIf cond ifBlock) = do
   evalCond <- verCoExp cond
   world <- get
-  let ifState = currStateP0 world
+  -- TODO: P0
+  let ifState = currState $ player0 world
   --TODO: P0
   addTransToNewStateP0
     ""
@@ -91,10 +92,12 @@ verCoStm (SIf cond ifBlock) = do
     []
   verCoStm ifBlock
   world <- get
+  --TODO: P0
   addCustomTransP0
     ""
     ifState
-    (currStateP0 world)
+    --TODO: P0
+    (currState $ player0 world)
     [negateExp evalCond]
     []
 
@@ -102,7 +105,8 @@ verCoStm (SIf cond ifBlock) = do
 verCoStm (SIfElse cond ifBlock elseBlock) = do
   evalCond <- verCoExp cond
   world <- get
-  let ifState = currStateP0 world
+  -- TODO: P0
+  let ifState = currState $ player0 world
   --TODO: P0
   addTransToNewStateP0
     ""
@@ -110,25 +114,33 @@ verCoStm (SIfElse cond ifBlock elseBlock) = do
     []
   verCoStm ifBlock
   world <- get
-  let endIfState = currStateP0 world
+  -- TODO: P0
+  let endIfState = currState $ player0 world
+  -- TODO: P0
   addCustomTransP0
     ""
     ifState
-    (numStatesP0 world + 1)
+    -- TODO: P0
+    (numStates (player0 world) + 1)
     [negateExp evalCond]
     []
+  -- TODO: P0
   world <- get
-  put (world {currStateP0 = numStatesP0 world + 1, numStatesP0 = numStatesP0 world + 1})
+  let newState = numStates (player0 world) + 1
+  -- TODO: P0
+  modifyPlayer0 (setCurrState newState)
+  modifyPlayer0 (setNumStates newState)
   verCoStm elseBlock
   world <- get
   addCustomTransP0
     ""
-    (currStateP0 world)
+    -- TODO: P0
+    (currState $ player0 world)
     endIfState
     []
     []
-  world <- get
-  put (world {currStateP0 = endIfState})
+  -- TODO: P0
+  modifyPlayer0 (setCurrState endIfState)
   
 verCoStm (SBlock stms) = do
   mapM_ verCoStm stms
@@ -162,7 +174,8 @@ verScStm (SReturn exp) = do
 verScStm (SIf cond ifBlock) = do
   evalCond <- verScExp cond
   world <- get
-  let ifState = currStateP0 world
+  -- TODO: P0
+  let ifState = currState $ player0 world
   --TODO: P0
   addTransToNewStateP0
     ""
@@ -173,7 +186,8 @@ verScStm (SIf cond ifBlock) = do
   addCustomTransP0
     ""
     ifState
-    (currStateP0 world)
+    -- TODO: P0
+    (currState $ player0 world)
     [negateExp evalCond]
     []
 
@@ -181,7 +195,8 @@ verScStm (SIf cond ifBlock) = do
 verScStm (SIfElse cond ifBlock elseBlock) = do
   evalCond <- verScExp cond
   world <- get
-  let ifState = currStateP0 world
+  -- TODO: P0
+  let ifState = currState $ player0 world
   --TODO: P0
   addTransToNewStateP0
     ""
@@ -189,25 +204,30 @@ verScStm (SIfElse cond ifBlock elseBlock) = do
     []
   verScStm ifBlock
   world <- get
-  let endIfState = currStateP0 world
+  -- TODO: P0
+  let endIfState = currState $ player0 world
   addCustomTransP0
     ""
     ifState
-    (numStatesP0 world + 1)
+    (numStates (player0 world) + 1)
     [negateExp evalCond]
     []
   world <- get
-  put (world {currStateP0 = numStatesP0 world + 1, numStatesP0 = numStatesP0 world + 1})
+  -- TODO: P0
+  let newState = numStates (player0 world) + 1
+  modifyPlayer0 (setCurrState newState)
+  modifyPlayer0 (setNumStates newState)
   verScStm elseBlock
   world <- get
   addCustomTransP0
     ""
-    (currStateP0 world)
+    -- TODO: P0
+    (currState $ player0 world)
     endIfState
     []
     []
-  world <- get
-  put (world {currStateP0 = endIfState})
+  -- TODO: P0
+  modifyPlayer0 (setCurrState endIfState)
   
 verScStm (SBlock stms) = do
   mapM_ verScStm stms

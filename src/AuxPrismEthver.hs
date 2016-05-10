@@ -23,16 +23,6 @@ data VerWorld = VerWorld {
   addresses :: Map.Map Integer Ident,
   numbers :: Map.Map String Integer,
   returnVar :: [Ident],
-  currStateContr :: Integer,
-  numStatesContr :: Integer,
-  currStateP0 :: Integer,
-  numStatesP0 :: Integer,
-  currStateP1 :: Integer,
-  numStatesP1 :: Integer,
-  bcTranss :: [Trans],
-  contrTranss :: [Trans],
-  p0Transs :: [Trans],
-  p1Transs :: [Trans],
   blockchain :: Module,
   contract :: Module,
   player0 :: Module,
@@ -54,8 +44,6 @@ emptyVerWorld :: VerWorld
 emptyVerWorld = VerWorld {props = "", contrGlobVars = Map.empty, bcVars = Map.empty,
   contrLocVars = Map.empty, p0Vars = Map.empty, p1Vars = Map.empty,
   funs = Map.empty, addresses = Map.empty, numbers = Map.empty, returnVar = [], 
-  currStateContr = 1, numStatesContr = 1, currStateP0 = 1, numStatesP0 = 1, currStateP1 = 1, numStatesP1 = 1,
-  bcTranss = [], contrTranss = [], p0Transs = [], p1Transs = [],
   blockchain = emptyModule, contract = emptyModule, player0 = emptyModule, player1 = emptyModule}
 
 emptyModule :: Module
@@ -251,13 +239,13 @@ generatePrism :: VerWorld -> String
 generatePrism world = 
   "mdp\n\n" ++
   "const int NUM_STATES_CONTR = " ++
-  (show $ numStatesContr world) ++
+  (show $ numStates $ contract world) ++
   ";\n" ++
   "const int NUM_STATES_P0 = " ++
-  (show $ numStatesP0 world) ++
+  (show $ numStates $ player0 world) ++
   ";\n" ++
   "const int NUM_STATES_P1 = " ++
-  (show $ numStatesP1 world) ++
+  (show $ numStates $ player1 world) ++
   ";\n\n" ++
   "\nmodule blockchain\n" ++
   (prismVars $ bcVars world) ++
