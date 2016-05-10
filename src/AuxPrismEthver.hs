@@ -129,6 +129,47 @@ removeReturnVar = do
   put (world {returnVar = tail $ returnVar world})
 
 
+-------------------------
+-- Module modification --
+-------------------------
+
+setCurrState :: Integer -> Module -> Module
+setCurrState curr mod = 
+  mod {currState = curr}
+
+setNumStates :: Integer -> Module -> Module
+setNumStates num mod =
+  mod {numStates = num}
+
+modifyBlockchain :: (Module -> Module) -> VerRes Module
+modifyBlockchain fun = do
+  world <- get
+  put (world {blockchain = fun $ blockchain world})
+  world <- get
+  return $ blockchain world
+
+modifyContract :: (Module -> Module) -> VerRes Module
+modifyContract fun = do
+  world <- get
+  put (world {contract = fun $ contract world})
+  world <- get
+  return $ contract world
+
+modifyPlayer0 :: (Module -> Module) -> VerRes Module
+modifyPlayer0 fun = do
+  world <- get
+  put (world {player0 = fun $ player0 world})
+  world <- get
+  return $ player0 world
+
+modifyPlayer1 :: (Module -> Module) -> VerRes Module
+modifyPlayer1 fun = do
+  world <- get
+  put (world {player1 = fun $ player1 world})
+  world <- get
+  return $ player1 world
+
+
 -----------
 -- Trans --
 -----------
@@ -172,42 +213,6 @@ addCustomTrans transName stateVar fromState toState guards updates modifyModuleF
   let newTrans = newCustomTrans transName stateVar fromState toState guards updates
   _ <- modifyModuleFun (addTransToModule newTrans)
   return ()
-
-setCurrState :: Integer -> Module -> Module
-setCurrState curr mod = 
-  mod {currState = curr}
-
-setNumStates :: Integer -> Module -> Module
-setNumStates num mod =
-  mod {numStates = num}
-
-modifyBlockchain :: (Module -> Module) -> VerRes Module
-modifyBlockchain fun = do
-  world <- get
-  put (world {blockchain = fun $ blockchain world})
-  world <- get
-  return $ blockchain world
-
-modifyContract :: (Module -> Module) -> VerRes Module
-modifyContract fun = do
-  world <- get
-  put (world {contract = fun $ contract world})
-  world <- get
-  return $ contract world
-
-modifyPlayer0 :: (Module -> Module) -> VerRes Module
-modifyPlayer0 fun = do
-  world <- get
-  put (world {player0 = fun $ player0 world})
-  world <- get
-  return $ player0 world
-
-modifyPlayer1 :: (Module -> Module) -> VerRes Module
-modifyPlayer1 fun = do
-  world <- get
-  put (world {player1 = fun $ player1 world})
-  world <- get
-  return $ player1 world
 
 addTransToModule :: Trans -> Module -> Module
 addTransToModule tr mod = 
