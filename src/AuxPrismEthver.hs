@@ -10,6 +10,7 @@ import ErrM
 -- TYPES --
 
 type VerRes a = State VerWorld a
+type Trans = (String, [Exp], [(Ident, Exp)])
 
 data VerWorld = VerWorld {
   props :: String,
@@ -22,8 +23,6 @@ data VerWorld = VerWorld {
   addresses :: Map.Map Integer Ident,
   numbers :: Map.Map String Integer,
   returnVar :: [Ident],
-  --sender :: [Exp],
-  --value :: [Exp],
   currStateContr :: Integer,
   numStatesContr :: Integer,
   currStateP0 :: Integer,
@@ -33,10 +32,20 @@ data VerWorld = VerWorld {
   bcTranss :: [Trans],
   contrTranss :: [Trans],
   p0Transs :: [Trans],
-  p1Transs :: [Trans]
+  p1Transs :: [Trans],
+  blockchain :: Module,
+  contract :: Module,
+  player0 :: Module,
+  player1 :: Module
   }
 
-type Trans = (String, [Exp], [(Ident, Exp)])
+data Module = Module {
+  vars :: Map.Map Ident Type,
+  currState :: Integer,
+  numStates :: Integer,
+  transs :: [Trans]
+  }
+  
 
 
 -- INITIALIZATION --
@@ -46,8 +55,11 @@ emptyVerWorld = VerWorld {props = "", contrGlobVars = Map.empty, bcVars = Map.em
   contrLocVars = Map.empty, p0Vars = Map.empty, p1Vars = Map.empty,
   funs = Map.empty, addresses = Map.empty, numbers = Map.empty, returnVar = [], 
   currStateContr = 1, numStatesContr = 1, currStateP0 = 1, numStatesP0 = 1, currStateP1 = 1, numStatesP1 = 1,
-  bcTranss = [], contrTranss = [], p0Transs = [], p1Transs = []}
+  bcTranss = [], contrTranss = [], p0Transs = [], p1Transs = [],
+  blockchain = emptyModule, contract = emptyModule, player0 = emptyModule, player1 = emptyModule}
 
+emptyModule :: Module
+emptyModule = Module {vars = Map.empty, currState = 1, numStates = 1, transs = []}
 
 -- WORLD MODIFICATION --
 
