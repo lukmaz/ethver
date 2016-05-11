@@ -11,35 +11,32 @@ contract Bank {
       }
     }
     
-    // todo: argument
     function withdraw() {
       if (msg.sender == "A") {
-          //msg.sender.send(w);
-          potA = potA - 0;
+          msg.sender.send(1);
+          potA = potA - 1;
       }
       if (msg.sender == "B") {
-          //msg.sender.send(w);
-          potB = potB - 0;
+          msg.sender.send(1);
+          potB = potB - 1;
       }
     }
 
-  /*  
-    function transfer(uint(3) val) {
+    function transfer() {
       if (msg.sender == "A") {
-          potA = potA - val;
-          potB = potB + val;
+          potA = potA - 1;
+          potB = potB + 1;
       }
     }
-    */
 }
 
 scenario A {
   deposit.sendTransaction({from: "A", value: 2});
-  //transfer.sendTransaction(1, {from: "A", value: 0});
-  //withdraw.sendTransaction(1, {from: "A", value: 0});
+  transfer.sendTransaction({from: "A", value: 0});
+  withdraw.sendTransaction({from: "A", value: 0});
 }
 
 scenario B {
   //wait ...
-  withdraw.sendTransaction(1, {from: "B", value: 0});
+  withdraw.sendTransaction({from: "B", value: 0});
 }
