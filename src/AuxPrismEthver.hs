@@ -16,8 +16,8 @@ type ModifyModuleType = (Module -> Module) -> VerRes Module
 data VerWorld = VerWorld {
   props :: String,
   funs :: Map.Map Ident Function,
-  addresses :: Map.Map Integer Ident,
-  numbers :: Map.Map String Integer,
+  --addresses :: Map.Map Integer Ident,
+  playerNumbers :: Map.Map String Integer,
   returnVar :: [Ident],
   blockchain :: Module,
   contract :: Module,
@@ -43,8 +43,8 @@ emptyVerWorld :: VerWorld
 emptyVerWorld = VerWorld {
   props = "", 
   funs = Map.empty, 
-  addresses = Map.empty, 
-  numbers = Map.empty, 
+  --addresses = Map.empty, 
+  playerNumbers = Map.empty, 
   returnVar = [], 
   blockchain = emptyModule {stateVar = "bcstate"}, 
   contract = emptyModule {stateVar = "cstate"}, 
@@ -83,28 +83,29 @@ addVar modifyModule typ ident = do
   _ <- modifyModule (addVarToModule typ ident)
   return ()
 
-addAddress :: String -> VerRes ()
-addAddress str = do
+addPlayer :: String -> VerRes ()
+addPlayer str = do
   world <- get
-  case Map.lookup str $ numbers world of
+  case Map.lookup str $ playerNumbers world of
     Nothing -> do
-      let size = Map.size $ addresses world
-      let name = "balance" ++ (show (size + 1))
-      put (world {numbers = Map.insert str (fromIntegral (size + 1)) $ numbers world, 
-        addresses = Map.insert (fromIntegral (size + 1)) (Ident name) $ addresses world})
+      let size = Map.size $ playerNumbers world
+      put (world {playerNumbers = Map.insert str (fromIntegral size) $ playerNumbers world})
     Just _ -> return ()
 
-getAddressNumber :: String -> VerRes Integer
-getAddressNumber str = do
+getPlayerNumber :: String -> VerRes Integer
+getPlayerNumber str = do
   world <- get
-  case Map.lookup str $ numbers world of
+  case Map.lookup str $ playerNumbers world of
     Just number -> return number
 
+-- TODO: do wywalenia
+{-
 getNumberBalance :: Integer -> VerRes Ident
 getNumberBalance number = do
   world <- get
   case Map.lookup number $ addresses world of
     Just name -> return name
+-}
 
 -- TODO: stos dla zagnieżdżonych wywołań?
 addReturnVar :: Ident -> VerRes ()
@@ -211,9 +212,11 @@ addTransToModule tr mod =
 -- MONEY TRANSFERS --
 ---------------------
 
+{-
 transferToContract :: Ident -> Exp -> VerRes ()
 transferToContract from value = do
   transferMoney from (Ident "contract_balance") (EVar (Ident "MAX_CONTRACT_BALANCE")) value
+-}
 
 transferFromContract :: Ident -> Exp -> VerRes ()
 transferFromContract to value = do
@@ -249,17 +252,20 @@ generatePrism world =
   "\nmodule blockchain\n" ++
   (prismVars $ vars $ blockchain world) ++
   prismTranss (reverse $ transs $ blockchain world) ++
-  "endmodule\n" ++
+  "endmodule\n\n\n" ++
+  "// CONTRACT\n" ++
   "\nmodule contract\n" ++
   "cstate : [1..NUM_STATES_CONTR];\n" ++
   (prismVars $ vars $ contract world) ++
   prismTranss (reverse $ transs $ contract world) ++
-  "endmodule\n" ++
+  "endmodule\n\n\n" ++
+  "// PLAYER 0\n" ++
   "\nmodule player0\n" ++
   "state0 : [1..NUM_STATES_P0];\n" ++
   (prismVars $ vars $ player0 world) ++
   prismTranss (reverse $ transs $ player0 world) ++
-  "endmodule\n" ++
+  "endmodule\n\n\n" ++
+  "// PLAYER 1\n" ++
   "\nmodule player1\n" ++
   "state1 : [1..NUM_STATES_P1];\n" ++
   (prismVars $ vars $ player1 world) ++
@@ -370,7 +376,7 @@ prismShowExp ESender =
   "sender"
 
 prismShowExp EValue =
-  "value"
+  "val"
 
 prismShowExp (ECall (h:t) args) =
   foldl

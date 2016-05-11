@@ -29,11 +29,13 @@ verContract (Contr name users decls funs) = do
   mapM_ addUser users
   mapM_ verCoDecl decls
   
-  -- TODO: odkomentować verFunExecute
   mapM_ (verFunBroadcast modifyPlayer0) funs
   mapM_ (verFunExecute modifyPlayer0) funs
   mapM_ (verFunBroadcast modifyPlayer1) funs
   mapM_ (verFunExecute modifyPlayer1) funs
+
+  verExecTransaction modifyPlayer0
+  verExecTransaction modifyPlayer1
 
   mapM_ verFunContract funs
 
@@ -93,13 +95,52 @@ verFunExecute modifyModule (Fun name args stms) = do
 
 verFunContract :: Function -> VerRes ()
 verFunContract (Fun name args stms) = do
+  mod <- modifyContract id
+  addCustomTrans
+    modifyContract
+    ("broadcast_" ++ (prismShowIdent name))
+    1
+    0
+    []
+    [(Ident "next_state", EInt $ numStates mod + 1)]
+  
+  modifyContract (\mod -> mod {currState = numStates mod + 1, numStates = numStates mod + 1})
   -- TODO argumenty
   mapM_ (verStm modifyContract) stms
+
+  mod <- modifyContract id
+  addCustomTrans
+    modifyContract
+    ""
+    (numStates mod)
+    1
+    []
+    []
+
+verExecTransaction :: ModifyModuleType -> VerRes ()
+verExecTransaction modifyModule = do
+  mod <- modifyModule id
+  addTransNoState
+    modifyContract
+    ""
+    [
+      EEq (EVar $ Ident "cstate") (EInt 0),
+      EEq (EVar $ Ident "sender") (EInt $ number mod),
+      EGe (EVar $ Ident $ "balance" ++ (show $ number mod)) (EVar $ Ident "val"),
+      ELe (EAdd (EVar $ Ident "contract_balance") (EVar $ Ident "val")) (EVar $ Ident "MAX_CONTRACT_BALANCE")
+    ]
+    [
+      (Ident "cstate", EVar $ Ident "next_state"),
+      (Ident $ "balance" ++ (show $ number mod), 
+        ESub (EVar $ Ident $ "balance" ++ (show $ number mod)) (EVar $ Ident "val")),
+      (Ident "contract_balance",
+        EAdd (EVar $ Ident "contract_balance") (EVar $ Ident "val"))
+    ]
 
 
 addUser :: UserDecl -> VerRes ()
 addUser (UDec name) = do
-  addAddress name
+  addPlayer name
 
 --------------
 -- SCENARIO --
@@ -275,22 +316,7 @@ verValExp modifyModule (EAss ident exp) = do
   return (EAss ident evalExp)
 
 verValExp modifyModule (EVar ident) = do
-  world <- get
-  case Map.lookup ident (vars $ blockchain world) of
-    Just exp ->
-      return (EVar ident)
-    Nothing ->
-      case Map.lookup ident (vars $ contract world) of
-        Just exp ->
-          return (EVar ident)
-        Nothing ->
-          case Map.lookup ident (vars $ player0 world) of
-            Just exp ->
-              return (EVar ident)
-            Nothing ->
-              case Map.lookup ident (vars $ player1 world) of
-                Just exp ->
-                  return (EVar ident)
+  return (EVar ident)
 
 verValExp modifyModule EValue = do
   return EValue
@@ -302,8 +328,7 @@ verValExp modifyModule (EInt x) =
   return (EInt x)
 
 verValExp modifyModule (EStr s) = do
-  number <- getAddressNumber s
-  addProps ("getAddress Number " ++ s ++ " = " ++ (show number) ++ "\n")
+  number <- getPlayerNumber s
   return (EInt number)
 
 
@@ -325,14 +350,26 @@ verCallExp modifyModule (ECall idents exps) = do
 verCallExp modifyModule (ESend receiverExp args) = do
   case args of
     [AExp val] -> do
-      receiverEval <- verExp modifyModule receiverExp
-      case receiverEval of
+      case receiverExp of
+        ESender -> do
+          verStm 
+            modifyModule 
+            (SIf 
+              (EEq (EVar $ Ident "sender") (EInt 0))
+              (SExp $ ESend (EInt 0) args)
+            )
+          verStm
+            modifyModule
+            (SIf
+              (EEq (EVar $ Ident "sender") (EInt 1))
+              (SExp $ ESend (EInt 1) args)
+            )
         EStr receiverAddress -> do
-          receiverNumber <- getAddressNumber receiverAddress
-          receiverBalance <- getNumberBalance receiverNumber
+          receiverNumber <- getPlayerNumber receiverAddress
+          let receiverBalance = Ident $ "balance" ++ (show receiverNumber) 
           transferFromContract receiverBalance val
         EInt receiverNumber -> do
-          receiverBalance <- getNumberBalance receiverNumber
+          let receiverBalance = Ident $ "balance" ++ (show receiverNumber)
           transferFromContract receiverBalance val
   return (ESend receiverExp args)
 
@@ -383,35 +420,6 @@ verSendTAux modifyModule funName argsVals = do
         (EVar (Ident (prismShowIdent funName ++ "_state" ++ (show $ number mod)))) 
         (EVar (Ident "T_EXECUTED"))]
     []
-
--- TODO: nie działają zagnieżdżone funkcje. 
--- Chyba musi być wielopoziomowy argMap
--- To jest wersja dla sendTransaction, dla call powinno być co innego
-{-
-
-verFunSendT :: ModifyModuleType -> Function -> [CallArg] -> VerRes ()
-verFunSendT modifyModule (Fun name args stms) argsVals = do
-  let expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
-  let (ABra sender value) = last argsVals
-  mapM_ (addArgMap modifyModule) $ zip args expArgsVals
-  --addSender sender
-  --addValue value
-  case sender of
-    EStr str -> do
-      addAddress str
-      when 
-        (value /= (EInt 0)) 
-        (do
-          number <- getAddressNumber str
-          balance <- getNumberBalance number
-          transferToContract balance value)
-      mapM_ (verStm modifyModule) stms
-  --removeValue
-  --removeSender
-
-verFunSendT modifyModule (FunR name args ret stms) argsVals =
-  verFunSendT modifyModule (Fun name args stms) argsVals
--}
 
 addArg :: Arg -> VerRes ()
 addArg (Ar typ ident) = do
