@@ -95,6 +95,13 @@ verFunExecute modifyModule (Fun name args stms) = do
 
 verFunContract :: Function -> VerRes ()
 verFunContract (Fun name args stms) = do
+  addBcVar (TUInt 4) $ Ident $ prismShowIdent name ++ "_state0" 
+  addBcVar (TUInt 4) $ Ident $ prismShowIdent name ++ "_state1"
+
+  -- TODO: skąd wziąć zakres val?
+  addP0Var (TUInt 3) $ Ident $ prismShowIdent name ++ "_val0"
+  addP1Var (TUInt 3) $ Ident $ prismShowIdent name ++ "_val1"
+
   mod <- modifyContract id
   addCustomTrans
     modifyContract
