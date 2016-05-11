@@ -33,11 +33,13 @@ contract Bank {
     */
 }
 
-deposit.sendTransaction({from: "A", value: 2});
-//transfer.sendTransaction(1, {from: "A", value: 0});
-//withdraw.sendTransaction(1, {from: "A", value: 0});
+scenario A {
+  deposit.sendTransaction({from: "A", value: 2});
+  //transfer.sendTransaction(1, {from: "A", value: 0});
+  //withdraw.sendTransaction(1, {from: "A", value: 0});
+}
 
-//wait ...
-//withdraw.sendTransaction(1, {from: "B", value: 0});
-
-
+scenario B {
+  //wait ...
+  withdraw.sendTransaction(1, {from: "B", value: 0});
+}

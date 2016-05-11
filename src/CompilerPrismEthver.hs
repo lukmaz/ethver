@@ -16,9 +16,9 @@ verTree prog =
   in (generatePrism world, props world)
 
 verProgram :: Program -> VerRes ()
-verProgram (Prog contract scenario) = do
+verProgram (Prog contract scenarios) = do
   verContract contract
-  verScenario scenario
+  mapM_ verScenario scenarios
 
 --------------
 -- CONTRACT --
@@ -54,10 +54,13 @@ addUser (UDec name) = do
 --------------
 
 verScenario :: Scenario -> VerRes ()
-verScenario (Scen decls stms) = do
+verScenario (Scen userName decls stms) = do
   mapM_ verScDecl decls
   -- TODO: P0
-  mapM_ (verStm modifyPlayer0) stms
+  when (userName == Ident "A")
+    (mapM_ (verStm modifyPlayer0) stms)
+  when (userName == Ident "B")
+    (mapM_ (verStm modifyPlayer1) stms)
 
 -- TODO: Drugi gracz
 verScDecl :: Decl -> VerRes ()

@@ -13,9 +13,9 @@ ethTree prog =
   
 
 ethProgram :: Program -> EthRes ()
-ethProgram (Prog contract scenario) = do
+ethProgram (Prog contract scenarios) = do
   ethContract contract
-  ethScenario scenario
+  mapM_ ethScenario scenarios
 
 
 -- Contract
@@ -105,8 +105,9 @@ ethExp (EVar ident) = do
 -- Scenario
 
 ethScenario :: Scenario -> EthRes ()
-ethScenario (Scen decls stms) = do
+ethScenario (Scen userName decls stms) = do
   mapM_ ethDecl decls
+  -- TODO: userName obsłużyć
   mapM_ ethScStm stms
 
 -- Stm

@@ -1,12 +1,16 @@
 comment "//" ;
 comment "/*" "*/" ;
 
-Prog.     Program  ::= Contract Scenario ;
-
+Prog.     Program  ::= Contract [Scenario] ;
+terminator Scenario "" ;
 
 -- CONTRACT
 
 Contr.    Contract ::= "contract" Ident "{" [UserDecl] [Decl] [Function] "}" ;
+
+-- SCENARIO
+
+Scen.  Scenario ::= "scenario" Ident "{" [Decl] [Stm] "}" ;
 
 terminator UserDecl ";" ;
 terminator Decl ";" ;
@@ -64,6 +68,3 @@ TUInt.   Type ::= "uint" "(" Integer ")" ;
 -- TRStr.   Type ::= "random_string" ;
 
 
--- SCENARIO
-
-Scen.  Scenario ::= [Decl] [Stm] ;
