@@ -56,7 +56,8 @@ addUser (UDec name) = do
 verScenario :: Scenario -> VerRes ()
 verScenario (Scen decls stms) = do
   mapM_ verScDecl decls
-  mapM_ verScStm stms
+  -- TODO: P0
+  mapM_ (verStm modifyPlayer0) stms
 
 -- TODO: Drugi gracz
 verScDecl :: Decl -> VerRes ()
@@ -143,119 +144,6 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
   
 verStm modifyModule (SBlock stms) = do
   mapM_ (verStm modifyModule) stms
-
-
------------
--- CoExp --
------------
-
--- TODO: SKASOWAĆ
---verCoExp :: Exp -> VerRes Exp
---verCoExp exp = verScExp exp
-
-
-
-
-
------------
--- ScStm --
------------
-
--- TODO: drugi gracz
-verScStm :: Stm -> VerRes ()
-verScStm stm = verStm modifyPlayer0 stm
-
-
-
-
-
-
-{- STARE ScStm do skasowania: 
-
-verScStm :: Stm -> VerRes ()
-verScStm (SExp exp) = do
-  _ <- verScExp exp
-  return ()
-  
-verScStm (SReturn exp) = do
-  evalExp <- verScExp exp
-  world <- get
-  _ <- verScExp (EAss (head $ returnVar world) evalExp)
-  return ()
-
--- TODO: drugi gracz
--- TODO: zrobić, żeby return wychodziło z wykonania bieżącej funkcji
-verScStm (SIf cond ifBlock) = do
-  evalCond <- verScExp cond
-  world <- get
-  -- TODO: P0
-  let ifState = currState $ player0 world
-  --TODO: P0
-  addTransToNewStateP0
-    ""
-    [evalCond]
-    []
-  verScStm ifBlock
-  world <- get
-  addCustomTransP0
-    ""
-    ifState
-    -- TODO: P0
-    (currState $ player0 world)
-    [negateExp evalCond]
-    []
-
--- TODO: drugi gracz, kontrakt
-verScStm (SIfElse cond ifBlock elseBlock) = do
-  evalCond <- verScExp cond
-  world <- get
-  -- TODO: P0
-  let ifState = currState $ player0 world
-  --TODO: P0
-  addTransToNewStateP0
-    ""
-    [evalCond]
-    []
-  verScStm ifBlock
-  world <- get
-  -- TODO: P0
-  let endIfState = currState $ player0 world
-  addCustomTransP0
-    ""
-    ifState
-    (numStates (player0 world) + 1)
-    [negateExp evalCond]
-    []
-  world <- get
-  -- TODO: P0
-  let newState = numStates (player0 world) + 1
-  modifyPlayer0 (setCurrState newState)
-  modifyPlayer0 (setNumStates newState)
-  verScStm elseBlock
-  world <- get
-  addCustomTransP0
-    ""
-    -- TODO: P0
-    (currState $ player0 world)
-    endIfState
-    []
-    []
-  -- TODO: P0
-  _ <- modifyPlayer0 (setCurrState endIfState)
-  return ()
-  
-verScStm (SBlock stms) = do
-  mapM_ verScStm stms
-
--}
-
-
-
-
-
-
-
-
 
 
 -----------
@@ -418,7 +306,7 @@ verFunCall modifyModule (FunR name args ret stms) argsVals = do
   mapM_ (addArgMap modifyModule) $ zip args expArgsVals
   let retVarIdent = Ident ((prismShowIdent name) ++ "_retVal")
   addReturnVar retVarIdent
-  mapM_ verScStm stms
+  mapM_ (verStm modifyModule) stms
   removeReturnVar
   return (EVar retVarIdent)
 --TODO: to jest przepisane z verScFunSendT
@@ -428,13 +316,32 @@ verFunCall modifyModule (FunR name args ret stms) argsVals = do
 
 verSendTAux :: ModifyModuleType -> Ident -> [CallArg] -> VerRes ()
 verSendTAux modifyModule funName argsVals = do
-  world <- get
-  case Map.lookup funName (funs world) of
-    Just fun -> verFunSendT modifyModule fun argsVals
+  -- TODO: chyba dopiero potrzebne przy argumentach
+  --case Map.lookup funName (funs world) of
+  --  Just fun -> verFunSendT modifyModule fun argsVals
+
+  --TODO: P0
+  let expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
+  let (ABra _ value) = last argsVals
+  addTransToNewState 
+    modifyModule 
+    ("broadcast_" ++ (prismShowIdent funName) ++ "0") 
+    [EEq (EVar (Ident "cstate")) (EInt 1)]
+    [(Ident $ (prismShowIdent funName) ++ "_val" ++ "0", value)]
+
+  addTransToNewState
+    modifyModule
+    ""
+    -- TODO: 0
+    [EEq (EVar (Ident "cstate")) (EInt 1), EEq (EVar (Ident (prismShowIdent funName ++ "_state" ++ "0"))) (EVar (Ident "T_EXECUTED"))]
+    []
+
 
 -- TODO: nie działają zagnieżdżone funkcje. 
 -- Chyba musi być wielopoziomowy argMap
 -- To jest wersja dla sendTransaction, dla call powinno być co innego
+{-
+
 verFunSendT :: ModifyModuleType -> Function -> [CallArg] -> VerRes ()
 verFunSendT modifyModule (Fun name args stms) argsVals = do
   let expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
@@ -457,7 +364,7 @@ verFunSendT modifyModule (Fun name args stms) argsVals = do
 
 verFunSendT modifyModule (FunR name args ret stms) argsVals =
   verFunSendT modifyModule (Fun name args stms) argsVals
-
+-}
 
 addArg :: Arg -> VerRes ()
 addArg (Ar typ ident) = do

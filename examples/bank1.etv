@@ -11,8 +11,8 @@ contract Bank {
       }
     }
     
-    
-    function withdraw(uint(3) w) {
+    // todo: argument
+    function withdraw() {
       if (msg.sender == "A") {
           //msg.sender.send(w);
           potA = potA - 0;
@@ -33,7 +33,7 @@ contract Bank {
     */
 }
 
-//deposit.sendTransaction({from: "A", value: 2});
+deposit.sendTransaction({from: "A", value: 2});
 //transfer.sendTransaction(1, {from: "A", value: 0});
 //withdraw.sendTransaction(1, {from: "A", value: 0});
 
