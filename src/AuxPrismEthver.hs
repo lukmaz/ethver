@@ -26,6 +26,7 @@ data VerWorld = VerWorld {
   }
 
 data Module = Module {
+  number :: Integer,
   stateVar :: String,
   vars :: Map.Map Ident Type,
   --TODO: local variables in contract
@@ -47,12 +48,12 @@ emptyVerWorld = VerWorld {
   returnVar = [], 
   blockchain = emptyModule {stateVar = "bcstate"}, 
   contract = emptyModule {stateVar = "cstate"}, 
-  player0 = emptyModule {stateVar = "state0"}, 
-  player1 = emptyModule {stateVar = "state1"}
+  player0 = emptyModule {number = 0, stateVar = "state0"}, 
+  player1 = emptyModule {number = 1, stateVar = "state1"}
   } 
 
 emptyModule :: Module
-emptyModule = Module {stateVar = "emptyState", vars = Map.empty, currState = 1, numStates = 1, transs = []}
+emptyModule = Module {number = 42, stateVar = "emptyState", vars = Map.empty, currState = 1, numStates = 1, transs = []}
 
 ------------------------
 -- WORLD MODIFICATION --
@@ -168,7 +169,6 @@ modifyPlayer1 fun = do
 
 addTransToNewState :: ModifyModuleType -> String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 addTransToNewState modifyModule transName guards updates = do
-  world <- get
   mod <- modifyModule id
   let newState = numStates mod + 1
   addCustomTrans modifyModule transName (currState mod) newState guards updates
@@ -178,23 +178,34 @@ addTransToNewState modifyModule transName guards updates = do
 
 addCustomTrans :: ModifyModuleType -> String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 addCustomTrans modifyModule transName fromState toState guards updates = do
-  world <- get
   mod <- modifyModule id
   let newTrans = newCustomTrans (stateVar mod) transName fromState toState guards updates
   _ <- modifyModule (addTransToModule newTrans)
   return ()
 
-addTransToModule :: Trans -> Module -> Module
-addTransToModule tr mod = 
-  mod {transs = tr:(transs mod)}
+
+addTransNoState :: ModifyModuleType -> String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addTransNoState modifyModule transName guards updates = do
+  mod <- modifyModule id
+  let newTrans = newTransNoState transName guards updates
+  _ <- modifyModule (addTransToModule newTrans)
+  return ()
 
 newCustomTrans :: String -> String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> Trans
 newCustomTrans stateVar transName fromState toState guards updates =
-  (
-    transName,
-    (EEq (EVar (Ident stateVar)) (EInt fromState)):guards,
-    (Ident stateVar, EInt toState):updates
-  )
+  newTransNoState
+    transName
+    ((EEq (EVar (Ident stateVar)) (EInt fromState)):guards)
+    ((Ident stateVar, EInt toState):updates)
+  
+
+newTransNoState :: String -> [Exp] -> [(Ident, Exp)] -> Trans
+newTransNoState transName guards updates =
+  (transName, guards, updates)
+
+addTransToModule :: Trans -> Module -> Module
+addTransToModule tr mod = 
+  mod {transs = tr:(transs mod)}
 
 ---------------------
 -- MONEY TRANSFERS --
@@ -273,7 +284,7 @@ prismTranss transs =
   
 prismTrans :: Trans -> String
 prismTrans (transName, guards, updates) =
-  "[" ++ transName ++ "] " ++ (prismGuards guards) ++ "  ->\n" ++ prismUpdates updates ++ ";\n"
+  "[" ++ transName ++ "]\n   " ++ (prismGuards guards) ++ "  ->\n" ++ prismUpdates updates ++ ";\n"
 
 prismGuards :: [Exp] -> String
 prismGuards [] = ""
