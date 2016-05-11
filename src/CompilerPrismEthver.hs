@@ -18,7 +18,7 @@ verTree prog =
 verProgram :: Program -> VerRes ()
 verProgram (Prog contract scenarios) = do
   verContract contract
-  mapM_ verScenario scenarios
+  verScenarios scenarios
 
 --------------
 -- CONTRACT --
@@ -28,20 +28,72 @@ verContract :: Contract -> VerRes ()
 verContract (Contr name users decls funs) = do
   mapM_ addUser users
   mapM_ verCoDecl decls
-  mapM_ verCoFun funs
+  
+  -- TODO: odkomentować verFunExecute
+  mapM_ (verFunBroadcast modifyPlayer0) funs
+  mapM_ (verFunExecute modifyPlayer0) funs
+  mapM_ (verFunBroadcast modifyPlayer1) funs
+  mapM_ (verFunExecute modifyPlayer1) funs
+
+  mapM_ verFunContract funs
 
 -- TODO: globalne, nieglobalne
 verCoDecl :: Decl -> VerRes ()
 verCoDecl (Dec typ ident) = do
   addContrVar typ ident
 
-verCoFun :: Function -> VerRes ()
-verCoFun (Fun name args stms) = do
-  --addFun fun
-  world <- get
+verFunBroadcast :: ModifyModuleType -> Function -> VerRes ()
+verFunBroadcast modifyModule (Fun name args stms) = do
+  --TODO: argumenty
+  mod <- modifyModule id
+  addTransNoState
+    modifyBlockchain 
+    ("broadcast_" ++ (prismShowIdent name) ++ (show $ number mod))
+    [EEq (EVar (Ident "cstate")) (EInt 1)]
+    [(Ident $ prismShowIdent name ++ "_state" ++ (show $ number mod), EVar (Ident "T_BROADCAST"))]
+
+verFunExecute :: ModifyModuleType -> Function -> VerRes ()
+verFunExecute modifyModule (Fun name args stms) = do
+  --TODO: argumenty
+  mod <- modifyModule id
+
+  addTransNoState
+    modifyBlockchain 
+    ("broadcast_" ++ (prismShowIdent name))
+    [
+      EEq (EVar (Ident "cstate")) (EInt 1),
+      EEq 
+        (EVar $ Ident $ prismShowIdent name ++ "_state" ++ (show $ number mod)) 
+        (EVar $ Ident "T_BROADCAST"),
+      ELe 
+        (EVar $ Ident $ prismShowIdent name ++ "_val" ++ (show $ number mod)) 
+        (EVar $ Ident $ "balance" ++ (show $ number mod))
+    ]
+    [
+      (Ident "sender", EInt $ number mod),
+      (Ident "val", EVar $ Ident $ prismShowIdent name ++ "_val" ++ (show $ number mod)),
+      (Ident $ prismShowIdent name ++ "_state" ++ (show $ number mod), EVar (Ident "T_EXECUTED"))
+    ]
+
+  addTransNoState
+    modifyBlockchain 
+    ""
+    [
+      EEq (EVar (Ident "cstate")) (EInt 1),
+      EEq 
+        (EVar $ Ident $ prismShowIdent name ++ "_state" ++ (show $ number mod)) 
+        (EVar $ Ident "T_BROADCAST"),
+      EGt 
+        (EVar $ Ident $ prismShowIdent name ++ "_val" ++ (show $ number mod)) 
+        (EVar $ Ident $ "balance" ++ (show $ number mod))
+    ]
+    [
+      (Ident $ prismShowIdent name ++ "_state" ++ (show $ number mod), EVar (Ident "T_INVALIDATED"))
+    ]
+
+verFunContract :: Function -> VerRes ()
+verFunContract (Fun name args stms) = do
   -- TODO argumenty
-  mapM_ addArg args
-  -- TODO: czy tu musi być verCoStm?
   mapM_ (verStm modifyContract) stms
 
 
@@ -53,19 +105,18 @@ addUser (UDec name) = do
 -- SCENARIO --
 --------------
 
-verScenario :: Scenario -> VerRes ()
-verScenario (Scen userName decls stms) = do
-  mapM_ verScDecl decls
-  -- TODO: P0
-  when (userName == Ident "A")
-    (mapM_ (verStm modifyPlayer0) stms)
-  when (userName == Ident "B")
-    (mapM_ (verStm modifyPlayer1) stms)
+verScenarios :: [Scenario] -> VerRes ()
+verScenarios [(Scen userName0 decls0 stms0), (Scen userName1 decls1 stms1)] = do
+  --TODO: przepadają userName'y
+  mapM_ (verDecl modifyPlayer0) decls0
+  mapM_ (verStm modifyPlayer0) stms0
+  mapM_ (verDecl modifyPlayer1) decls1
+  mapM_ (verStm modifyPlayer1) stms1
 
 -- TODO: Drugi gracz
-verScDecl :: Decl -> VerRes ()
-verScDecl (Dec typ ident) = do
-  addP0Var typ ident
+verDecl :: ModifyModuleType -> Decl -> VerRes ()
+verDecl modifyModule (Dec typ ident) = do
+  addVar modifyModule typ ident
 
 -----------
 -- CoStm --
@@ -86,7 +137,6 @@ verStm modifyModule (SReturn exp) = do
 -- TODO: zrobić, żeby return wychodziło z wykonania bieżącej funkcji
 verStm modifyModule (SIf cond ifBlock) = do
   evalCond <- verExp modifyModule cond
-  world <- get
   mod <- modifyModule id
   let ifState = currState mod
   addTransToNewState
@@ -95,7 +145,6 @@ verStm modifyModule (SIf cond ifBlock) = do
     [evalCond]
     []
   verStm modifyModule ifBlock
-  world <- get
   mod <- modifyModule id
   addCustomTrans
     modifyModule
@@ -108,7 +157,6 @@ verStm modifyModule (SIf cond ifBlock) = do
 -- TODO: drugi gracz, kontrakt
 verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
   evalCond <- verExp modifyModule cond
-  world <- get
   mod <- modifyModule id
   let ifState = currState mod
   addTransToNewState
@@ -117,7 +165,6 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
     [evalCond]
     []
   verStm modifyModule ifBlock
-  world <- get
   mod <- modifyModule id
   let endIfState = currState mod 
   addCustomTrans
@@ -127,13 +174,11 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
     (numStates mod + 1)
     [negateExp evalCond]
     []
-  world <- get
   mod <- modifyModule id
   let newState = numStates mod + 1
   modifyModule (setCurrState newState)
   modifyModule (setNumStates newState)
   verStm modifyModule elseBlock
-  world <- get
   mod <- modifyModule id
   addCustomTrans
     modifyModule
@@ -220,7 +265,6 @@ verValExp :: ModifyModuleType -> Exp -> VerRes Exp
 
 verValExp modifyModule (EAss ident exp) = do
   evalExp <- verExp modifyModule exp
-  world <- get
   minV <- minValue ident
   maxV <- maxValue ident
   addTransToNewState
@@ -319,26 +363,26 @@ verFunCall modifyModule (FunR name args ret stms) argsVals = do
 
 verSendTAux :: ModifyModuleType -> Ident -> [CallArg] -> VerRes ()
 verSendTAux modifyModule funName argsVals = do
-  -- TODO: chyba dopiero potrzebne przy argumentach
-  --case Map.lookup funName (funs world) of
-  --  Just fun -> verFunSendT modifyModule fun argsVals
-
-  --TODO: P0
+  mod <- modifyModule id
   let expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
   let (ABra _ value) = last argsVals
+
+
   addTransToNewState 
     modifyModule 
-    ("broadcast_" ++ (prismShowIdent funName) ++ "0") 
+    ("broadcast_" ++ (prismShowIdent funName) ++ (show $ number mod)) 
     [EEq (EVar (Ident "cstate")) (EInt 1)]
-    [(Ident $ (prismShowIdent funName) ++ "_val" ++ "0", value)]
+    [(Ident $ (prismShowIdent funName) ++ "_val" ++ (show $ number mod), value)]
 
   addTransToNewState
     modifyModule
     ""
     -- TODO: 0
-    [EEq (EVar (Ident "cstate")) (EInt 1), EEq (EVar (Ident (prismShowIdent funName ++ "_state" ++ "0"))) (EVar (Ident "T_EXECUTED"))]
+    [EEq (EVar (Ident "cstate")) (EInt 1), 
+      EEq 
+        (EVar (Ident (prismShowIdent funName ++ "_state" ++ (show $ number mod)))) 
+        (EVar (Ident "T_EXECUTED"))]
     []
-
 
 -- TODO: nie działają zagnieżdżone funkcje. 
 -- Chyba musi być wielopoziomowy argMap

@@ -1,1 +1,1 @@
-./MakeEthver examples/bank1.etv
+./MakeEthver examples/bank1-no_args.etv
