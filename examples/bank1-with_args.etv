@@ -2,30 +2,30 @@ contract Bank {
     user "A";
     user "B";
 
-    uint(3) potA;
-    uint(3) potB;
+    uint(3) pot0;
+    uint(3) pot1;
     
     function deposit() {
       if (msg.sender == "A") {
-        potA = potA + msg.value;
+        pot0 = pot0 + msg.value;
       }
     }
     
-    function withdraw(uint(3) cash) {
+    function transfer(uint(3) money) {
       if (msg.sender == "A") {
-          msg.sender.send(cash);
-          potA = potA - cash;
-      }
-      if (msg.sender == "B") {
-          msg.sender.send(cash);
-          potB = potB - cash;
+          pot0 = pot0 - money;
+          pot1 = pot1 + money;
       }
     }
 
-    function transfer(uint(3) money) {
+    function withdraw(uint(3) money) {
       if (msg.sender == "A") {
-          potA = potA - money;
-          potB = potB + money;
+          msg.sender.send(money);
+          pot0 = pot0 - money;
+      }
+      if (msg.sender == "B") {
+          msg.sender.send(money);
+          pot1 = pot1 - money;
       }
     }
 }

@@ -16,6 +16,7 @@ type ModifyModuleType = (Module -> Module) -> VerRes Module
 data VerWorld = VerWorld {
   props :: String,
   funs :: Map.Map Ident Function,
+  argMap :: Map.Map Ident Ident,
   playerNumbers :: Map.Map String Integer,
   returnVar :: [Ident],
   blockchain :: Module,
@@ -41,7 +42,8 @@ data Module = Module {
 emptyVerWorld :: VerWorld
 emptyVerWorld = VerWorld {
   props = "", 
-  funs = Map.empty, 
+  funs = Map.empty,
+  argMap = Map.empty,
   playerNumbers = Map.empty, 
   returnVar = [], 
   blockchain = emptyModule {stateVar = "bcstate"}, 
@@ -62,6 +64,15 @@ addProps text = do
   world <- get
   put (world {props = (props world) ++ text})
 
+addFun :: Function -> VerRes ()
+addFun (Fun name args stms) = do
+  world <- get
+  put $ world {funs = Map.insert name (Fun name args stms) $ funs world}
+  
+addFun (FunR name args typ stms) = do
+  world <- get
+  put $ world {funs = Map.insert name (FunR name args typ stms) $ funs world}
+  
 -- TODO: czy te 4 funkcje są potrzebne?
 addBcVar :: Type -> Ident -> VerRes ()
 addBcVar = addVar modifyBlockchain
@@ -81,6 +92,34 @@ addVar :: ModifyModuleType -> Type -> Ident -> VerRes ()
 addVar modifyModule typ ident = do
   _ <- modifyModule (addVarToModule typ ident)
   return ()
+
+addBcArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
+addBcArg modifyModule (Ident funName) (Ar typ (Ident varName)) = do
+  addVar modifyModule typ (Ident $ funName ++ "_" ++ varName)
+
+addPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
+addPlayerArg modifyModule (Ident funName) (Ar typ (Ident varName)) = do
+  mod <- modifyModule id
+  addVar modifyModule typ (Ident $ funName ++ "_" ++ varName ++ (show $ number mod))
+
+addArgToMap :: Ident -> Arg -> VerRes ()
+addArgToMap (Ident funName) (Ar _ (Ident varName)) = do
+  world <- get
+  put (world {argMap = Map.insert (Ident varName) (Ident $ funName ++ "_" ++ varName) $ argMap world})
+  
+clearArgMap :: VerRes ()
+clearArgMap = do
+  world <- get
+  put (world {argMap = Map.empty})
+
+addArgument :: Ident -> Arg -> VerRes ()
+addArgument funName arg = do
+  addBcArg modifyBlockchain funName arg
+  addPlayerArg modifyPlayer0 funName arg
+  addPlayerArg modifyPlayer1 funName arg
+  addArgToMap funName arg
+
+-- Players
 
 addPlayer :: String -> VerRes ()
 addPlayer str = do
@@ -261,7 +300,7 @@ blockchainPream :: String
 blockchainPream =
   "  sender : [0..1];\n" ++
   -- TODO: skąd wziąć zakres val?
-  "  val : [0..2];\n\n"
+  "  val : [0..2];\n"
 
 contractPream :: String
 contractPream =

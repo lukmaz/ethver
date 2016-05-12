@@ -59,6 +59,10 @@ verFunExecute modifyModule (Fun name args stms) = do
   --TODO: argumenty
   mod <- modifyModule id
 
+  let updates0 = [(Ident "sender", EInt $ number mod), (Ident "val", EVar $ Ident $ prismShowIdent name ++ "_val" ++ (show $ number mod)), (Ident $ prismShowIdent name ++ "_state" ++ (show $ number mod), EVar (Ident "T_EXECUTED"))]
+  let addAssignment acc (Ar _ (Ident varName)) = acc ++ [(Ident $ prismShowIdent name ++ "_" ++ varName, EVar $Ident $ prismShowIdent name ++ "_" ++ varName ++ (show $ number mod))]
+  let updates = foldl addAssignment updates0 args
+
   addTransNoState
     modifyBlockchain 
     ("broadcast_" ++ (prismShowIdent name))
@@ -71,11 +75,7 @@ verFunExecute modifyModule (Fun name args stms) = do
         (EVar $ Ident $ prismShowIdent name ++ "_val" ++ (show $ number mod)) 
         (EVar $ Ident $ "balance" ++ (show $ number mod))
     ]
-    [
-      (Ident "sender", EInt $ number mod),
-      (Ident "val", EVar $ Ident $ prismShowIdent name ++ "_val" ++ (show $ number mod)),
-      (Ident $ prismShowIdent name ++ "_state" ++ (show $ number mod), EVar (Ident "T_EXECUTED"))
-    ]
+    updates
 
   addTransNoState
     modifyBlockchain 
@@ -95,8 +95,12 @@ verFunExecute modifyModule (Fun name args stms) = do
 
 verFunContract :: Function -> VerRes ()
 verFunContract (Fun name args stms) = do
+  addFun (Fun name args stms)
   addBcVar (TUInt 4) $ Ident $ prismShowIdent name ++ "_state0" 
   addBcVar (TUInt 4) $ Ident $ prismShowIdent name ++ "_state1"
+
+  -- adds also to argMap
+  mapM_ (addArgument name) args
 
   -- TODO: skąd wziąć zakres val?
   addP0Var (TUInt 3) $ Ident $ prismShowIdent name ++ "_val0"
@@ -112,7 +116,7 @@ verFunContract (Fun name args stms) = do
     [(Ident "next_state", EInt $ numStates mod + 1)]
   
   modifyContract (\mod -> mod {currState = numStates mod + 1, numStates = numStates mod + 1})
-  -- TODO argumenty
+  
   mapM_ (verStm modifyContract) stms
 
   mod <- modifyContract id
@@ -123,6 +127,8 @@ verFunContract (Fun name args stms) = do
     1
     []
     []
+  
+  clearArgMap
 
 verExecTransaction :: ModifyModuleType -> VerRes ()
 verExecTransaction modifyModule = do
@@ -323,7 +329,10 @@ verValExp modifyModule (EAss ident exp) = do
   return (EAss ident evalExp)
 
 verValExp modifyModule (EVar ident) = do
-  return (EVar ident)
+  world <- get
+  case Map.lookup ident $ argMap world of
+    Just varName -> return (EVar varName)
+    Nothing -> return (EVar ident)
 
 verValExp modifyModule EValue = do
   return EValue
@@ -356,7 +365,8 @@ verCallExp modifyModule (ECall idents exps) = do
 
 verCallExp modifyModule (ESend receiverExp args) = do
   case args of
-    [AExp val] -> do
+    [AExp arg] -> do
+      val <- verExp modifyModule arg
       case receiverExp of
         ESender -> do
           verStm 
@@ -387,14 +397,16 @@ verCallExp modifyModule (ESend receiverExp args) = do
 -- TODO: chyba powinno być najpierw kopiowanie coVars i scVars (?) na lokalne
 verCallAux :: ModifyModuleType -> Ident -> [CallArg] -> VerRes Exp
 verCallAux modifyModule funName argsVals = do
+  -- TODO: stara wersja, przepisać jak sendT
   world <- get
   case Map.lookup funName (funs world) of
     Just fun -> verFunCall modifyModule fun argsVals
 
 verFunCall :: ModifyModuleType -> Function -> [CallArg] -> VerRes Exp
 verFunCall modifyModule (FunR name args ret stms) argsVals = do
+  -- TODO: stara wersja, przepisać jak sendT
   let expArgsVals = map (\(AExp exp) -> exp) argsVals
-  mapM_ (addArgMap modifyModule) $ zip args expArgsVals
+  --mapM_ (addArgMap modifyModule) $ zip args expArgsVals
   let retVarIdent = Ident ((prismShowIdent name) ++ "_retVal")
   addReturnVar retVarIdent
   mapM_ (verStm modifyModule) stms
@@ -407,33 +419,46 @@ verFunCall modifyModule (FunR name args ret stms) argsVals = do
 
 verSendTAux :: ModifyModuleType -> Ident -> [CallArg] -> VerRes ()
 verSendTAux modifyModule funName argsVals = do
+  world <- get
   mod <- modifyModule id
-  let expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
-  let (ABra _ value) = last argsVals
+  case Map.lookup funName (funs world) of
+    Just fun -> do
+      let argNames = getArgNames fun
+      let expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
+      -- TODO: olewamy "from", bo sender jest wiadomy ze scenariusza
+      let (ABra _ value) = last argsVals
+      
+      let updates0 = [(Ident $ (prismShowIdent funName) ++ "_val" ++ (show $ number mod), value)]
+      let addAssignment acc (argName, argVal) = acc ++ [createAssignment (number mod) funName argName argVal]
+      let updates = foldl addAssignment updates0 $ zip argNames expArgsVals
+      
 
+      addTransToNewState 
+        modifyModule 
+        ("broadcast_" ++ (prismShowIdent funName) ++ (show $ number mod)) 
+        [EEq (EVar (Ident "cstate")) (EInt 1)]
+        updates
 
-  addTransToNewState 
-    modifyModule 
-    ("broadcast_" ++ (prismShowIdent funName) ++ (show $ number mod)) 
-    [EEq (EVar (Ident "cstate")) (EInt 1)]
-    [(Ident $ (prismShowIdent funName) ++ "_val" ++ (show $ number mod), value)]
+      addTransToNewState
+        modifyModule
+        ""
+        [EEq (EVar (Ident "cstate")) (EInt 1), 
+          EEq 
+            (EVar (Ident (prismShowIdent funName ++ "_state" ++ (show $ number mod)))) 
+            (EVar (Ident "T_EXECUTED"))]
+        []
 
-  addTransToNewState
-    modifyModule
-    ""
-    -- TODO: 0
-    [EEq (EVar (Ident "cstate")) (EInt 1), 
-      EEq 
-        (EVar (Ident (prismShowIdent funName ++ "_state" ++ (show $ number mod)))) 
-        (EVar (Ident "T_EXECUTED"))]
-    []
+getArgNames :: Function -> [Arg]
+getArgNames (Fun _ args _) = args
+getArgNames (FunR _ args _ _) = args
 
-addArg :: Arg -> VerRes ()
-addArg (Ar typ ident) = do
-  -- TODO: sztywna nazwa "arg"
-  addBcVar typ ident
+createAssignment :: Integer -> Ident -> Arg -> Exp -> (Ident, Exp)
+createAssignment playerNumber funName (Ar _ (Ident varName)) exp = 
+  (Ident $ prismShowIdent funName ++ "_" ++ varName ++ (show playerNumber), exp)
 
+{-
 addArgMap :: ModifyModuleType -> (Arg, Exp) -> VerRes ()
 addArgMap modifyModule ((Ar typ ident), exp) = do
   verExp modifyModule (EAss ident exp)
   return ()
+-}
