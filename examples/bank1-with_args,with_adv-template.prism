@@ -241,13 +241,25 @@ module player0
  [broadcast_deposit0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (deposit_val0' = 2);
 
 //TODO: add args
- [broadcast_transfer0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (transfer_val0' = 0);
- [broadcast_transfer0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (transfer_val0' = 1);
- [broadcast_transfer0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (transfer_val0' = 2);
+ [broadcast_transfer0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (transfer_val0' = 0) & (transfer_money0' = 0);
+ [broadcast_transfer0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (transfer_val0' = 0) & (transfer_money0' = 1);
+ [broadcast_transfer0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (transfer_val0' = 0) & (transfer_money0' = 2);
+ [broadcast_transfer0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (transfer_val0' = 1) & (transfer_money0' = 0);
+ [broadcast_transfer0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (transfer_val0' = 1) & (transfer_money0' = 1);
+ [broadcast_transfer0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (transfer_val0' = 1) & (transfer_money0' = 2);
+ [broadcast_transfer0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (transfer_val0' = 2) & (transfer_money0' = 0);
+ [broadcast_transfer0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (transfer_val0' = 2) & (transfer_money0' = 1);
+ [broadcast_transfer0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (transfer_val0' = 2) & (transfer_money0' = 2);
 
- [broadcast_withdraw0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (withdraw_val0' = 0);
- [broadcast_withdraw0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (withdraw_val0' = 1);
- [broadcast_withdraw0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (withdraw_val0' = 2);
+ [broadcast_withdraw0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (withdraw_val0' = 0) & (withdraw_money0' = 0);
+ [broadcast_withdraw0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (withdraw_val0' = 0) & (withdraw_money0' = 1);
+ [broadcast_withdraw0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (withdraw_val0' = 0) & (withdraw_money0' = 2);
+ [broadcast_withdraw0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (withdraw_val0' = 1) & (withdraw_money0' = 0);
+ [broadcast_withdraw0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (withdraw_val0' = 1) & (withdraw_money0' = 1);
+ [broadcast_withdraw0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (withdraw_val0' = 1) & (withdraw_money0' = 2);
+ [broadcast_withdraw0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (withdraw_val0' = 2) & (withdraw_money0' = 0);
+ [broadcast_withdraw0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (withdraw_val0' = 2) & (withdraw_money0' = 1);
+ [broadcast_withdraw0] (!critical_section1) & (cstate = 1) & (state0 = -1) -> (withdraw_val0' = 2) & (withdraw_money0' = 2);
 endmodule
 
 module player1
@@ -277,12 +289,23 @@ module player1
  [broadcast_deposit1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (deposit_val1' = 1);
  [broadcast_deposit1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (deposit_val1' = 2);
 
-//TODO: add args
- [broadcast_transfer1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (transfer_val1' = 0);
- [broadcast_transfer1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (transfer_val1' = 1);
- [broadcast_transfer1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (transfer_val1' = 2);
+ [broadcast_transfer1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (transfer_val1' = 0) & (transfer_money1' = 0);
+ [broadcast_transfer1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (transfer_val1' = 0) & (transfer_money1' = 1);
+ [broadcast_transfer1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (transfer_val1' = 0) & (transfer_money1' = 2);
+ [broadcast_transfer1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (transfer_val1' = 1) & (transfer_money1' = 0);
+ [broadcast_transfer1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (transfer_val1' = 1) & (transfer_money1' = 1);
+ [broadcast_transfer1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (transfer_val1' = 1) & (transfer_money1' = 2);
+ [broadcast_transfer1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (transfer_val1' = 2) & (transfer_money1' = 0);
+ [broadcast_transfer1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (transfer_val1' = 2) & (transfer_money1' = 1);
+ [broadcast_transfer1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (transfer_val1' = 2) & (transfer_money1' = 2);
 
- [broadcast_withdraw1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (withdraw_val1' = 0);
- [broadcast_withdraw1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (withdraw_val1' = 1);
- [broadcast_withdraw1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (withdraw_val1' = 2);
+ [broadcast_withdraw1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (withdraw_val1' = 0) & (withdraw_money1' = 0);
+ [broadcast_withdraw1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (withdraw_val1' = 0) & (withdraw_money1' = 1);
+ [broadcast_withdraw1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (withdraw_val1' = 0) & (withdraw_money1' = 2);
+ [broadcast_withdraw1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (withdraw_val1' = 1) & (withdraw_money1' = 0);
+ [broadcast_withdraw1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (withdraw_val1' = 1) & (withdraw_money1' = 1);
+ [broadcast_withdraw1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (withdraw_val1' = 1) & (withdraw_money1' = 2);
+ [broadcast_withdraw1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (withdraw_val1' = 2) & (withdraw_money1' = 0);
+ [broadcast_withdraw1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (withdraw_val1' = 2) & (withdraw_money1' = 1);
+ [broadcast_withdraw1] (!critical_section0) & (cstate = 1) & (state1 = -1) -> (withdraw_val1' = 2) & (withdraw_money1' = 2);
 endmodule

@@ -1,0 +1,14 @@
+P>=1 [F (state0 = 6) & (state1 = 6) ]
+
+Pmin=? [F (state0 = 6) & (state1 = 6) & (balance0 = 4) ]
+
+Pmax=? [F (state0 = 6) & (state1 = 6) & (balance0 = 4) ]
+
+Pmin=? [F (state0 = 6) & (state1 = 6) & (balance1 = 4) ]
+
+Pmax=? [F (state0 = 6) & (state1 = 6) & (balance1 = 4) ]
+
+Pmin=? [F (state0 = 6) & (state1 = 6) & (balance0 = 2) & (balance1 = 2) ]
+
+Pmax=? [F (state0 = 6) & (state1 = 6) & (balance0 = 2) & (balance1 = 2) ]
+
