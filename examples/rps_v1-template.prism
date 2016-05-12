@@ -1,0 +1,454 @@
+mdp
+
+const int T_NONE = 0;
+const int T_BROADCAST = 1;
+const int T_EXECUTED = 2;
+const int T_INVALIDATED = 3;
+
+const int NUM_CONTRACT_STATES = 19;
+const int NUM_PLAYER0_STATES = 6;
+const int NUM_PLAYER1_STATES = 6;
+
+const int MAX_CONTRACT_BALANCE = 4;
+const int MAX_USER_BALANCE = 4;
+
+
+
+/////////////////////
+
+module blockchain
+  sender : [0..1];
+  val : [0..2];
+
+  finalize_state0 : [0..3];
+  finalize_state1 : [0..3];
+  player_input_choice : [0..3];
+  player_input_state0 : [0..3];
+  player_input_state1 : [0..3];
+
+  [broadcast_player_input0]
+    (cstate = 1)
+  ->
+    (player_input_state0' = T_BROADCAST);
+
+  [broadcast_finalize0]
+    (cstate = 1)
+  ->
+    (finalize_state0' = T_BROADCAST);
+
+  [broadcast_player_input]
+    (cstate = 1)
+  & (player_input_state0 = T_BROADCAST)
+  & (player_input_val0 <= balance0)
+  ->
+    (sender' = 0)
+  & (val' = player_input_val0)
+  & (player_input_state0' = T_EXECUTED)
+  & (player_input_choice' = player_input_choice0);
+
+  []
+    (cstate = 1)
+  & (player_input_state0 = T_BROADCAST)
+  & (player_input_val0 > balance0)
+  ->
+    (player_input_state0' = T_INVALIDATED);
+
+  [broadcast_finalize]
+    (cstate = 1)
+  & (finalize_state0 = T_BROADCAST)
+  & (finalize_val0 <= balance0)
+  ->
+    (sender' = 0)
+  & (val' = finalize_val0)
+  & (finalize_state0' = T_EXECUTED);
+
+  []
+    (cstate = 1)
+  & (finalize_state0 = T_BROADCAST)
+  & (finalize_val0 > balance0)
+  ->
+    (finalize_state0' = T_INVALIDATED);
+
+  [broadcast_player_input1]
+    (cstate = 1)
+  ->
+    (player_input_state1' = T_BROADCAST);
+
+  [broadcast_finalize1]
+    (cstate = 1)
+  ->
+    (finalize_state1' = T_BROADCAST);
+
+  [broadcast_player_input]
+    (cstate = 1)
+  & (player_input_state1 = T_BROADCAST)
+  & (player_input_val1 <= balance1)
+  ->
+    (sender' = 1)
+  & (val' = player_input_val1)
+  & (player_input_state1' = T_EXECUTED)
+  & (player_input_choice' = player_input_choice1);
+
+  []
+    (cstate = 1)
+  & (player_input_state1 = T_BROADCAST)
+  & (player_input_val1 > balance1)
+  ->
+    (player_input_state1' = T_INVALIDATED);
+
+  [broadcast_finalize]
+    (cstate = 1)
+  & (finalize_state1 = T_BROADCAST)
+  & (finalize_val1 <= balance1)
+  ->
+    (sender' = 1)
+  & (val' = finalize_val1)
+  & (finalize_state1' = T_EXECUTED);
+
+  []
+    (cstate = 1)
+  & (finalize_state1 = T_BROADCAST)
+  & (finalize_val1 > balance1)
+  ->
+    (finalize_state1' = T_INVALIDATED);
+
+endmodule
+
+
+
+
+/////////////////////
+
+module contract
+  cstate : [0..NUM_CONTRACT_STATES] init 1;
+  next_state : [0..NUM_CONTRACT_STATES];
+  contract_balance : [0..MAX_CONTRACT_BALANCE];
+  balance0 : [0..MAX_USER_BALANCE] init 2;
+  balance1 : [0..MAX_USER_BALANCE] init 2;
+
+  input0 : [0..3];
+  input1 : [0..3];
+
+  []
+    (cstate = 0)
+  & (sender = 0)
+  & (balance0 >= val)
+  & (contract_balance + val <= MAX_CONTRACT_BALANCE)
+  ->
+    (cstate' = next_state)
+  & (balance0' = balance0 - val)
+  & (contract_balance' = contract_balance + val);
+
+  []
+    (cstate = 0)
+  & (sender = 1)
+  & (balance1 >= val)
+  & (contract_balance + val <= MAX_CONTRACT_BALANCE)
+  ->
+    (cstate' = next_state)
+  & (balance1' = balance1 - val)
+  & (contract_balance' = contract_balance + val);
+
+  [broadcast_player_input]
+    (cstate = 1)
+  ->
+    (cstate' = 0)
+  & (next_state' = 2);
+
+  []
+    (cstate = 2)
+  & (val = 2)
+  ->
+    (cstate' = 3);
+
+  []
+    (cstate = 3)
+  & (sender = 0)
+  ->
+    (cstate' = 4);
+
+  []
+    (cstate = 4)
+  & (player_input_choice >= 0)
+  & (player_input_choice <= 3)
+  ->
+    (cstate' = 5)
+  & (input0' = player_input_choice);
+
+  []
+    (cstate = 3)
+  & (sender != 0)
+  ->
+    (cstate' = 5);
+
+  []
+    (cstate = 5)
+  & (sender = 1)
+  ->
+    (cstate' = 6);
+
+  []
+    (cstate = 6)
+  & (player_input_choice >= 0)
+  & (player_input_choice <= 3)
+  ->
+    (cstate' = 7)
+  & (input1' = player_input_choice);
+
+  []
+    (cstate = 5)
+  & (sender != 1)
+  ->
+    (cstate' = 7);
+
+  []
+    (cstate = 2)
+  & (val != 2)
+  ->
+    (cstate' = 7);
+
+  []
+    (cstate = 7)
+  ->
+    (cstate' = 1);
+
+  [broadcast_finalize]
+    (cstate = 1)
+  ->
+    (cstate' = 0)
+  & (next_state' = 8);
+
+  []
+    (cstate = 8)
+  & (input0 != 0)
+  ->
+    (cstate' = 9);
+
+  []
+    (cstate = 9)
+  & (input1 != 0)
+  ->
+    (cstate' = 10);
+
+  []
+    (cstate = 10)
+  & (mod(3 + input0 - input1, 3) = 1)
+  ->
+    (cstate' = 11);
+
+  []
+    (cstate = 11)
+  & (contract_balance >= 2 * 2)
+  & (balance0 + 2 * 2 <= MAX_USER_BALANCE)
+  ->
+    (cstate' = 12)
+  & (contract_balance' = contract_balance - 2 * 2)
+  & (balance0' = balance0 + 2 * 2);
+
+  []
+    (cstate = 10)
+  & (mod(3 + input0 - input1, 3) != 1)
+  ->
+    (cstate' = 12);
+
+  []
+    (cstate = 12)
+  & (mod(3 + input0 - input1, 3) = 2)
+  ->
+    (cstate' = 13);
+
+  []
+    (cstate = 13)
+  & (contract_balance >= 2 * 2)
+  & (balance1 + 2 * 2 <= MAX_USER_BALANCE)
+  ->
+    (cstate' = 14)
+  & (contract_balance' = contract_balance - 2 * 2)
+  & (balance1' = balance1 + 2 * 2);
+
+  []
+    (cstate = 12)
+  & (mod(3 + input0 - input1, 3) != 2)
+  ->
+    (cstate' = 14);
+
+  []
+    (cstate = 14)
+  & (mod(3 + input0 - input1, 3) = 0)
+  ->
+    (cstate' = 15);
+
+  []
+    (cstate = 15)
+  & (contract_balance >= 2)
+  & (balance0 + 2 <= MAX_USER_BALANCE)
+  ->
+    (cstate' = 16)
+  & (contract_balance' = contract_balance - 2)
+  & (balance0' = balance0 + 2);
+
+  []
+    (cstate = 16)
+  & (contract_balance >= 2)
+  & (balance1 + 2 <= MAX_USER_BALANCE)
+  ->
+    (cstate' = 17)
+  & (contract_balance' = contract_balance - 2)
+  & (balance1' = balance1 + 2);
+
+  []
+    (cstate = 14)
+  & (mod(3 + input0 - input1, 3) != 0)
+  ->
+    (cstate' = 17);
+
+  []
+    (cstate = 17)
+  & (0 >= 0)
+  & (0 <= 3)
+  ->
+    (cstate' = 18)
+  & (input0' = 0);
+
+  []
+    (cstate = 18)
+  & (0 >= 0)
+  & (0 <= 3)
+  ->
+    (cstate' = 19)
+  & (input1' = 0);
+
+  []
+    (cstate = 9)
+  & (input1 = 0)
+  ->
+    (cstate' = 19);
+
+  []
+    (cstate = 8)
+  & (input0 = 0)
+  ->
+    (cstate' = 19);
+
+  []
+    (cstate = 19)
+  ->
+    (cstate' = 1);
+
+endmodule
+
+
+
+
+/////////////////////
+
+module player0
+  state0 : [1..NUM_PLAYER0_STATES];
+
+  finalize_val0 : [0..2];
+  inputA : [0..3];
+  player_input_choice0 : [0..3];
+  player_input_val0 : [0..2];
+
+  []
+    (state0 = 1)
+  & (1 >= 0)
+  & (1 <= 2)
+  ->
+    1/3: (state0' = 2)
+  & (inputA' = 1) + 
+    1/3: (state0' = 2)
+  & (inputA' = 2) +
+    1/3: (state0' = 2)
+  & (inputA' = 3);
+
+  [broadcast_player_input0]
+    (state0 = 2)
+  & (cstate = 1)
+  ->
+    (state0' = 3)
+  & (player_input_val0' = 2)
+  & (player_input_choice0' = inputA);
+
+  []
+    (state0 = 3)
+  & (cstate = 1)
+  & (player_input_state0 = T_EXECUTED)
+  ->
+    (state0' = 4);
+
+  [broadcast_finalize0]
+    (state0 = 4)
+  & (cstate = 1)
+  & (player_input_state1 = T_EXECUTED)
+  ->
+    (state0' = 5)
+  & (finalize_val0' = 0);
+
+  []
+    (state0 = 5)
+  & (cstate = 1)
+  & (finalize_state0 = T_EXECUTED)
+  ->
+    (state0' = 6);
+
+endmodule
+
+
+
+
+/////////////////////
+
+module player1
+  state1 : [1..NUM_PLAYER1_STATES];
+
+  finalize_val1 : [0..2];
+  inputB : [0..3];
+  player_input_choice1 : [0..3];
+  player_input_val1 : [0..2];
+
+  []
+    (state1 = 1)
+  & (2 >= 0)
+  & (2 <= 3)
+  ->
+    1/3: (state1' = 2)
+  & (inputB' = 1) + 
+    1/3: (state1' = 2)
+  & (inputB' = 2) +
+    1/3: (state1' = 2)
+  & (inputB' = 3);
+
+  [broadcast_player_input1]
+    (state1 = 2)
+  & (cstate = 1)
+  ->
+    (state1' = 3)
+  & (player_input_val1' = 2)
+  & (player_input_choice1' = inputB);
+
+  []
+    (state1 = 3)
+  & (cstate = 1)
+  & (player_input_state1 = T_EXECUTED)
+  ->
+    (state1' = 4);
+
+  [broadcast_finalize1]
+    (state1 = 4)
+  & (cstate = 1)
+  & (player_input_state0 = T_EXECUTED)
+  ->
+    (state1' = 5)
+  & (finalize_val1' = 0);
+
+  []
+    (state1 = 5)
+  & (cstate = 1)
+  & (finalize_state1 = T_EXECUTED)
+  ->
+    (state1' = 6);
+
+endmodule
+
+
