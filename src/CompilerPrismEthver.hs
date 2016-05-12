@@ -255,6 +255,7 @@ verStm modifyModule (SBlock stms) = do
 verExp :: ModifyModuleType -> Exp -> VerRes Exp
 
 verExp modifyModule (EEq exp1 exp2) = verMathExp modifyModule (EEq exp1 exp2)
+verExp modifyModule (ENe exp1 exp2) = verMathExp modifyModule (ENe exp1 exp2)
 verExp modifyModule (EAdd exp1 exp2) = verMathExp modifyModule (EAdd exp1 exp2)
 verExp modifyModule (ESub exp1 exp2) = verMathExp modifyModule (ESub exp1 exp2)
 verExp modifyModule (EMul exp1 exp2) = verMathExp modifyModule (EMul exp1 exp2)
@@ -282,6 +283,11 @@ verMathExp modifyModule (EEq exp1 exp2) = do
   evalExp1 <- verExp modifyModule exp1
   evalExp2 <- verExp modifyModule exp2
   return (EEq evalExp1 evalExp2)
+
+verMathExp modifyModule (ENe exp1 exp2) = do
+  evalExp1 <- verExp modifyModule exp1
+  evalExp2 <- verExp modifyModule exp2
+  return (ENe evalExp1 evalExp2)
 
 verMathExp modifyModule (EAdd exp1 exp2) = do
   evalExp1 <- verExp modifyModule exp1

@@ -12,7 +12,7 @@ contract Bank {
     }
     
     function transfer(uint(3) money) {
-      if (msg.sender == "A") {
+      if (msg.sender != "A") {
           pot0 = pot0 - money;
           pot1 = pot1 + money;
       }
