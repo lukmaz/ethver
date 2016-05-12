@@ -222,6 +222,13 @@ addCustomTrans modifyModule transName fromState toState guards updates = do
   _ <- modifyModule (addTransToModule newTrans)
   return ()
 
+addFirstCustomTrans :: ModifyModuleType -> String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addFirstCustomTrans modifyModule transName fromState toState guards updates = do
+  mod <- modifyModule id
+  let newTrans = newCustomTrans (stateVar mod) transName fromState toState guards updates
+  _ <- modifyModule (addFirstTransToModule newTrans)
+  return ()
+
 
 addTransNoState :: ModifyModuleType -> String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 addTransNoState modifyModule transName guards updates = do
@@ -246,15 +253,48 @@ addTransToModule :: Trans -> Module -> Module
 addTransToModule tr mod = 
   mod {transs = tr:(transs mod)}
 
+addFirstTransToModule :: Trans -> Module -> Module
+addFirstTransToModule tr mod =
+  mod {transs = (transs mod) ++ [tr]}
+
+----------------------
+-- Critical section --
+----------------------
+
+-- converts all commands in a module by adding critical section stuff
+addCS :: Module -> Module
+addCS mod = 
+  mod { transs = reverse $ 
+    foldl
+      (\acc tr -> ((setCS (number mod) tr):(unsetCS (number mod) tr):acc))
+      []
+      (transs mod)
+  }
+  
+setCS :: Integer -> Trans -> Trans
+setCS number (_, guards, _) = 
+  (
+    "",
+    (ENot $ EVar $ Ident "critical_section0")
+      :(ENot $ EVar $ Ident "critical_section1")
+      :(head guards)
+      :(drop 2 guards),
+    [(Ident $ "critical_section" ++ (show number), ETrue)]
+  )
+
+unsetCS :: Integer -> Trans -> Trans
+unsetCS number (transName, guards, updates) =
+  (
+    transName,
+    (EVar $ Ident $ "critical_section" ++ (show number))
+      :guards,
+    (Ident $ "critical_section" ++ (show number), EFalse)
+      :updates
+  )
+
 ---------------------
 -- MONEY TRANSFERS --
 ---------------------
-
-{-
-transferToContract :: Ident -> Exp -> VerRes ()
-transferToContract from value = do
-  transferMoney from (Ident "contract_balance") (EVar (Ident "MAX_CONTRACT_BALANCE")) value
--}
 
 transferFromContract :: Ident -> Exp -> VerRes ()
 transferFromContract to value = do
@@ -278,6 +318,7 @@ transferMoney from to maxTo value = do
 generatePrism :: VerWorld -> String
 generatePrism world = 
   "mdp\n\n" ++
+  "const int ADVERSARY;\n\n" ++ 
   generateConstants ++
   (generateNumStates world) ++
   (generateMaxBalances) ++ 
@@ -313,11 +354,13 @@ contractPream =
 
 player0Pream :: String
 player0Pream =
-  "  state0 : [1..NUM_PLAYER0_STATES];\n"
+  "  state0 : [-1..NUM_PLAYER0_STATES] init 0;\n" ++
+  "  critical_section0 : bool;\n"
 
 player1Pream :: String
 player1Pream =
-  "  state1 : [1..NUM_PLAYER1_STATES];\n"
+  "  state1 : [-1..NUM_PLAYER1_STATES] init 0;\n" ++
+  "  critical_section1 : bool;\n"
 
 generateConstants :: String
 generateConstants = 
@@ -438,6 +481,12 @@ prismShowExp (EDiv e1 e2) =
 prismShowExp (EMod e1 e2) =
   "mod(" ++ prismShowExp e1 ++ ", " ++ prismShowExp e2 ++ ")"
 
+prismShowExp (ENot e1) =
+  "!" ++ prismShowExp e1
+
+prismShowExp (ENeg e1) =
+  "-" ++ prismShowExp e1
+
 -- TODO: szukać dokładniej, jeśli nazwy lok/glob się przekrywają
 prismShowExp (EVar ident) =
   prismShowIdent ident
@@ -453,6 +502,12 @@ prismShowExp ESender =
 
 prismShowExp EValue =
   "val"
+
+prismShowExp ETrue = 
+  "true"
+
+prismShowExp EFalse = 
+  "false"
 
 prismShowExp (ECall (h:t) args) =
   foldl

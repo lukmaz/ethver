@@ -48,15 +48,19 @@ ESub.    Exp2 ::= Exp2 "-" Exp3 ;
 EMul.    Exp3 ::= Exp3 "*" Exp4 ;
 EDiv.    Exp3 ::= Exp3 "/" Exp4 ;
 EMod.    Exp3 ::= Exp3 "%" Exp4 ;
-ECall.   Exp4 ::= [Ident] "(" [CallArg] ")" ;
-ESend.   Exp4 ::= Exp "." "send" "(" [CallArg] ")" ;
-EVar.    Exp4 ::= Ident ;
-EValue.  Exp4 ::= "msg" "." "value" ;
-ESender. Exp4 ::= "msg" "." "sender" ;
-EStr.    Exp4 ::= String ;
-EInt.    Exp4 ::= Integer ;
+ENeg.    Exp4 ::= "-" Exp5 ;
+ENot.    Exp4 ::= "!" Exp5 ;
+ECall.   Exp5 ::= [Ident] "(" [CallArg] ")" ;
+ESend.   Exp5 ::= Exp "." "send" "(" [CallArg] ")" ;
+EVar.    Exp5 ::= Ident ;
+EValue.  Exp5 ::= "msg" "." "value" ;
+ESender. Exp5 ::= "msg" "." "sender" ;
+EStr.    Exp5 ::= String ;
+EInt.    Exp5 ::= Integer ;
+ETrue.   Exp5 ::= "true" ;
+EFalse.  Exp5 ::= "false" ;
 
-coercions Exp 4 ;
+coercions Exp 5 ;
 separator CallArg "," ;
 separator nonempty Ident "." ;
 
