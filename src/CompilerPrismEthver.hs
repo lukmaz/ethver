@@ -19,6 +19,12 @@ verProgram :: Program -> VerRes ()
 verProgram (Prog contract scenarios) = do
   verContract contract
   verScenarios scenarios
+  addAdversarialTranss contract
+
+addAdversarialTranss :: Contract -> VerRes ()
+addAdversarialTranss (Contr _ _ _ funs) = do
+  mapM_ (addAdversarialTranssToPlayer modifyPlayer0) funs
+  mapM_ (addAdversarialTranssToPlayer modifyPlayer1) funs
 
 --------------
 -- CONTRACT --
@@ -51,7 +57,10 @@ verFunBroadcast modifyModule (Fun name args stms) = do
   addTransNoState
     modifyBlockchain 
     ("broadcast_" ++ (prismShowIdent name) ++ (show $ number mod))
-    [EEq (EVar (Ident "cstate")) (EInt 1)]
+    [
+      EEq (EVar (Ident "cstate")) (EInt 1), 
+      ENe (EVar $ Ident $ prismShowIdent name ++ "_state" ++ (show $ number mod)) (EVar $ Ident "T_BROADCAST")
+    ]
     [(Ident $ prismShowIdent name ++ "_state" ++ (show $ number mod), EVar (Ident "T_BROADCAST"))]
 
 verFunExecute :: ModifyModuleType -> Function -> VerRes ()
@@ -155,6 +164,25 @@ addUser :: UserDecl -> VerRes ()
 addUser (UDec name) = do
   addPlayer name
 
+addAdversarialTranssToPlayer :: ModifyModuleType -> Function -> VerRes ()
+addAdversarialTranssToPlayer modifyModule (Fun (Ident funName) _ _) = do
+  mod <- modifyModule id 
+  let valName = Ident $ funName ++ "_val" ++ (show $ number mod)
+  maxVal <- maxValue valName
+  forM_ 
+    [0..maxVal]
+    (\v -> addTransNoState
+      modifyModule
+      ("broadcast_" ++ funName ++ (show $ number mod))
+      [
+        ENot $ EVar $ Ident $ "critical_section" ++ (show $ 1 - (number mod)),
+        EEq (EVar $ Ident "cstate") (EInt 1),
+        EEq (EVar $ Ident $ "state" ++ (show $ number mod)) (EInt (-1))
+      ]
+      [(Ident $ funName ++ "_val" ++ (show $ number mod), EInt v)]
+    )
+
+
 --------------
 -- SCENARIO --
 --------------
@@ -162,19 +190,44 @@ addUser (UDec name) = do
 verScenarios :: [Scenario] -> VerRes ()
 verScenarios [(Scen userName0 decls0 stms0), (Scen userName1 decls1 stms1)] = do
   --TODO: przepadają userName'y
-  mapM_ (verDecl modifyPlayer0) decls0
-  mapM_ (verStm modifyPlayer0) stms0
-  mapM_ (verDecl modifyPlayer1) decls1
-  mapM_ (verStm modifyPlayer1) stms1
+  verScenario modifyPlayer0 decls0 stms0
+  verScenario modifyPlayer1 decls1 stms1
 
--- TODO: Drugi gracz
+verScenario :: ModifyModuleType -> [Decl] -> [Stm] -> VerRes ()
+verScenario modifyModule decls stms = do
+  mod <- modifyModule id
+
+  mapM_ (verDecl modifyModule) decls
+
+  mapM_ (verStm modifyModule) stms
+
+  _ <- modifyModule addCS
+  
+  addFirstCustomTrans
+    modifyModule
+    ""
+    0
+    1
+    [ENe (EVar $ Ident "ADVERSARY") (EInt $ number mod)]
+    []
+
+  addCustomTrans
+    modifyModule
+    ""
+    0
+    (-1)
+    [EEq (EVar $ Ident "ADVERSARY") (EInt $ number mod)]
+    []
+
+
 verDecl :: ModifyModuleType -> Decl -> VerRes ()
 verDecl modifyModule (Dec typ ident) = do
   addVar modifyModule typ ident
 
------------
--- CoStm --
------------
+
+---------
+-- Stm --
+---------
 
 verStm :: ModifyModuleType -> Stm -> VerRes ()
 verStm modifyModule (SExp exp) = do
@@ -187,7 +240,6 @@ verStm modifyModule (SReturn exp) = do
   _ <- verExp modifyModule (EAss (head $ returnVar world) evalExp)
   return ()
 
--- TODO: drugi gracz
 -- TODO: zrobić, żeby return wychodziło z wykonania bieżącej funkcji
 verStm modifyModule (SIf cond ifBlock) = do
   evalCond <- verExp modifyModule cond
@@ -208,7 +260,6 @@ verStm modifyModule (SIf cond ifBlock) = do
     [negateExp evalCond]
     []
 
--- TODO: drugi gracz, kontrakt
 verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
   evalCond <- verExp modifyModule cond
   mod <- modifyModule id
