@@ -20,11 +20,11 @@ contract Bank {
 
     function withdraw(uint(3) money) {
       if (msg.sender == "A") {
-          msg.sender.send(money);
+          "A".send(money);
           pot0 = pot0 - money;
       }
       if (msg.sender == "B") {
-          msg.sender.send(money);
+          "B".send(money);
           pot1 = pot1 - money;
       }
     }
