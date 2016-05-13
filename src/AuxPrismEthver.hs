@@ -136,15 +136,6 @@ getPlayerNumber str = do
   case Map.lookup str $ playerNumbers world of
     Just number -> return number
 
--- TODO: do wywalenia
-{-
-getNumberBalance :: Integer -> VerRes Ident
-getNumberBalance number = do
-  world <- get
-  case Map.lookup number $ addresses world of
-    Just name -> return name
--}
-
 -- TODO: stos dla zagnieżdżonych wywołań?
 addReturnVar :: Ident -> VerRes ()
 addReturnVar ident = do
@@ -535,6 +526,9 @@ findVarType ident = do
               case Map.lookup ident (vars $ player1 world) of
                 Just typ -> return (Just typ)
                 Nothing -> return Nothing
+
+maxValueOfType :: Type -> Integer
+maxValueOfType (TUInt x) = (x - 1)
 
 minValue :: Ident -> VerRes Integer
 minValue ident = do

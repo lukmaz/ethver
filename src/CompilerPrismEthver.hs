@@ -165,13 +165,14 @@ addUser (UDec name) = do
   addPlayer name
 
 addAdversarialTranssToPlayer :: ModifyModuleType -> Function -> VerRes ()
-addAdversarialTranssToPlayer modifyModule (Fun (Ident funName) _ _) = do
+addAdversarialTranssToPlayer modifyModule (Fun (Ident funName) args _) = do
   mod <- modifyModule id 
   let valName = Ident $ funName ++ "_val" ++ (show $ number mod)
   maxVal <- maxValue valName
+  let maxValsList = generateValsList maxVal args
   forM_ 
-    [0..maxVal]
-    (\v -> addTransNoState
+    maxValsList
+    (\vals -> addTransNoState
       modifyModule
       ("broadcast_" ++ funName ++ (show $ number mod))
       [
@@ -179,9 +180,35 @@ addAdversarialTranssToPlayer modifyModule (Fun (Ident funName) _ _) = do
         EEq (EVar $ Ident "cstate") (EInt 1),
         EEq (EVar $ Ident $ "state" ++ (show $ number mod)) (EInt (-1))
       ]
-      [(Ident $ funName ++ "_val" ++ (show $ number mod), EInt v)]
+      (advUpdates (number mod) funName args vals)
     )
 
+generateValsList :: Integer -> [Arg] -> [[Integer]]
+generateValsList maxVal args = 
+  let maxVals = maxVal:(map (\(Ar typ _) -> maxValueOfType typ) args) in
+    generateAllVals maxVals
+
+generateAllVals :: [Integer] -> [[Integer]]
+generateAllVals [] = []
+
+generateAllVals [h] =
+  map (\a -> [a]) [0..h]
+
+generateAllVals (h:t) = 
+  let vt = generateAllVals t in
+    foldl
+      (\acc x -> 
+        (map (\v -> x:v) vt)
+          ++ acc)
+      []
+      (reverse [0..h])
+
+advUpdates :: Integer -> String -> [Arg] -> [Integer] -> [(Ident, Exp)]
+advUpdates number funName args valList =
+  let varNames = "val":(map (\(Ar _ (Ident ident)) -> ident) args) in
+    map
+      (\(varName, v) -> (Ident $ funName ++ "_" ++ varName ++ (show number), EInt v))
+      (zip varNames valList)
 
 --------------
 -- SCENARIO --
