@@ -61,16 +61,16 @@ verFunBroadcast modifyModule (Fun name args stms) = do
       EEq (EVar (Ident "cstate")) (EInt 1), 
       ENe (EVar $ Ident $ prismShowIdent name ++ "_state" ++ (show $ number mod)) (EVar $ Ident "T_BROADCAST")
     ]
-    [(Ident $ prismShowIdent name ++ "_state" ++ (show $ number mod), EVar (Ident "T_BROADCAST"))]
+    [[(Ident $ prismShowIdent name ++ "_state" ++ (show $ number mod), EVar (Ident "T_BROADCAST"))]]
 
 verFunExecute :: ModifyModuleType -> Function -> VerRes ()
 verFunExecute modifyModule (Fun name args stms) = do
   --TODO: argumenty
   mod <- modifyModule id
 
-  let updates0 = [(Ident "sender", EInt $ number mod), (Ident "val", EVar $ Ident $ prismShowIdent name ++ "_val" ++ (show $ number mod)), (Ident $ prismShowIdent name ++ "_state" ++ (show $ number mod), EVar (Ident "T_EXECUTED"))]
+  let updates0 = [[(Ident "sender", EInt $ number mod), (Ident "val", EVar $ Ident $ prismShowIdent name ++ "_val" ++ (show $ number mod)), (Ident $ prismShowIdent name ++ "_state" ++ (show $ number mod), EVar (Ident "T_EXECUTED"))]]
   let addAssignment acc (Ar _ (Ident varName)) = acc ++ [(Ident $ prismShowIdent name ++ "_" ++ varName, EVar $Ident $ prismShowIdent name ++ "_" ++ varName ++ (show $ number mod))]
-  let updates = foldl addAssignment updates0 args
+  let updates = [foldl addAssignment (head updates0) args]
 
   addTransNoState
     modifyBlockchain 
@@ -99,7 +99,7 @@ verFunExecute modifyModule (Fun name args stms) = do
         (EVar $ Ident $ "balance" ++ (show $ number mod))
     ]
     [
-      (Ident $ prismShowIdent name ++ "_state" ++ (show $ number mod), EVar (Ident "T_INVALIDATED"))
+      [(Ident $ prismShowIdent name ++ "_state" ++ (show $ number mod), EVar (Ident "T_INVALIDATED"))]
     ]
 
 verFunContract :: Function -> VerRes ()
@@ -122,7 +122,7 @@ verFunContract (Fun name args stms) = do
     1
     0
     []
-    [(Ident "next_state", EInt $ numStates mod + 1)]
+    [[(Ident "next_state", EInt $ numStates mod + 1)]]
   
   modifyContract (\mod -> mod {currState = numStates mod + 1, numStates = numStates mod + 1})
   
@@ -135,7 +135,7 @@ verFunContract (Fun name args stms) = do
     (numStates mod)
     1
     []
-    []
+    [[]]
   
   clearArgMap
 
@@ -151,13 +151,13 @@ verExecTransaction modifyModule = do
       EGe (EVar $ Ident $ "balance" ++ (show $ number mod)) (EVar $ Ident "val"),
       ELe (EAdd (EVar $ Ident "contract_balance") (EVar $ Ident "val")) (EVar $ Ident "MAX_CONTRACT_BALANCE")
     ]
-    [
+    [[
       (Ident "cstate", EVar $ Ident "next_state"),
       (Ident $ "balance" ++ (show $ number mod), 
         ESub (EVar $ Ident $ "balance" ++ (show $ number mod)) (EVar $ Ident "val")),
       (Ident "contract_balance",
         EAdd (EVar $ Ident "contract_balance") (EVar $ Ident "val"))
-    ]
+    ]]
 
 
 addUser :: UserDecl -> VerRes ()
@@ -203,12 +203,14 @@ generateAllVals (h:t) =
       []
       (reverse [0..h])
 
-advUpdates :: Integer -> String -> [Arg] -> [Integer] -> [(Ident, Exp)]
+advUpdates :: Integer -> String -> [Arg] -> [Integer] -> [[(Ident, Exp)]]
 advUpdates number funName args valList =
   let varNames = "val":(map (\(Ar _ (Ident ident)) -> ident) args) in
-    map
-      (\(varName, v) -> (Ident $ funName ++ "_" ++ varName ++ (show number), EInt v))
-      (zip varNames valList)
+    [
+      map
+        (\(varName, v) -> (Ident $ funName ++ "_" ++ varName ++ (show number), EInt v))
+        (zip varNames valList)
+    ]
 
 --------------
 -- SCENARIO --
@@ -228,7 +230,8 @@ verScenario modifyModule decls stms = do
 
   mapM_ (verStm modifyModule) stms
 
-  _ <- modifyModule addCS
+  -- add critical sections stuff 
+  --_ <- modifyModule addCS
   
   addFirstCustomTrans
     modifyModule
@@ -236,7 +239,7 @@ verScenario modifyModule decls stms = do
     0
     1
     [ENe (EVar $ Ident "ADVERSARY") (EInt $ number mod)]
-    []
+    [[]]
 
   addCustomTrans
     modifyModule
@@ -244,7 +247,7 @@ verScenario modifyModule decls stms = do
     0
     (-1)
     [EEq (EVar $ Ident "ADVERSARY") (EInt $ number mod)]
-    []
+    [[]]
 
 
 verDecl :: ModifyModuleType -> Decl -> VerRes ()
@@ -276,7 +279,7 @@ verStm modifyModule (SIf cond ifBlock) = do
     modifyModule
     ""
     [evalCond]
-    []
+    [[]]
   verStm modifyModule ifBlock
   mod <- modifyModule id
   addCustomTrans
@@ -285,7 +288,7 @@ verStm modifyModule (SIf cond ifBlock) = do
     ifState
     (currState mod)
     [negateExp evalCond]
-    []
+    [[]]
 
 verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
   evalCond <- verExp modifyModule cond
@@ -295,7 +298,7 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
     modifyModule
     ""
     [evalCond]
-    []
+    [[]]
   verStm modifyModule ifBlock
   mod <- modifyModule id
   let endIfState = currState mod 
@@ -305,7 +308,7 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
     ifState
     (numStates mod + 1)
     [negateExp evalCond]
-    []
+    [[]]
   mod <- modifyModule id
   let newState = numStates mod + 1
   modifyModule (setCurrState newState)
@@ -318,7 +321,7 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
     (currState mod)
     endIfState
     []
-    []
+    [[]]
   _ <- modifyModule (setCurrState endIfState)
   return ()
   
@@ -409,7 +412,7 @@ verValExp modifyModule (EAss ident exp) = do
     modifyModule
     ""
     [EGe evalExp (EInt minV), ELe evalExp (EInt maxV)]
-    [(ident, evalExp)]
+    [[(ident, evalExp)]]
   return (EAss ident evalExp)
 
 verValExp modifyModule (EVar ident) = do
@@ -512,9 +515,9 @@ verSendTAux modifyModule funName argsVals = do
       -- TODO: olewamy "from", bo sender jest wiadomy ze scenariusza
       let (ABra _ value) = last argsVals
       
-      let updates0 = [(Ident $ (prismShowIdent funName) ++ "_val" ++ (show $ number mod), value)]
+      let updates0 = [[(Ident $ (prismShowIdent funName) ++ "_val" ++ (show $ number mod), value)]]
       let addAssignment acc (argName, argVal) = acc ++ [createAssignment (number mod) funName argName argVal]
-      let updates = foldl addAssignment updates0 $ zip argNames expArgsVals
+      let updates = [foldl addAssignment (head updates0) $ zip argNames expArgsVals]
       
 
       addTransToNewState 
@@ -530,7 +533,7 @@ verSendTAux modifyModule funName argsVals = do
           EEq 
             (EVar (Ident (prismShowIdent funName ++ "_state" ++ (show $ number mod)))) 
             (EVar (Ident "T_EXECUTED"))]
-        []
+        [[]]
 
 getArgNames :: Function -> [Arg]
 getArgNames (Fun _ args _) = args

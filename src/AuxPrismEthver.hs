@@ -10,7 +10,7 @@ import ErrM
 -- TYPES --
 
 type VerRes a = State VerWorld a
-type Trans = (String, [Exp], [(Ident, Exp)])
+type Trans = (String, [Exp], [[(Ident, Exp)]])
 type ModifyModuleType = (Module -> Module) -> VerRes Module
 
 data VerWorld = VerWorld {
@@ -197,7 +197,7 @@ modifyPlayer1 fun = do
 -- Trans --
 -----------
 
-addTransToNewState :: ModifyModuleType -> String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addTransToNewState :: ModifyModuleType -> String -> [Exp] -> [[(Ident, Exp)]] -> VerRes ()
 addTransToNewState modifyModule transName guards updates = do
   mod <- modifyModule id
   let newState = numStates mod + 1
@@ -206,14 +206,14 @@ addTransToNewState modifyModule transName guards updates = do
   _ <- modifyModule (setNumStates newState)
   return ()
 
-addCustomTrans :: ModifyModuleType -> String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addCustomTrans :: ModifyModuleType -> String -> Integer -> Integer -> [Exp] -> [[(Ident, Exp)]] -> VerRes ()
 addCustomTrans modifyModule transName fromState toState guards updates = do
   mod <- modifyModule id
   let newTrans = newCustomTrans (stateVar mod) transName fromState toState guards updates
   _ <- modifyModule (addTransToModule newTrans)
   return ()
 
-addFirstCustomTrans :: ModifyModuleType -> String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addFirstCustomTrans :: ModifyModuleType -> String -> Integer -> Integer -> [Exp] -> [[(Ident, Exp)]] -> VerRes ()
 addFirstCustomTrans modifyModule transName fromState toState guards updates = do
   mod <- modifyModule id
   let newTrans = newCustomTrans (stateVar mod) transName fromState toState guards updates
@@ -221,22 +221,22 @@ addFirstCustomTrans modifyModule transName fromState toState guards updates = do
   return ()
 
 
-addTransNoState :: ModifyModuleType -> String -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+addTransNoState :: ModifyModuleType -> String -> [Exp] -> [[(Ident, Exp)]] -> VerRes ()
 addTransNoState modifyModule transName guards updates = do
   mod <- modifyModule id
   let newTrans = newTransNoState transName guards updates
   _ <- modifyModule (addTransToModule newTrans)
   return ()
 
-newCustomTrans :: String -> String -> Integer -> Integer -> [Exp] -> [(Ident, Exp)] -> Trans
+newCustomTrans :: String -> String -> Integer -> Integer -> [Exp] -> [[(Ident, Exp)]] -> Trans
 newCustomTrans stateVar transName fromState toState guards updates =
   newTransNoState
     transName
     ((EEq (EVar (Ident stateVar)) (EInt fromState)):guards)
-    ((Ident stateVar, EInt toState):updates)
+    (map ((Ident stateVar, EInt toState):) updates)
   
 
-newTransNoState :: String -> [Exp] -> [(Ident, Exp)] -> Trans
+newTransNoState :: String -> [Exp] -> [[(Ident, Exp)]] -> Trans
 newTransNoState transName guards updates =
   (transName, guards, updates)
 
@@ -270,7 +270,7 @@ setCS number (_, guards, _) =
       :(ENot $ EVar $ Ident "critical_section1")
       :(head guards)
       :(drop 2 guards),
-    [(Ident $ "critical_section" ++ (show number), ETrue)]
+    [[(Ident $ "critical_section" ++ (show number), ETrue)]]
   )
 
 unsetCS :: Integer -> Trans -> Trans
@@ -279,8 +279,7 @@ unsetCS number (transName, guards, updates) =
     transName,
     (EVar $ Ident $ "critical_section" ++ (show number))
       :guards,
-    (Ident $ "critical_section" ++ (show number), EFalse)
-      :updates
+    (map ((Ident $ "critical_section" ++ (show number), EFalse):) updates)
   )
 
 ---------------------
@@ -299,7 +298,7 @@ transferMoney from to maxTo value = do
     modifyContract
     ""
     [EGe (EVar from) value, ELe (EAdd (EVar to) value) maxTo]
-    [(from, ESub (EVar from) value), (to, EAdd (EVar to) value)]
+    [[(from, ESub (EVar from) value)], [(to, EAdd (EVar to) value)]]
 
 --------------------------------
 -- CODE GENERATION FROM WORLD --
@@ -412,10 +411,22 @@ prismGuards (h:t) =
       ""
       t
 
-prismUpdates :: [(Ident, Exp)] -> String
+prismUpdates :: [[(Ident, Exp)]] -> String
 prismUpdates [] = ""
 
+prismUpdates [updates] = 
+  prismUpdatesDeterm updates
+
 prismUpdates (h:t) = 
+  let n = length (h:t) in
+    foldl
+      (\acc updates -> acc ++ " +\n    1/" ++ (show n) ++ ": " ++
+        (prismUpdatesDeterm updates))
+      ("    1/" ++ (show n) ++ ": " ++ (prismUpdatesDeterm h))
+      t
+
+prismUpdatesDeterm :: [(Ident, Exp)] -> String
+prismUpdatesDeterm (h:t) = 
   "    " ++ (prismUpdate h) ++
     foldl
       (\acc update -> acc ++ "\n  & " ++ (prismUpdate update))

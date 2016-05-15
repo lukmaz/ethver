@@ -1,1 +1,1 @@
-./MakeEthver examples/bank1-with_args.etv
+./MakeEthver examples/rps_v1.etv
