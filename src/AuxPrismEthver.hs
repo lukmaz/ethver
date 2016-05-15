@@ -382,8 +382,8 @@ generateNumStates world =
 -- TODO: skąd?
 generateMaxBalances :: String
 generateMaxBalances =
-  "const int MAX_CONTRACT_BALANCE = 2;\n" ++
-  "const int MAX_USER_BALANCE = 2;\n\n"
+  "const int MAX_CONTRACT_BALANCE = 4;\n" ++
+  "const int MAX_USER_BALANCE = 4;\n\n"
 
 prismVars :: Map.Map Ident Type -> String
 prismVars vars = 
@@ -450,6 +450,8 @@ prismUpdate (ident, exp) =
 
 prismShowType :: Type -> String
 prismShowType (TUInt x) = "[0.." ++ (show $ x - 1) ++ "]" 
+prismShowType (TRUInt x) = "[0.." ++ (show x) ++ "]"
+prismShowType TBool = "bool"
 
 prismShowIdent :: Ident -> String
 prismShowIdent (Ident ident) = ident
@@ -546,21 +548,35 @@ findVarType ident = do
                 Just typ -> return (Just typ)
                 Nothing -> return Nothing
 
-maxValueOfType :: Type -> Integer
-maxValueOfType (TUInt x) = (x - 1)
+maxRealValueOfType :: Type -> Integer
+maxRealValueOfType (TUInt x) = (x - 1)
+maxRealValueOfType (TRUInt x) = (x - 1)
+maxRealValueOfType TBool = 1
+
+maxTypeValueOfType :: Type -> Integer
+maxTypeValueOfType (TUInt x) = (x - 1)
+maxTypeValueOfType (TRUInt x) = x
+maxTypeValueOfType TBool = 1
 
 minValue :: Ident -> VerRes Integer
 minValue ident = do
   typ <- findVarType ident
   case typ of 
     Just (TUInt x) -> return 0
+    Just (TRUInt x) -> return 0
+    Just TBool -> return 0
 
-maxValue :: Ident -> VerRes Integer
-maxValue ident = do
+maxRealValue :: Ident -> VerRes Integer
+maxRealValue ident = do
   typ <- findVarType ident
   case typ of
-    Just (TUInt x) -> return (x - 1)
-    
+    Just t -> return $ maxRealValueOfType t
+
+maxTypeValue :: Ident -> VerRes Integer
+maxTypeValue ident = do
+  typ <- findVarType ident
+  case typ of
+    Just t -> return $ maxTypeValueOfType t
 
 
 -- negate cond --
@@ -571,3 +587,5 @@ negateExp (ELt e1 e2) = (EGe e1 e2)
 negateExp (ELe e1 e2) = (EGt e1 e2)
 negateExp (EGt e1 e2) = (ELe e1 e2)
 negateExp (EGe e1 e2) = (ELt e1 e2)
+
+negateExp exp = ENot exp

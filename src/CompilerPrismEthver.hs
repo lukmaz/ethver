@@ -168,8 +168,8 @@ addAdversarialTranssToPlayer :: ModifyModuleType -> Function -> VerRes ()
 addAdversarialTranssToPlayer modifyModule (Fun (Ident funName) args _) = do
   mod <- modifyModule id 
   let valName = Ident $ funName ++ "_val" ++ (show $ number mod)
-  maxVal <- maxValue valName
-  let maxValsList = generateValsList maxVal args
+  maxValVal <- maxRealValue valName
+  let maxValsList = generateValsList maxValVal args
   forM_ 
     maxValsList
     (\vals -> addTransNoState
@@ -184,8 +184,8 @@ addAdversarialTranssToPlayer modifyModule (Fun (Ident funName) args _) = do
     )
 
 generateValsList :: Integer -> [Arg] -> [[Integer]]
-generateValsList maxVal args = 
-  let maxVals = maxVal:(map (\(Ar typ _) -> maxValueOfType typ) args) in
+generateValsList maxValVal args = 
+  let maxVals = maxValVal:(map (\(Ar typ _) -> maxRealValueOfType typ) args) in
     generateAllVals maxVals
 
 generateAllVals :: [Integer] -> [[Integer]]
@@ -229,6 +229,11 @@ verScenario modifyModule decls stms = do
   mapM_ (verDecl modifyModule) decls
 
   mapM_ (verStm modifyModule) stms
+
+
+  --------------------------------------------------
+  -- TUTAJ ZAKOMENTOWAĆ, ŻEBY NIE BYŁO CRIT. SEC. --
+  --------------------------------------------------
 
   -- add critical sections stuff 
   _ <- modifyModule addCS
@@ -349,6 +354,8 @@ verExp modifyModule EValue = verValExp modifyModule EValue
 verExp modifyModule ESender = verValExp modifyModule ESender
 verExp modifyModule (EInt x) = verValExp modifyModule (EInt x)
 verExp modifyModule (EStr s) = verValExp modifyModule (EStr s)
+verExp modifyModule ETrue = verValExp modifyModule ETrue
+verExp modifyModule EFalse = verValExp modifyModule EFalse
 
 verExp modifyModule (ECall idents exps) = verCallExp modifyModule (ECall idents exps)
 verExp modifyModule (ESend receiver args) = verCallExp modifyModule (ESend receiver args)
@@ -407,7 +414,7 @@ verValExp :: ModifyModuleType -> Exp -> VerRes Exp
 verValExp modifyModule (EAss ident exp) = do
   evalExp <- verExp modifyModule exp
   minV <- minValue ident
-  maxV <- maxValue ident
+  maxV <- maxTypeValue ident
   addTransToNewState
     modifyModule
     ""
@@ -434,6 +441,12 @@ verValExp modifyModule (EStr s) = do
   number <- getPlayerNumber s
   return (EInt number)
 
+verValExp _ ETrue =
+  return ETrue
+
+verValExp _ EFalse =
+  return EFalse
+
 
 ----------------
 -- CallExp --
@@ -451,6 +464,8 @@ verCallExp modifyModule (ECall idents args) = do
       verCallAux modifyModule funName args
     [Ident "random"] -> do
       verRandom modifyModule args
+    [Ident "random_lazy"] -> do
+      verRandomLazy modifyModule args
 
 
 verCallExp modifyModule (ESend receiverExp args) = do
@@ -499,6 +514,10 @@ verRandom modifyModule [AExp (EInt range)] = do
       [0..(range - 1)]
     )
   return (EVar $ Ident localVarName)
+
+verRandomLazy :: ModifyModuleType -> [CallArg] -> VerRes Exp
+verRandomLazy modifyModule [AExp (EInt range)] = do
+  return $ EInt range
 
 -- TODO: chyba powinno być najpierw kopiowanie coVars i scVars (?) na lokalne
 verCallAux :: ModifyModuleType -> Ident -> [CallArg] -> VerRes Exp
