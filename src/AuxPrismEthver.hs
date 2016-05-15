@@ -29,7 +29,7 @@ data Module = Module {
   number :: Integer,
   stateVar :: String,
   vars :: Map.Map Ident Type,
-  --TODO: local variables in contract
+  numLocals :: Integer,
   currState :: Integer,
   numStates :: Integer,
   transs :: [Trans]
@@ -53,7 +53,8 @@ emptyVerWorld = VerWorld {
   } 
 
 emptyModule :: Module
-emptyModule = Module {number = 42, stateVar = "emptyState", vars = Map.empty, currState = 1, numStates = 1, transs = []}
+emptyModule = Module {number = 42, stateVar = "emptyState", vars = Map.empty, numLocals = 0,
+  currState = 1, numStates = 1, transs = []}
 
 ------------------------
 -- WORLD MODIFICATION --
@@ -86,6 +87,13 @@ addP0Var = addVar modifyPlayer0
 addP1Var :: Type -> Ident -> VerRes ()
 addP1Var = addVar modifyPlayer1
 
+addLocal :: ModifyModuleType -> Type -> VerRes ()
+addLocal modifyModule typ = do
+  mod <- modifyModule id
+  let varName = "local" ++ (show $ numLocals mod)
+  addVar modifyModule typ (Ident varName)
+  _ <- modifyModule (\mod -> mod {numLocals = numLocals mod + 1})
+  return ()
 
 -- General addVar
 addVar :: ModifyModuleType -> Type -> Ident -> VerRes ()
@@ -298,7 +306,7 @@ transferMoney from to maxTo value = do
     modifyContract
     ""
     [EGe (EVar from) value, ELe (EAdd (EVar to) value) maxTo]
-    [[(from, ESub (EVar from) value)], [(to, EAdd (EVar to) value)]]
+    [[(from, ESub (EVar from) value), (to, EAdd (EVar to) value)]]
 
 --------------------------------
 -- CODE GENERATION FROM WORLD --
@@ -415,7 +423,7 @@ prismUpdates :: [[(Ident, Exp)]] -> String
 prismUpdates [] = ""
 
 prismUpdates [updates] = 
-  prismUpdatesDeterm updates
+  "    " ++ prismUpdatesDeterm updates
 
 prismUpdates (h:t) = 
   let n = length (h:t) in
@@ -427,7 +435,7 @@ prismUpdates (h:t) =
 
 prismUpdatesDeterm :: [(Ident, Exp)] -> String
 prismUpdatesDeterm (h:t) = 
-  "    " ++ (prismUpdate h) ++
+  (prismUpdate h) ++
     foldl
       (\acc update -> acc ++ "\n  & " ++ (prismUpdate update))
       ""

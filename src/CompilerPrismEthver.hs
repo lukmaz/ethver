@@ -231,7 +231,7 @@ verScenario modifyModule decls stms = do
   mapM_ (verStm modifyModule) stms
 
   -- add critical sections stuff 
-  --_ <- modifyModule addCS
+  _ <- modifyModule addCS
   
   addFirstCustomTrans
     modifyModule
@@ -442,13 +442,16 @@ verValExp modifyModule (EStr s) = do
 -- TODO: na razie możemy mieć tylko jeden kontrakt
 verCallExp :: ModifyModuleType -> Exp -> VerRes Exp
 
-verCallExp modifyModule (ECall idents exps) = do
+verCallExp modifyModule (ECall idents args) = do
   case idents of
     [funName, (Ident "sendTransaction")] -> do 
-      verSendTAux modifyModule funName exps
-      return (ECall idents exps)
+      verSendTAux modifyModule funName args
+      return (ECall idents args)
     [funName, (Ident "call")] -> do
-      verCallAux modifyModule funName exps
+      verCallAux modifyModule funName args
+    [Ident "random"] -> do
+      verRandom modifyModule args
+
 
 verCallExp modifyModule (ESend receiverExp args) = do
   case args of
@@ -480,6 +483,22 @@ verCallExp modifyModule (ESend receiverExp args) = do
 -----------------------------
 -- Call auxilary functions --
 -----------------------------
+
+verRandom :: ModifyModuleType -> [CallArg] -> VerRes Exp
+verRandom modifyModule [AExp (EInt range)] = do
+  mod <- modifyModule id
+  let localVarName = "local" ++ (show $ numLocals mod)
+  addLocal modifyModule (TUInt range)
+  addTransToNewState 
+    modifyModule 
+    ""
+    []
+    (foldl
+      (\acc x -> acc ++ [[(Ident localVarName, EInt x)]])
+      []
+      [0..(range - 1)]
+    )
+  return (EVar $ Ident localVarName)
 
 -- TODO: chyba powinno być najpierw kopiowanie coVars i scVars (?) na lokalne
 verCallAux :: ModifyModuleType -> Ident -> [CallArg] -> VerRes Exp

@@ -38,16 +38,16 @@ contract RPS {
 
 scenario A {
   uint(4) inputA;
-  inputA = 1;
-//  inputA = random(3);
+//  inputA = 1;
+  inputA = 1 + random(3);
   player_input.sendTransaction(inputA, {from: "A", value: 2});
   finalize.sendTransaction({from: "A", value: 0});
 }
 
 scenario B {
   uint(4) inputB;
-  inputB = 2;
-//  inputB = random(3);
+//  inputB = 2;
+  inputB = 1 + random(3);
   player_input.sendTransaction(inputB, {from: "B", value: 2});
   finalize.sendTransaction({from: "B", value: 0});
 }
