@@ -7,8 +7,8 @@ contract RPS {
 
 	uint(3) input0;
 	uint(3) input1;
-  bool input0_set;
-  bool input1_set;
+  uint(2) input0_set;
+  uint(2) input1_set;
 
 	
   function send_commit(random_uint(3) commit) {
@@ -22,36 +22,36 @@ contract RPS {
 		}
 	}
 
-	function send_open(bool reveal) {
+	function send_open(uint(2) reveal) {
     if (msg.sender == "A") {
-      if (reveal) {
+      if (reveal == 1) {
         if (commit0 == 3) {  //special value
           input0 = random(3);
-          input0_set = true;
+          input0_set = 1;
         }
         if (commit0 != 3) {  //special value
           input0 = commit0;
-          input0_set = true;
+          input0_set = 1;
         }
       }
     }
     if (msg.sender == "B") {
-      if (reveal) {
+      if (reveal == 1) {
         if (commit1 == 3) {  //special value
           input1 = random(3);
-          input1_set = true;
+          input1_set = 1;
         }
         if (commit1 != 3) {  //special value
           input1 = commit1;
-          input1_set = true;
+          input1_set = 1;
         }
       }
     }
 	}
 
 	function finalize() {
-    if (input0_set) {
-      if (input1_set) {
+    if (input0_set == 1) {
+      if (input1_set == 1) {
         if ((((3 + input0) - input1)%3) == 1) {
           "A".send(2*2);
         }
@@ -62,8 +62,8 @@ contract RPS {
           "A".send(2);
           "B".send(2);
         }
-        input0_set = false;
-        input1_set = false;
+        input0_set = 0;
+        input1_set = 0;
       }
     }
   }
@@ -73,7 +73,7 @@ scenario A {
   random_uint(3) inputA;
   inputA = random_lazy(3);  //sets special value
   send_commit.sendTransaction(inputA, {from: "A", value: 2});
-  send_open.sendTransaction(true, {from: "A", value: 0});
+  send_open.sendTransaction(1, {from: "A", value: 0});
   finalize.sendTransaction({from: "A", value: 0});
 }
 
@@ -81,6 +81,6 @@ scenario B {
   random_uint(3) inputB;
   inputB = random_lazy(3);  //sets special value
   send_commit.sendTransaction(inputB, {from: "B", value: 2});
-  send_open.sendTransaction(true, {from: "B", value: 0});
+  send_open.sendTransaction(1, {from: "B", value: 0});
   finalize.sendTransaction({from: "B", value: 0});
 }
