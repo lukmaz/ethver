@@ -60,6 +60,7 @@ EMod.    Exp6 ::= Exp6 "%" Exp7 ;
 ENeg.    Exp7 ::= "-" Exp8 ;
 ENot.    Exp7 ::= "!" Exp8 ;
 EArray.  Exp8 ::= Ident "[" Exp "]" ;
+EWait.   Exp8 ::= "wait" "(" Exp ")" ;
 ECall.   Exp8 ::= [Ident] "(" [CallArg] ")" ;
 ESend.   Exp8 ::= Exp "." "send" "(" [CallArg] ")" ;
 EVar.    Exp8 ::= Ident ;
@@ -76,6 +77,7 @@ separator nonempty Ident "." ;
 
 AExp.   CallArg ::= Exp ;
 ABra.   CallArg ::= "{" "from" ":" Exp "," "value" ":" Exp "}" ;
+-- TODO: skasować AWait całkowicie
 AWait.  CallArg ::= "{" "from" ":" Exp "," "value" ":" Exp "," "wait" ":" Exp "}" ;
 
 TUInt.   Type ::= "uint" "(" Integer ")" ;

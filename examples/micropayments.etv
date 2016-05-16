@@ -53,8 +53,8 @@ scenario A {
   
   uint(3) r0;
   r0 = random(3);
-  //TODO: jak będzie wait osobno, to może zadziała is_committed[1]
-  send_ticket.sendTransaction(1, r0, {from: "A", value: 0, wait: (is_committed_1 == 1)});
+  wait(is_committed[1] == 1);
+  send_ticket.sendTransaction(1, r0, {from: "A", value: 0});
   
 }
 
@@ -62,7 +62,7 @@ scenario B {
   random_uint(3) r1;
   r1 = random_lazy(3);
   ask_payment.sendTransaction(r1, {from: "B", value: 0});
-  // TODOL: zrobić wait osobno, żeby zadziałało is_signed[1]
-  get_payment.sendTransaction(1, {from: "B", value: 0, wait: (is_signed_1 == 1)});
+  wait(is_signed[1] == 1);
+  get_payment.sendTransaction(1, {from: "B", value: 0});
 }
 

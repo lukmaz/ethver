@@ -421,7 +421,7 @@ verExp modifyModule EFalse = verValExp modifyModule EFalse
 
 verExp modifyModule (ECall idents exps) = verCallExp modifyModule (ECall idents exps)
 verExp modifyModule (ESend receiver args) = verCallExp modifyModule (ESend receiver args)
-
+verExp modifyModule (EWait cond) = verCallExp modifyModule (EWait cond)
 
 -------------
 -- MathExp --
@@ -665,6 +665,15 @@ verCallExp modifyModule (ESend receiverExp args) = do
           transferFromContract receiverBalance val
   return (ESend receiverExp args)
 
+verCallExp modifyModule (EWait cond) = do
+  evalCond <- verExp modifyModule cond
+  addTransToNewState
+    modifyModule
+    ""
+    [evalCond]
+    [[]]
+  return (EWait evalCond)
+
 -----------------------------
 -- Call auxilary functions --
 -----------------------------
@@ -722,6 +731,7 @@ verSendTAux modifyModule funName argsVals = do
       let expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
       -- TODO: olewamy "from", bo sender jest wiadomy ze scenariusza
       
+      -- TODO: skasować opcję z wait, bo wait to osobna funkcja
       let guards0 = [EEq (EVar (Ident "cstate")) (EInt 1)]
       let (value, guards1) = case (last argsVals) of (ABra _ value) -> (value, guards0)
                                                      (AWait _ value wait) -> (value, guards0 ++ [wait])
