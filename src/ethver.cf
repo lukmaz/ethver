@@ -67,6 +67,7 @@ separator nonempty Ident "." ;
 
 AExp.   CallArg ::= Exp ;
 ABra.   CallArg ::= "{" "from" ":" Exp "," "value" ":" Exp "}" ;
+AWait.  CallArg ::= "{" "from" ":" Exp "," "value" ":" Exp "," "wait" ":" Exp "}" ;
 
 TUInt.   Type ::= "uint" "(" Integer ")" ;
 TBool.   Type ::= "bool" ;

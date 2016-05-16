@@ -182,14 +182,14 @@ addAdversarialTranssToPlayer modifyModule (FunV (Ident funName) args _) = do
   let valName = Ident $ funName ++ "_val" ++ (show $ number mod)
   maxValVal <- maxRealValue valName
   let maxValsList = generateValsList maxValVal args
-  generateAdvTranss modifyModule funName args maxValsList
+  generateAdvTranss modifyModule True funName args maxValsList
 
 addAdversarialTranssToPlayer modifyModule (Fun (Ident funName) args _) = do
   let maxValsList = generateValsListNoVal args
-  generateAdvTranss modifyModule funName args maxValsList
+  generateAdvTranss modifyModule False funName args maxValsList
 
-generateAdvTranss :: ModifyModuleType -> String -> [Arg] -> [[Integer]] -> VerRes ()
-generateAdvTranss modifyModule funName args maxes = do
+generateAdvTranss :: ModifyModuleType -> Bool -> String -> [Arg] -> [[Integer]] -> VerRes ()
+generateAdvTranss modifyModule withVal funName args maxes = do
   mod <- modifyModule id
   case maxes of
     [] ->
@@ -213,7 +213,7 @@ generateAdvTranss modifyModule funName args maxes = do
             EEq (EVar $ Ident "cstate") (EInt 1),
             EEq (EVar $ Ident $ "state" ++ (show $ number mod)) (EInt (-1))
           ]
-          (advUpdates (number mod) funName args vals)
+          (advUpdates withVal (number mod) funName args vals)
         )
 
 generateValsList :: Integer -> [Arg] -> [[Integer]]
@@ -241,14 +241,15 @@ generateAllVals (h:t) =
       []
       (reverse [0..h])
 
-advUpdates :: Integer -> String -> [Arg] -> [Integer] -> [[(Ident, Exp)]]
-advUpdates number funName args valList =
-  let varNames = "val":(map (\(Ar _ (Ident ident)) -> ident) args) in
-    [
-      map
-        (\(varName, v) -> (Ident $ funName ++ "_" ++ varName ++ (show number), EInt v))
-        (zip varNames valList)
-    ]
+advUpdates :: Bool -> Integer -> String -> [Arg] -> [Integer] -> [[(Ident, Exp)]]
+advUpdates withVal number funName args valList =
+  let prefix = if withVal then ("val":) else id in
+    let varNames = prefix (map (\(Ar _ (Ident ident)) -> ident) args) in
+      [
+        map
+          (\(varName, v) -> (Ident $ funName ++ "_" ++ varName ++ (show number), EInt v))
+          (zip varNames valList)
+      ]
 
 --------------
 -- SCENARIO --
