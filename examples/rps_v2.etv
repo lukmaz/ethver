@@ -4,60 +4,60 @@ contract RPS {
 
 	random_uint(3) commit0;
 	random_uint(3) commit1;
-  uint(2) committed0;
-  uint(2) committed1;
+  bool committed0;
+  bool committed1;
 
 	uint(3) input0;
 	uint(3) input1;
-  uint(2) input0_set;
-  uint(2) input1_set;
+  bool input0_set;
+  bool input1_set;
 
-  uint(2) finalized;
+  bool finalized;
 	
   function_with_value send_commit(random_uint(3) commit) {
 		if (msg.value == 2) {
       if (msg.sender == "A") {
         commit0 = commit;
-        committed0 = 1;
+        committed0 = true;
       }
       if (msg.sender == "B") {
         commit1 = commit;
-        committed1 = 1;
+        committed1 = true;
       }
 		}
 	}
 
-	function send_open(uint(2) reveal) {
+	function send_open(bool reveal) {
     if (msg.sender == "A") {
-      if (reveal == 1) {
+      if (reveal) {
         if (commit0 == 3) {  //special value
           input0 = random(3);
-          input0_set = 1;
+          input0_set = true;
         }
         if (commit0 != 3) {  //special value
           input0 = commit0;
-          input0_set = 1;
+          input0_set = true;
         }
       }
     }
     if (msg.sender == "B") {
-      if (reveal == 1) {
+      if (reveal) {
         if (commit1 == 3) {  //special value
           input1 = random(3);
-          input1_set = 1;
+          input1_set = true;
         }
         if (commit1 != 3) {  //special value
           input1 = commit1;
-          input1_set = 1;
+          input1_set = true;
         }
       }
     }
 	}
 
 	function finalize() {
-    if (finalized == 0) {
-      if (input0_set == 1) {
-        if (input1_set == 1) {
+    if (!finalized) {
+      if (input0_set) {
+        if (input1_set) {
           if ((((3 + input0) - input1)%3) == 1) {
             "A".send(2*2);
           }
@@ -68,7 +68,7 @@ contract RPS {
             "A".send(2);
             "B".send(2);
           }
-          finalized = 1;
+          finalized = true;
         }
       }
     }
@@ -79,14 +79,14 @@ scenario A {
   random_uint(3) inputA;
   inputA = random_lazy(3);  //sets special value
   send_commit.sendTransaction(inputA, {from: "A", value: 2});
-  send_open.sendTransaction(1, {from: "A", value: 0, wait: (committed1 == 1)});
-  finalize.sendTransaction({from: "A", value: 0, wait: (input1_set == 1)});
+  send_open.sendTransaction(true, {from: "A", value: 0, wait: (committed1)});
+  finalize.sendTransaction({from: "A", value: 0, wait: (input1_set)});
 }
 
 scenario B {
   random_uint(3) inputB;
   inputB = random_lazy(3);  //sets special value
   send_commit.sendTransaction(inputB, {from: "B", value: 2});
-  send_open.sendTransaction(1, {from: "B", value: 0, wait: (committed0 == 1)});
-  finalize.sendTransaction({from: "B", value: 0, wait: (input0_set == 1)});
+  send_open.sendTransaction(true, {from: "B", value: 0, wait: (committed0)});
+  finalize.sendTransaction({from: "B", value: 0, wait: (input0_set)});
 }

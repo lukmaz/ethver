@@ -469,6 +469,12 @@ prismShowExp (EEq e1 e2) =
 prismShowExp (ENe e1 e2) = 
   prismShowExp e1 ++ " != " ++ prismShowExp e2
 
+prismShowExp (EAnd e1 e2) = 
+  "(" ++ prismShowExp e1 ++ " & " ++ prismShowExp e2 ++ ")"
+
+prismShowExp (EOr e1 e2) =
+  "(" ++ prismShowExp e1 ++ " | " ++ prismShowExp e2 ++ ")"
+  
 prismShowExp (EGt e1 e2) = 
   prismShowExp e1 ++ " > " ++ prismShowExp e2
 
@@ -551,10 +557,10 @@ findVarType ident = do
                 Just typ -> return (Just typ)
                 Nothing -> return Nothing
 
-maxRealValueOfType :: Type -> Integer
-maxRealValueOfType (TUInt x) = (x - 1)
-maxRealValueOfType (TRUInt x) = (x - 1)
-maxRealValueOfType TBool = 1
+maxRealValueOfType :: Type -> Exp
+maxRealValueOfType (TUInt x) = EInt (x - 1)
+maxRealValueOfType (TRUInt x) = EInt (x - 1)
+maxRealValueOfType TBool = ETrue
 
 maxTypeValueOfType :: Type -> Integer
 maxTypeValueOfType (TUInt x) = (x - 1)
@@ -569,7 +575,7 @@ minValue ident = do
     Just (TRUInt x) -> return 0
     Just TBool -> return 0
 
-maxRealValue :: Ident -> VerRes Integer
+maxRealValue :: Ident -> VerRes Exp
 maxRealValue ident = do
   typ <- findVarType ident
   case typ of
