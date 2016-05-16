@@ -1,0 +1,70 @@
+contract RPS {
+  user "U";
+  user "M";
+
+  function get_payment() {
+    if (is_signed[msg.sender] && is_opened[msg.sender]) {
+      if (randM[msg.sender] == randU[msg.sender]) {
+        msg.sender.send(1);
+        is_committed[msg.sender] = false;
+        is_signed[msg.sender] = false;
+      }
+    }
+  }
+}
+
+communication {
+  uint(10) products_sent;
+
+  random_uint(3) commit[2];
+  uint(2) is_committed[2];
+  uint(2) is_opened[2];
+  uint(3) randU[2];
+  uint(2) is_signed[2];
+  uint(3) randM[2];
+
+  function ask_payment(random_uint(3) commit) {
+    commit[msg.sender] = commit;            //should be generated
+    is_committed[msg.sender] = true;
+    is_opened[msg.sender] = false;
+    is_signed[msg.sender] = false;
+    if (msg.sender == "M") {                //& products_sent + 1 < 10 (?)
+      products_sent = products_sent + 1;
+    }
+  }
+
+  function open() {                         //should be generated
+    if (commit[msg.sender] == 3) {
+      randM[msg.sender] = random(3);
+    }
+    else {
+      randM[msg.sender] = commit[msg.sender];
+    }
+    is_opened[msg.sender] = true;
+  }
+
+  function send_ticket(uint(2) merchant, uint(3) r) {
+    if (msg.sender == "U") {
+      if (is_committed[merchant] && !is_opened[merchant]) {
+        randU[merchant] = r;
+        is_signed[merchant] = true;
+      }
+    } 
+  }
+}
+
+scenario A {
+  uint(3) r0;
+  r0 = random(3);
+  wait(is_committed[1]);
+  send_ticket.sendMessage(1, r0);
+}
+
+scenario B {
+  random_uint(3) r1;
+  r1 = random_lazy(3);
+  ask_payment.sendMessage(r1);
+  wait(is_signed[1]);
+  get_payment.sendTransaction(1, {from: "B", value: 0});
+}
+
