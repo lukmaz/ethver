@@ -4,25 +4,25 @@ contract RPS {
 
 	uint(3) input0;
 	uint(3) input1;
-  uint(2) input0_set;
-  uint(2) input1_set;
+  bool input0_set;
+  bool input1_set;
 
 	function_with_value player_input(uint(3) choice) {
 		if (msg.value == 2) {
       if (msg.sender == "A") {
         input0 = choice;
-        input0_set = 1;
+        input0_set = true;
       }
       if (msg.sender == "B") {
         input1 = choice;
-        input1_set = 1;
+        input1_set = true;
       }
 		}
 	}
 
 	function finalize() {
-    if (input0_set == 1) {
-      if (input1_set == 1) {
+    if (input0_set) {
+      if (input1_set) {
         if ((((3 + input0) - input1)%3) == 1) {
           "A".send(2*2);
         }
@@ -33,8 +33,8 @@ contract RPS {
           "A".send(2);
           "B".send(2);
         }
-        input0_set = 0;
-        input1_set = 0;
+        input0_set = false;
+        input1_set = false;
       }
     }
   }
@@ -44,12 +44,12 @@ scenario A {
   uint(3) inputA;
   inputA = random(3);
   player_input.sendTransaction(inputA, {from: "A", value: 2});
-  finalize.sendTransaction({from: "A", value: 0, wait: (input1_set == 1)});
+  finalize.sendTransaction({from: "A", value: 0, wait: (input1_set)});
 }
 
 scenario B {
   uint(3) inputB;
   inputB = random(3);
   player_input.sendTransaction(inputB, {from: "B", value: 2});
-  finalize.sendTransaction({from: "B", value: 0, wait: (input0_set == 1)});
+  finalize.sendTransaction({from: "B", value: 0, wait: (input0_set)});
 }

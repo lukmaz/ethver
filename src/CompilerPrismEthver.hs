@@ -188,7 +188,7 @@ addAdversarialTranssToPlayer modifyModule (Fun (Ident funName) args _) = do
   let maxValsList = generateValsListNoVal args
   generateAdvTranss modifyModule False funName args maxValsList
 
-generateAdvTranss :: ModifyModuleType -> Bool -> String -> [Arg] -> [[Integer]] -> VerRes ()
+generateAdvTranss :: ModifyModuleType -> Bool -> String -> [Arg] -> [[Exp]] -> VerRes ()
 generateAdvTranss modifyModule withVal funName args maxes = do
   mod <- modifyModule id
   case maxes of
@@ -216,38 +216,50 @@ generateAdvTranss modifyModule withVal funName args maxes = do
           (advUpdates withVal (number mod) funName args vals)
         )
 
-generateValsList :: Integer -> [Arg] -> [[Integer]]
+generateValsList :: Exp -> [Arg] -> [[Exp]]
 generateValsList maxValVal args = 
   let maxVals = maxValVal:(map (\(Ar typ _) -> maxRealValueOfType typ) args) in
     generateAllVals maxVals
 
-generateValsListNoVal :: [Arg] -> [[Integer]]
+generateValsListNoVal :: [Arg] -> [[Exp]]
 generateValsListNoVal args = 
   let maxVals = (map (\(Ar typ _) -> maxRealValueOfType typ) args) in
     generateAllVals maxVals
 
-generateAllVals :: [Integer] -> [[Integer]]
+generateAllVals :: [Exp] -> [[Exp]]
 generateAllVals [] = []
 
-generateAllVals [h] =
-  map (\a -> [a]) [0..h]
+generateAllVals [ETrue] =
+  map (\a -> [a]) [EFalse, ETrue]
 
-generateAllVals (h:t) = 
+generateAllVals [EInt h] =
+  map (\a -> [EInt a]) [0..h]
+
+generateAllVals (ETrue:t) = 
   let vt = generateAllVals t in
     foldl
       (\acc x -> 
         (map (\v -> x:v) vt)
           ++ acc)
       []
+      (reverse [ETrue, EFalse])
+
+generateAllVals ((EInt h):t) = 
+  let vt = generateAllVals t in
+    foldl
+      (\acc x -> 
+        (map (\v -> (EInt x):v) vt)
+          ++ acc)
+      []
       (reverse [0..h])
 
-advUpdates :: Bool -> Integer -> String -> [Arg] -> [Integer] -> [[(Ident, Exp)]]
+advUpdates :: Bool -> Integer -> String -> [Arg] -> [Exp] -> [[(Ident, Exp)]]
 advUpdates withVal number funName args valList =
   let prefix = if withVal then ("val":) else id in
     let varNames = prefix (map (\(Ar _ (Ident ident)) -> ident) args) in
       [
         map
-          (\(varName, v) -> (Ident $ funName ++ "_" ++ varName ++ (show number), EInt v))
+          (\(varName, v) -> (Ident $ funName ++ "_" ++ varName ++ (show number), v))
           (zip varNames valList)
       ]
 
@@ -379,6 +391,8 @@ verStm modifyModule (SBlock stms) = do
 
 verExp :: ModifyModuleType -> Exp -> VerRes Exp
 
+verExp modifyModule (ENot exp) = verMathExp modifyModule (ENot exp)
+verExp modifyModule (ENeg exp) = verMathExp modifyModule (ENeg exp)
 verExp modifyModule (EEq exp1 exp2) = verMathExp modifyModule (EEq exp1 exp2)
 verExp modifyModule (ENe exp1 exp2) = verMathExp modifyModule (ENe exp1 exp2)
 verExp modifyModule (EAdd exp1 exp2) = verMathExp modifyModule (EAdd exp1 exp2)
@@ -405,6 +419,14 @@ verExp modifyModule (ESend receiver args) = verCallExp modifyModule (ESend recei
 -------------
 
 verMathExp :: ModifyModuleType -> Exp -> VerRes Exp
+
+verMathExp modifyModule (ENot exp) = do
+  evalExp <- verExp modifyModule exp
+  return (ENot exp)
+
+verMathExp modifyModule (ENeg exp) = do
+  evalExp <- verExp modifyModule exp
+  return (ENeg exp)
 
 verMathExp modifyModule (EEq exp1 exp2) = do
   evalExp1 <- verExp modifyModule exp1
@@ -452,12 +474,16 @@ verValExp :: ModifyModuleType -> Exp -> VerRes Exp
 
 verValExp modifyModule (EAss ident exp) = do
   evalExp <- verExp modifyModule exp
+  typ <- findVarType ident
   minV <- minValue ident
   maxV <- maxTypeValue ident
+  let guards = case typ of Just TBool -> []
+                           Just _ -> [EGe evalExp (EInt minV), ELe evalExp (EInt maxV)]
+      
   addTransToNewState
     modifyModule
     ""
-    [EGe evalExp (EInt minV), ELe evalExp (EInt maxV)]
+    guards
     [[(ident, evalExp)]]
   return (EAss ident evalExp)
 
