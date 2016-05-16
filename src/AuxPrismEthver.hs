@@ -423,6 +423,8 @@ prismGuards (h:t) =
 prismUpdates :: [[(Ident, Exp)]] -> String
 prismUpdates [] = ""
 
+prismUpdates [[]] = "    true"
+
 prismUpdates [updates] = 
   "    " ++ prismUpdatesDeterm updates
 

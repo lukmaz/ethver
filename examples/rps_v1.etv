@@ -7,7 +7,7 @@ contract RPS {
   uint(2) input0_set;
   uint(2) input1_set;
 
-	function player_input(uint(3) choice) {
+	function_with_value player_input(uint(3) choice) {
 		if (msg.value == 2) {
       if (msg.sender == "A") {
         input0 = choice;

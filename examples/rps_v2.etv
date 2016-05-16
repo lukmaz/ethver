@@ -11,7 +11,7 @@ contract RPS {
   uint(2) input1_set;
 
 	
-  function send_commit(random_uint(3) commit) {
+  function_with_value send_commit(random_uint(3) commit) {
 		if (msg.value == 2) {
       if (msg.sender == "A") {
         commit0 = commit;

@@ -51,6 +51,10 @@ verCoDecl (Dec typ ident) = do
   addContrVar typ ident
 
 verFunBroadcast :: ModifyModuleType -> Function -> VerRes ()
+
+verFunBroadcast modifyModule (FunV name args stms) = 
+  verFunBroadcast modifyModule (Fun name args stms)
+
 verFunBroadcast modifyModule (Fun name args stms) = do
   --TODO: argumenty
   mod <- modifyModule id
@@ -64,6 +68,10 @@ verFunBroadcast modifyModule (Fun name args stms) = do
     [[(Ident $ prismShowIdent name ++ "_state" ++ (show $ number mod), EVar (Ident "T_BROADCAST"))]]
 
 verFunExecute :: ModifyModuleType -> Function -> VerRes ()
+
+verFunExecute modifyModule (FunV name args stms) =
+  verFunExecute modifyModule (Fun name args stms)
+
 verFunExecute modifyModule (Fun name args stms) = do
   --TODO: argumenty
   mod <- modifyModule id
@@ -103,6 +111,10 @@ verFunExecute modifyModule (Fun name args stms) = do
     ]
 
 verFunContract :: Function -> VerRes ()
+
+verFunContract (FunV name args stms) = 
+  verFunContract (Fun name args stms) 
+
 verFunContract (Fun name args stms) = do
   addFun (Fun name args stms)
   addBcVar (TUInt 4) $ Ident $ prismShowIdent name ++ "_state0" 
@@ -165,27 +177,53 @@ addUser (UDec name) = do
   addPlayer name
 
 addAdversarialTranssToPlayer :: ModifyModuleType -> Function -> VerRes ()
-addAdversarialTranssToPlayer modifyModule (Fun (Ident funName) args _) = do
+addAdversarialTranssToPlayer modifyModule (FunV (Ident funName) args _) = do
   mod <- modifyModule id 
   let valName = Ident $ funName ++ "_val" ++ (show $ number mod)
   maxValVal <- maxRealValue valName
   let maxValsList = generateValsList maxValVal args
-  forM_ 
-    maxValsList
-    (\vals -> addTransNoState
-      modifyModule
-      ("broadcast_" ++ funName ++ (show $ number mod))
-      [
-        ENot $ EVar $ Ident $ "critical_section" ++ (show $ 1 - (number mod)),
-        EEq (EVar $ Ident "cstate") (EInt 1),
-        EEq (EVar $ Ident $ "state" ++ (show $ number mod)) (EInt (-1))
-      ]
-      (advUpdates (number mod) funName args vals)
-    )
+  generateAdvTranss modifyModule funName args maxValsList
+
+addAdversarialTranssToPlayer modifyModule (Fun (Ident funName) args _) = do
+  let maxValsList = generateValsListNoVal args
+  generateAdvTranss modifyModule funName args maxValsList
+
+generateAdvTranss :: ModifyModuleType -> String -> [Arg] -> [[Integer]] -> VerRes ()
+generateAdvTranss modifyModule funName args maxes = do
+  mod <- modifyModule id
+  case maxes of
+    [] ->
+      addTransNoState
+        modifyModule
+        ("broadcast_" ++ funName ++ (show $ number mod))
+        [
+          ENot $ EVar $ Ident $ "critical_section" ++ (show $ 1 - (number mod)),
+          EEq (EVar $ Ident "cstate") (EInt 1),
+          EEq (EVar $ Ident $ "state" ++ (show $ number mod)) (EInt (-1))
+        ]
+        [[]]
+    maxValsList ->
+      forM_ 
+        maxValsList
+        (\vals -> addTransNoState
+          modifyModule
+          ("broadcast_" ++ funName ++ (show $ number mod))
+          [
+            ENot $ EVar $ Ident $ "critical_section" ++ (show $ 1 - (number mod)),
+            EEq (EVar $ Ident "cstate") (EInt 1),
+            EEq (EVar $ Ident $ "state" ++ (show $ number mod)) (EInt (-1))
+          ]
+          (advUpdates (number mod) funName args vals)
+        )
 
 generateValsList :: Integer -> [Arg] -> [[Integer]]
 generateValsList maxValVal args = 
   let maxVals = maxValVal:(map (\(Ar typ _) -> maxRealValueOfType typ) args) in
+    generateAllVals maxVals
+
+generateValsListNoVal :: [Arg] -> [[Integer]]
+generateValsListNoVal args = 
+  let maxVals = (map (\(Ar typ _) -> maxRealValueOfType typ) args) in
     generateAllVals maxVals
 
 generateAllVals :: [Integer] -> [[Integer]]
