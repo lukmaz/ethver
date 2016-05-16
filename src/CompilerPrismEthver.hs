@@ -50,6 +50,11 @@ verCoDecl :: Decl -> VerRes ()
 verCoDecl (Dec typ ident) = do
   addContrVar typ ident
 
+-- TODO: size inne niż 2
+verCoDecl (ArrDec typ (Ident ident) size) = do
+  addContrVar typ $ Ident $ ident ++ "_0"
+  addContrVar typ $ Ident $ ident ++ "_1"
+  
 verFunBroadcast :: ModifyModuleType -> Function -> VerRes ()
 
 verFunBroadcast modifyModule (FunV name args stms) = 
@@ -404,7 +409,9 @@ verExp modifyModule (EDiv exp1 exp2) = verMathExp modifyModule (EDiv exp1 exp2)
 verExp modifyModule (EMod exp1 exp2) = verMathExp modifyModule (EMod exp1 exp2)
 
 verExp modifyModule (EAss ident exp) = verValExp modifyModule (EAss ident exp)
+verExp modifyModule (EArrAss ident index exp) = verValExp modifyModule (EArrAss ident index exp)
 verExp modifyModule (EVar ident) = verValExp modifyModule (EVar ident)
+verExp modifyModule (EArray ident exp) = verValExp modifyModule (EArray ident exp)
 verExp modifyModule EValue = verValExp modifyModule EValue
 verExp modifyModule ESender = verValExp modifyModule ESender
 verExp modifyModule (EInt x) = verValExp modifyModule (EInt x)
@@ -499,11 +506,97 @@ verValExp modifyModule (EAss ident exp) = do
     [[(ident, evalExp)]]
   return (EAss ident evalExp)
 
+verValExp modifyModule (EArrAss (Ident ident) index exp) = do
+  case index of
+    ESender -> do
+      verStm 
+        modifyModule 
+        (SIf 
+          (EEq (EVar $ Ident "sender") (EInt 0))
+          (SExp $ EAss (Ident $ ident ++ "_0") exp)
+        )
+      verStm
+        modifyModule
+        (SIf
+          (EEq (EVar $ Ident "sender") (EInt 1))
+          (SExp $ EAss (Ident $ ident ++ "_1") exp)
+        )
+      return $ EInt 42
+    EVar v -> do
+      var <- verExp modifyModule (EVar v)
+      verStm 
+        modifyModule 
+        (SIf 
+          (EEq var (EInt 0))
+          (SExp $ EAss (Ident $ ident ++ "_0") exp)
+        )
+      verStm
+        modifyModule
+        (SIf
+          (EEq var (EInt 1))
+          (SExp $ EAss (Ident $ ident ++ "_1") exp)
+        )
+      return $ EInt 42
+    EStr indexAddress -> do
+      indexNumber <- getPlayerNumber indexAddress
+      let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
+      verExp modifyModule $ EAss indexVar exp
+    EInt indexNumber -> do
+      let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
+      verExp modifyModule $ EAss indexVar exp
+
 verValExp modifyModule (EVar ident) = do
   world <- get
   case Map.lookup ident $ argMap world of
     Just varName -> return (EVar varName)
     Nothing -> return (EVar ident)
+
+verValExp modifyModule (EArray (Ident ident) index) = do
+  mod <- modifyModule id
+  let localVarName = (moduleName mod) ++ "_local" ++ (show $ numLocals mod)
+  -- TODO: liczba graczy = 2
+  let range = 2
+  addLocal modifyModule (TUInt range)
+  
+  case index of
+    ESender -> do
+      verStm 
+        modifyModule 
+        (SIf 
+          (EEq (EVar $ Ident "sender") (EInt 0))
+          (SExp $ EAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_0"))
+        )
+      verStm
+        modifyModule
+        (SIf
+          (EEq (EVar $ Ident "sender") (EInt 1))
+          (SExp $ EAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_1"))
+        )
+      return $ EVar $ Ident localVarName
+    EVar v -> do
+      var <- verExp modifyModule (EVar v)
+      verStm 
+        modifyModule 
+        (SIf 
+          (EEq var (EInt 0))
+          (SExp $ EAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_0"))
+        )
+      verStm
+        modifyModule
+        (SIf
+          (EEq var (EInt 1))
+          (SExp $ EAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_1"))
+        )
+      return $ EVar $ Ident localVarName
+    EStr indexAddress -> do
+      indexNumber <- getPlayerNumber indexAddress
+      let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
+      verExp modifyModule $ EVar indexVar
+      return $ EVar $ Ident localVarName
+    EInt indexNumber -> do
+      let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
+      verExp modifyModule $ EVar indexVar
+      return $ EVar $ Ident localVarName
 
 verValExp modifyModule EValue = do
   return EValue

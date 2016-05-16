@@ -8,6 +8,10 @@ terminator Scenario "" ;
 
 Contr.    Contract ::= "contract" Ident "{" [UserDecl] [Decl] [Function] "}" ;
 
+-- COMMUNICATION
+
+-- TODO
+
 -- SCENARIO
 
 Scen.  Scenario ::= "scenario" Ident "{" [Decl] [Stm] "}" ;
@@ -16,8 +20,9 @@ terminator UserDecl ";" ;
 terminator Decl ";" ;
 terminator Function "" ;
 
-UDec. UserDecl ::= "user" String ;
-Dec.  Decl     ::= Type Ident ;
+UDec.   UserDecl ::= "user" String ;
+Dec.    Decl     ::= Type Ident ;
+ArrDec. Decl     ::= Type Ident "[" Integer "]" ;
 
 Fun.      Function ::= "function" Ident "(" [Arg] ")" "{" [Stm] "}" ;
 FunV.     Function ::= "function_with_value" Ident "(" [Arg] ")" "{" [Stm] "}" ;
@@ -38,6 +43,7 @@ SReturn. Stm ::= "return" Exp  ";" ;
 terminator Stm "" ;
 
 EAss.    Exp  ::= Ident "=" Exp ;
+EArrAss. Exp  ::= Ident "[" Exp "]" "=" Exp ;
 EOr.     Exp1 ::= Exp1 "||" Exp2 ;
 EAnd.    Exp2 ::= Exp2 "&&" Exp3 ;
 EEq.     Exp3 ::= Exp3 "==" Exp4 ;
@@ -53,6 +59,7 @@ EDiv.    Exp6 ::= Exp6 "/" Exp7 ;
 EMod.    Exp6 ::= Exp6 "%" Exp7 ;
 ENeg.    Exp7 ::= "-" Exp8 ;
 ENot.    Exp7 ::= "!" Exp8 ;
+EArray.  Exp8 ::= Ident "[" Exp "]" ;
 ECall.   Exp8 ::= [Ident] "(" [CallArg] ")" ;
 ESend.   Exp8 ::= Exp "." "send" "(" [CallArg] ")" ;
 EVar.    Exp8 ::= Ident ;

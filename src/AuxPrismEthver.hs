@@ -587,7 +587,6 @@ maxTypeValue ident = do
   case typ of
     Just t -> return $ maxTypeValueOfType t
 
-
 -- negate cond --
 negateExp :: Exp -> Exp
 negateExp (EEq e1 e2) = (ENe e1 e2)
