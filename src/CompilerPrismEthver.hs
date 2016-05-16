@@ -590,18 +590,21 @@ verSendTAux modifyModule funName argsVals = do
       let argNames = getArgNames fun
       let expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
       -- TODO: olewamy "from", bo sender jest wiadomy ze scenariusza
-      let (ABra _ value) = last argsVals
       
+      let guards0 = [EEq (EVar (Ident "cstate")) (EInt 1)]
+      let (value, guards1) = case (last argsVals) of (ABra _ value) -> (value, guards0)
+                                                     (AWait _ value wait) -> (value, guards0 ++ [wait])
+       
       let updates0 = [[(Ident $ (prismShowIdent funName) ++ "_val" ++ (show $ number mod), value)]]
       let addAssignment acc (argName, argVal) = acc ++ [createAssignment (number mod) funName argName argVal]
-      let updates = [foldl addAssignment (head updates0) $ zip argNames expArgsVals]
+      let updates1 = [foldl addAssignment (head updates0) $ zip argNames expArgsVals]
       
 
       addTransToNewState 
         modifyModule 
         ("broadcast_" ++ (prismShowIdent funName) ++ (show $ number mod)) 
-        [EEq (EVar (Ident "cstate")) (EInt 1)]
-        updates
+        guards1
+        updates1
 
       addTransToNewState
         modifyModule

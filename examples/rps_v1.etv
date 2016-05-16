@@ -44,14 +44,12 @@ scenario A {
   uint(3) inputA;
   inputA = random(3);
   player_input.sendTransaction(inputA, {from: "A", value: 2});
-  //finalize.sendTransaction({from: "A", value: 0, wait: (input1_set == 1)});
-  finalize.sendTransaction({from: "A", value: 0});
+  finalize.sendTransaction({from: "A", value: 0, wait: (input1_set == 1)});
 }
 
 scenario B {
   uint(3) inputB;
   inputB = random(3);
   player_input.sendTransaction(inputB, {from: "B", value: 2});
-  //finalize.sendTransaction({from: "B", value: 0, wait: (input0_set == 1)});
-  finalize.sendTransaction({from: "B", value: 0});
+  finalize.sendTransaction({from: "B", value: 0, wait: (input0_set == 1)});
 }

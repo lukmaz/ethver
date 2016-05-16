@@ -4,20 +4,25 @@ contract RPS {
 
 	random_uint(3) commit0;
 	random_uint(3) commit1;
+  uint(2) committed0;
+  uint(2) committed1;
 
 	uint(3) input0;
 	uint(3) input1;
   uint(2) input0_set;
   uint(2) input1_set;
 
+  uint(2) finalized;
 	
   function_with_value send_commit(random_uint(3) commit) {
 		if (msg.value == 2) {
       if (msg.sender == "A") {
         commit0 = commit;
+        committed0 = 1;
       }
       if (msg.sender == "B") {
         commit1 = commit;
+        committed1 = 1;
       }
 		}
 	}
@@ -50,20 +55,21 @@ contract RPS {
 	}
 
 	function finalize() {
-    if (input0_set == 1) {
-      if (input1_set == 1) {
-        if ((((3 + input0) - input1)%3) == 1) {
-          "A".send(2*2);
+    if (finalized == 0) {
+      if (input0_set == 1) {
+        if (input1_set == 1) {
+          if ((((3 + input0) - input1)%3) == 1) {
+            "A".send(2*2);
+          }
+          if ((((3 + input0) - input1)%3) == 2) {
+            "B".send(2*2);
+          }
+          if ((((3 + input0) - input1)%3) == 0) {
+            "A".send(2);
+            "B".send(2);
+          }
+          finalized = 1;
         }
-        if ((((3 + input0) - input1)%3) == 2) {
-          "B".send(2*2);
-        }
-        if ((((3 + input0) - input1)%3) == 0) {
-          "A".send(2);
-          "B".send(2);
-        }
-        input0_set = 0;
-        input1_set = 0;
       }
     }
   }
@@ -73,14 +79,14 @@ scenario A {
   random_uint(3) inputA;
   inputA = random_lazy(3);  //sets special value
   send_commit.sendTransaction(inputA, {from: "A", value: 2});
-  send_open.sendTransaction(1, {from: "A", value: 0});
-  finalize.sendTransaction({from: "A", value: 0});
+  send_open.sendTransaction(1, {from: "A", value: 0, wait: (committed1 == 1)});
+  finalize.sendTransaction({from: "A", value: 0, wait: (input1_set == 1)});
 }
 
 scenario B {
   random_uint(3) inputB;
   inputB = random_lazy(3);  //sets special value
   send_commit.sendTransaction(inputB, {from: "B", value: 2});
-  send_open.sendTransaction(1, {from: "B", value: 0});
-  finalize.sendTransaction({from: "B", value: 0});
+  send_open.sendTransaction(1, {from: "B", value: 0, wait: (committed0 == 1)});
+  finalize.sendTransaction({from: "B", value: 0, wait: (input0_set == 1)});
 }
