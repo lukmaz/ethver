@@ -393,6 +393,8 @@ verExp :: ModifyModuleType -> Exp -> VerRes Exp
 
 verExp modifyModule (ENot exp) = verMathExp modifyModule (ENot exp)
 verExp modifyModule (ENeg exp) = verMathExp modifyModule (ENeg exp)
+verExp modifyModule (EAnd exp1 exp2) = verMathExp modifyModule (EAnd exp1 exp2)
+verExp modifyModule (EOr exp1 exp2) = verMathExp modifyModule (EOr exp1 exp2)
 verExp modifyModule (EEq exp1 exp2) = verMathExp modifyModule (EEq exp1 exp2)
 verExp modifyModule (ENe exp1 exp2) = verMathExp modifyModule (ENe exp1 exp2)
 verExp modifyModule (EAdd exp1 exp2) = verMathExp modifyModule (EAdd exp1 exp2)
@@ -437,6 +439,16 @@ verMathExp modifyModule (ENe exp1 exp2) = do
   evalExp1 <- verExp modifyModule exp1
   evalExp2 <- verExp modifyModule exp2
   return (ENe evalExp1 evalExp2)
+
+verMathExp modifyModule (EAnd exp1 exp2) = do
+  evalExp1 <- verExp modifyModule exp1
+  evalExp2 <- verExp modifyModule exp2
+  return (EAnd evalExp1 evalExp2)
+
+verMathExp modifyModule (EOr exp1 exp2) = do
+  evalExp1 <- verExp modifyModule exp1
+  evalExp2 <- verExp modifyModule exp2
+  return (EOr evalExp1 evalExp2)
 
 verMathExp modifyModule (EAdd exp1 exp2) = do
   evalExp1 <- verExp modifyModule exp1

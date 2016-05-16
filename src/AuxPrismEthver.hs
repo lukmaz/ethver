@@ -469,6 +469,12 @@ prismShowExp (EEq e1 e2) =
 prismShowExp (ENe e1 e2) = 
   prismShowExp e1 ++ " != " ++ prismShowExp e2
 
+prismShowExp (EAnd e1 e2) = 
+  "(" ++ prismShowExp e1 ++ " & " ++ prismShowExp e2 ++ ")"
+
+prismShowExp (EOr e1 e2) =
+  "(" ++ prismShowExp e1 ++ " | " ++ prismShowExp e2 ++ ")"
+  
 prismShowExp (EGt e1 e2) = 
   prismShowExp e1 ++ " > " ++ prismShowExp e2
 
