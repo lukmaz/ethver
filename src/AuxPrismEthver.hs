@@ -28,6 +28,7 @@ data VerWorld = VerWorld {
 data Module = Module {
   number :: Integer,
   stateVar :: String,
+  moduleName :: String,
   vars :: Map.Map Ident Type,
   numLocals :: Integer,
   currState :: Integer,
@@ -46,14 +47,14 @@ emptyVerWorld = VerWorld {
   argMap = Map.empty,
   playerNumbers = Map.empty, 
   returnVar = [], 
-  blockchain = emptyModule {stateVar = "bcstate"}, 
-  contract = emptyModule {stateVar = "cstate"}, 
-  player0 = emptyModule {number = 0, stateVar = "state0"}, 
-  player1 = emptyModule {number = 1, stateVar = "state1"}
+  blockchain = emptyModule {stateVar = "bcstate", moduleName = "blockchain"}, 
+  contract = emptyModule {stateVar = "cstate", moduleName = "contract"}, 
+  player0 = emptyModule {number = 0, stateVar = "state0", moduleName = "player0"}, 
+  player1 = emptyModule {number = 1, stateVar = "state1", moduleName = "player1"}
   } 
 
 emptyModule :: Module
-emptyModule = Module {number = 42, stateVar = "emptyState", vars = Map.empty, numLocals = 0,
+emptyModule = Module {number = 42, stateVar = "emptyState", moduleName = "noName", vars = Map.empty, numLocals = 0,
   currState = 1, numStates = 1, transs = []}
 
 ------------------------
@@ -90,7 +91,7 @@ addP1Var = addVar modifyPlayer1
 addLocal :: ModifyModuleType -> Type -> VerRes ()
 addLocal modifyModule typ = do
   mod <- modifyModule id
-  let varName = "local" ++ (show $ numLocals mod)
+  let varName = (moduleName mod) ++ "_local" ++ (show $ numLocals mod)
   addVar modifyModule typ (Ident varName)
   _ <- modifyModule (\mod -> mod {numLocals = numLocals mod + 1})
   return ()

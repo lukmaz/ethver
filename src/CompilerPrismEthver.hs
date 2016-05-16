@@ -502,7 +502,7 @@ verCallExp modifyModule (ESend receiverExp args) = do
 verRandom :: ModifyModuleType -> [CallArg] -> VerRes Exp
 verRandom modifyModule [AExp (EInt range)] = do
   mod <- modifyModule id
-  let localVarName = "local" ++ (show $ numLocals mod)
+  let localVarName = (moduleName mod) ++ "_local" ++ (show $ numLocals mod)
   addLocal modifyModule (TUInt range)
   addTransToNewState 
     modifyModule 
