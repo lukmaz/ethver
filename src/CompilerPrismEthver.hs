@@ -590,7 +590,7 @@ verValExp modifyModule (EArray (Ident ident) index) = do
   mod <- modifyModule id
   let localVarName = (moduleName mod) ++ "_local" ++ (show $ numLocals mod)
   -- TODO: liczba graczy = 2
-  maybeType <- findVarType $ Ident ident
+  maybeType <- findVarType $ Ident $ ident ++ "_0"
   
   case index of
     ESender -> do
