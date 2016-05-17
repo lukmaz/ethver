@@ -1,6 +1,7 @@
+user "A";
+user "B";
+
 contract RPS {
-  user "A";
-  user "B";
 
   uint(10) products_sent;
 
@@ -48,6 +49,9 @@ contract RPS {
 
 }
 
+communication {
+
+}
 
 scenario A {
   

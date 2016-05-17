@@ -16,13 +16,16 @@ verTree prog =
   in (generatePrism world, props world)
 
 verProgram :: Program -> VerRes ()
-verProgram (Prog contract scenarios) = do
+verProgram (Prog users contract communication scenarios) = do
+  mapM_ addUser users
+
   verContract contract
+  verCommunication communication
   verScenarios scenarios
   addAdversarialTranss contract
 
 addAdversarialTranss :: Contract -> VerRes ()
-addAdversarialTranss (Contr _ _ _ funs) = do
+addAdversarialTranss (Contr _ _ funs) = do
   mapM_ (addAdversarialTranssToPlayer modifyPlayer0) funs
   mapM_ (addAdversarialTranssToPlayer modifyPlayer1) funs
 
@@ -31,8 +34,7 @@ addAdversarialTranss (Contr _ _ _ funs) = do
 --------------
 
 verContract :: Contract -> VerRes ()
-verContract (Contr name users decls funs) = do
-  mapM_ addUser users
+verContract (Contr name decls funs) = do
   mapM_ verCoDecl decls
   
   mapM_ (verFunBroadcast modifyPlayer0) funs
@@ -45,16 +47,38 @@ verContract (Contr name users decls funs) = do
 
   mapM_ verFunContract funs
 
+verCommunication :: Communication -> VerRes ()
+verCommunication (Comm decls funs) = do
+  mapM_ verCommDecl decls
+
+  --TODO: verFunBroadcast? 
+  --TODO: verFunExecute?
+  --TODO: verExecTransaction?
+
+  mapM_ verFunCommunication funs
+
 -- TODO: globalne, nieglobalne
 verCoDecl :: Decl -> VerRes ()
 verCoDecl (Dec typ ident) = do
   addContrVar typ ident
 
+
 -- TODO: size inne niż 2
 verCoDecl (ArrDec typ (Ident ident) size) = do
   addContrVar typ $ Ident $ ident ++ "_0"
   addContrVar typ $ Ident $ ident ++ "_1"
-  
+
+verCommDecl :: Decl -> VerRes ()
+
+verCommDecl (Dec typ ident) = do
+  addCommVar typ ident
+
+--TODO: size inne niż 2
+verCommDecl (ArrDec typ (Ident ident) size) = do
+  addCommVar typ $ Ident $ ident ++ "_0"
+  addCommVar typ $ Ident $ ident ++ "_1"
+
+
 verFunBroadcast :: ModifyModuleType -> Function -> VerRes ()
 
 verFunBroadcast modifyModule (FunV name args stms) = 
@@ -155,6 +179,17 @@ verFunContract (Fun name args stms) = do
     [[]]
   
   clearArgMap
+
+
+
+-- COMMUNICATION
+
+verFunCommunication :: Function -> VerRes ()
+
+-- TODO
+verFunCommunication _ = return ()
+
+
 
 verExecTransaction :: ModifyModuleType -> VerRes ()
 verExecTransaction modifyModule = do

@@ -1,16 +1,16 @@
 comment "//" ;
 comment "/*" "*/" ;
 
-Prog.     Program  ::= Contract [Scenario] ;
+Prog.     Program  ::= [UserDecl] Contract Communication [Scenario] ;
 terminator Scenario "" ;
 
 -- CONTRACT
 
-Contr.    Contract ::= "contract" Ident "{" [UserDecl] [Decl] [Function] "}" ;
+Contr.    Contract ::= "contract" Ident "{" [Decl] [Function] "}" ;
 
 -- COMMUNICATION
 
--- TODO
+Comm.  Communication ::= "communication" "{" [Decl] [Function] "}" ;
 
 -- SCENARIO
 
@@ -70,6 +70,14 @@ EStr.    Exp8 ::= String ;
 EInt.    Exp8 ::= Integer ;
 ETrue.   Exp8 ::= "true" ;
 EFalse.  Exp8 ::= "false" ;
+
+_. Exp   ::= Exp2 ;
+_. Exp2  ::= Exp3 ;
+_. Exp3  ::= Exp4 ;
+_. Exp4  ::= Exp5 ;
+_. Exp5  ::= Exp6 ;
+_. Exp6  ::= Exp7 ;
+_. Exp7  ::= Exp8 ;
 
 coercions Exp 8 ;
 separator CallArg "," ;

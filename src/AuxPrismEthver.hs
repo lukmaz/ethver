@@ -21,6 +21,7 @@ data VerWorld = VerWorld {
   returnVar :: [Ident],
   blockchain :: Module,
   contract :: Module,
+  communication :: Module,
   player0 :: Module,
   player1 :: Module
   }
@@ -49,6 +50,7 @@ emptyVerWorld = VerWorld {
   returnVar = [], 
   blockchain = emptyModule {stateVar = "bcstate", moduleName = "blockchain"}, 
   contract = emptyModule {stateVar = "cstate", moduleName = "contract"}, 
+  communication = emptyModule {stateVar = "commstate", moduleName = "communication"},
   player0 = emptyModule {number = 0, stateVar = "state0", moduleName = "player0"}, 
   player1 = emptyModule {number = 1, stateVar = "state1", moduleName = "player1"}
   } 
@@ -81,6 +83,9 @@ addBcVar = addVar modifyBlockchain
 
 addContrVar :: Type -> Ident -> VerRes ()
 addContrVar = addVar modifyContract
+
+addCommVar :: Type -> Ident -> VerRes ()
+addCommVar = addVar modifyCommunication
 
 addP0Var :: Type -> Ident -> VerRes ()
 addP0Var = addVar modifyPlayer0
@@ -186,6 +191,13 @@ modifyContract fun = do
   put (world {contract = fun $ contract world})
   world <- get
   return $ contract world
+
+modifyCommunication :: (Module -> Module) -> VerRes Module
+modifyCommunication fun = do
+  world <- get
+  put (world {communication = fun $ communication world})
+  world <- get
+  return $ communication world
 
 modifyPlayer0 :: (Module -> Module) -> VerRes Module
 modifyPlayer0 fun = do

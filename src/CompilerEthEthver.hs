@@ -13,8 +13,10 @@ ethTree prog =
   
 
 ethProgram :: Program -> EthRes ()
-ethProgram (Prog contract scenarios) = do
+ethProgram (Prog _ contract communication scenarios) = do
+  -- TODO: users?
   ethContract contract
+  ethCommunication communication
   mapM_ ethScenario scenarios
 
 
@@ -22,7 +24,7 @@ ethProgram (Prog contract scenarios) = do
 
 -- TODO: UserDecl
 ethContract :: Contract -> EthRes ()
-ethContract (Contr ident _ decls funs) = do
+ethContract (Contr ident decls funs) = do
   addContr "contract "
   ethIdent ident
   addContr " {\n"
@@ -30,6 +32,10 @@ ethContract (Contr ident _ decls funs) = do
   addContr "\n"
   mapM_ ethFun funs
   addContr "}"
+
+-- TODO
+ethCommunication :: Communication -> EthRes ()
+ethCommunication _ = return ()
 
 ethDecl :: Decl -> EthRes ()
 ethDecl (Dec typ ident) = do

@@ -1,6 +1,7 @@
+user "A";
+user "B";
+
 contract RPS {
-  user "A";
-  user "B";
 
 	random_uint(3) commit0;
 	random_uint(3) commit1;
@@ -24,8 +25,8 @@ contract RPS {
         commit1 = commit;
         committed1 = true;
       }
-		}
-	}
+    }
+  }
 
 	function send_open(bool reveal) {
     if (msg.sender == "A") {
@@ -73,6 +74,10 @@ contract RPS {
       }
     }
   }
+}
+
+communication {
+
 }
 
 scenario A {

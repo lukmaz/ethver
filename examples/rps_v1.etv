@@ -1,6 +1,7 @@
+user "A";
+user "B";
+
 contract RPS {
-  user "A";
-  user "B";
 
 	uint(3) input0;
 	uint(3) input1;
@@ -37,6 +38,11 @@ contract RPS {
     }
   }
 }
+
+communication {
+
+}
+
 
 scenario A {
   uint(3) inputA;
