@@ -590,48 +590,53 @@ verValExp modifyModule (EArray (Ident ident) index) = do
   mod <- modifyModule id
   let localVarName = (moduleName mod) ++ "_local" ++ (show $ numLocals mod)
   -- TODO: liczba graczy = 2
-  let range = 2
-  addLocal modifyModule (TUInt range)
+  maybeType <- findVarType $ Ident ident
   
   case index of
     ESender -> do
-      verStm 
-        modifyModule 
-        (SIf 
-          (EEq (EVar $ Ident "sender") (EInt 0))
-          (SExp $ EAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_0"))
-        )
-      verStm
-        modifyModule
-        (SIf
-          (EEq (EVar $ Ident "sender") (EInt 1))
-          (SExp $ EAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_1"))
-        )
-      return $ EVar $ Ident localVarName
+      case maybeType of
+        Just typ -> do 
+          addLocal modifyModule typ
+          verStm 
+            modifyModule 
+            (SIf 
+              (EEq (EVar $ Ident "sender") (EInt 0))
+              (SExp $ EAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_0"))
+            )
+          verStm
+            modifyModule
+            (SIf
+              (EEq (EVar $ Ident "sender") (EInt 1))
+              (SExp $ EAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_1"))
+            )
+          return $ EVar $ Ident localVarName
     EVar v -> do
-      var <- verExp modifyModule (EVar v)
-      verStm 
-        modifyModule 
-        (SIf 
-          (EEq var (EInt 0))
-          (SExp $ EAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_0"))
-        )
-      verStm
-        modifyModule
-        (SIf
-          (EEq var (EInt 1))
-          (SExp $ EAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_1"))
-        )
-      return $ EVar $ Ident localVarName
+      case maybeType of
+        Just typ -> do
+          addLocal modifyModule typ
+          var <- verExp modifyModule (EVar v)
+          verStm 
+            modifyModule 
+            (SIf 
+              (EEq var (EInt 0))
+              (SExp $ EAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_0"))
+            )
+          verStm
+            modifyModule
+            (SIf
+              (EEq var (EInt 1))
+              (SExp $ EAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_1"))
+            )
+          return $ EVar $ Ident localVarName
     EStr indexAddress -> do
       indexNumber <- getPlayerNumber indexAddress
       let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
       verExp modifyModule $ EVar indexVar
-      return $ EVar $ Ident localVarName
+      return $ EVar $ indexVar
     EInt indexNumber -> do
       let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
       verExp modifyModule $ EVar indexVar
-      return $ EVar $ Ident localVarName
+      return $ EVar $ indexVar
 
 verValExp modifyModule EValue = do
   return EValue
