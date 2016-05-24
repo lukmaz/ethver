@@ -57,7 +57,7 @@ scenario A {
   
   uint(3) r0;
   r0 = random(3);
-  //wait(is_committed[1] == 1);
+  wait(is_committed[1] == 1);
   send_ticket.sendTransaction(1, r0, {from: "A", value: 0});
   
 }
