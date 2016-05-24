@@ -327,7 +327,7 @@ verScenario modifyModule decls stms = do
   --------------------------------------------------
 
   -- add critical sections stuff 
-  --_ <- modifyModule addCS
+  _ <- modifyModule addCS
   
   addFirstCustomTrans
     modifyModule
@@ -714,9 +714,9 @@ verCallExp modifyModule (EWait cond) = do
     [[]]
   return (EWait evalCond)
 
------------------------------
--- Call auxilary functions --
------------------------------
+------------
+-- Random --
+------------
 
 verRandom :: ModifyModuleType -> [CallArg] -> VerRes Exp
 verRandom modifyModule [AExp (EInt range)] = do
@@ -738,6 +738,10 @@ verRandomLazy :: ModifyModuleType -> [CallArg] -> VerRes Exp
 verRandomLazy modifyModule [AExp (EInt range)] = do
   return $ EInt range
 
+-----------------------------
+-- Call auxilary functions --
+-----------------------------
+
 -- TODO: chyba powinno być najpierw kopiowanie coVars i scVars (?) na lokalne
 verCallAux :: ModifyModuleType -> Ident -> [CallArg] -> VerRes Exp
 verCallAux modifyModule funName argsVals = do
@@ -758,8 +762,9 @@ verFunCall modifyModule (FunR name args ret stms) argsVals = do
   return (EVar retVarIdent)
 --TODO: to jest przepisane z verScFunSendT
 
-
+-------------
 -- ScSendT --
+-------------
 
 verSendTAux :: ModifyModuleType -> Ident -> [CallArg] -> VerRes ()
 verSendTAux modifyModule funName argsVals = do
@@ -772,9 +777,8 @@ verSendTAux modifyModule funName argsVals = do
       -- TODO: olewamy "from", bo sender jest wiadomy ze scenariusza
       
       -- TODO: skasować opcję z wait, bo wait to osobna funkcja
-      let guards0 = [EEq (EVar (Ident "cstate")) (EInt 1)]
-      let (value, guards1) = case (last argsVals) of (ABra _ value) -> (value, guards0)
-                                                     (AWait _ value wait) -> (value, guards0 ++ [wait])
+      let (value, guards1) = case (last argsVals) of (ABra _ value) -> (value, [])
+                                                     (AWait _ value wait) -> (value, [wait])
        
       let updates0 = [[(Ident $ (prismShowIdent funName) ++ "_val" ++ (show $ number mod), value)]]
       let addAssignment acc (argName, argVal) = acc ++ [createAssignment (number mod) funName argName argVal]
@@ -790,11 +794,16 @@ verSendTAux modifyModule funName argsVals = do
       addTransToNewState
         modifyModule
         ""
-        [EEq (EVar (Ident "cstate")) (EInt 1), 
+        [ 
           EEq 
             (EVar (Ident (prismShowIdent funName ++ "_state" ++ (show $ number mod)))) 
-            (EVar (Ident "T_EXECUTED"))]
+            (EVar (Ident "T_EXECUTED"))
+        ]
         [[]]
+
+---------
+-- Aux --
+---------
 
 getArgNames :: Function -> [Arg]
 getArgNames (Fun _ args _) = args
@@ -804,9 +813,3 @@ createAssignment :: Integer -> Ident -> Arg -> Exp -> (Ident, Exp)
 createAssignment playerNumber funName (Ar _ (Ident varName)) exp = 
   (Ident $ prismShowIdent funName ++ "_" ++ varName ++ (show playerNumber), exp)
 
-{-
-addArgMap :: ModifyModuleType -> (Arg, Exp) -> VerRes ()
-addArgMap modifyModule ((Ar typ ident), exp) = do
-  verExp modifyModule (EAss ident exp)
-  return ()
--}

@@ -289,8 +289,7 @@ setCS number (_, guards, _) =
     "",
     (ENot $ EVar $ Ident "critical_section0")
       :(ENot $ EVar $ Ident "critical_section1")
-      :(head guards)
-      :(drop 2 guards),
+      :guards,
     [[(Ident $ "critical_section" ++ (show number), ETrue)]]
   )
 
@@ -299,6 +298,7 @@ unsetCS number (transName, guards, updates) =
   (
     transName,
     (EVar $ Ident $ "critical_section" ++ (show number))
+      :(EEq (EVar $ Ident "cstate") (EInt 1))
       :guards,
     (map ((Ident $ "critical_section" ++ (show number), EFalse):) updates)
   )
