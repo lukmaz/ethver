@@ -327,7 +327,7 @@ verScenario modifyModule decls stms = do
   --------------------------------------------------
 
   -- add critical sections stuff 
-  --_ <- modifyModule addCS
+  _ <- modifyModule addCS
   
   addFirstCustomTrans
     modifyModule
