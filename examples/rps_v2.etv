@@ -84,14 +84,16 @@ scenario A {
   random_uint(3) inputA;
   inputA = random_lazy(3);  //sets special value
   send_commit.sendTransaction(inputA, {from: "A", value: 2});
-  send_open.sendTransaction(true, {from: "A", value: 0, wait: (committed1)});
-  finalize.sendTransaction({from: "A", value: 0, wait: (input1_set)});
+  wait(committed1);
+  send_open.sendTransaction(true, {from: "A", value: 0});
+  wait(input1_set);
+  finalize.sendTransaction({from: "A", value: 0});
 }
 
 scenario B {
   random_uint(3) inputB;
   inputB = random_lazy(3);  //sets special value
   send_commit.sendTransaction(inputB, {from: "B", value: 2});
-  send_open.sendTransaction(true, {from: "B", value: 0, wait: (committed0)});
-  finalize.sendTransaction({from: "B", value: 0, wait: (input0_set)});
+  wait(commited0);
+  send_open.sendTransaction(true, {from: "B", value: 0});
 }
