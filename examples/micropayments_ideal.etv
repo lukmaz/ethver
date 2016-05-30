@@ -92,11 +92,11 @@ scenario M {
       get_payment.sendTransaction(1, {from: "B", value: 0});
 //      reset.sendCommunication();
     }
-/*
+
     else {
-      reset.sendCommunication();
+//      reset.sendCommunication();
     }
-*/
+
   }
 }
 

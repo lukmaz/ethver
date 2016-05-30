@@ -94,6 +94,6 @@ scenario B {
   random_uint(3) inputB;
   inputB = random_lazy(3);  //sets special value
   send_commit.sendTransaction(inputB, {from: "B", value: 2});
-  wait(commited0);
+  wait(committed0);
   send_open.sendTransaction(true, {from: "B", value: 0});
 }

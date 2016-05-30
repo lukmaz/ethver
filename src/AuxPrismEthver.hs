@@ -361,7 +361,7 @@ contractPream =
   "  contract_balance : [0..MAX_CONTRACT_BALANCE];\n" ++
   -- TODO: skąd wziąć zakresy balance?
   "  balance0 : [0..MAX_USER_BALANCE] init 2;\n" ++
-  "  balance1 : [0..MAX_USER_BALANCE] init 0;\n"
+  "  balance1 : [0..MAX_USER_BALANCE] init 2;\n"
 
 player0Pream :: String
 player0Pream =
