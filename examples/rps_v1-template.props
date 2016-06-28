@@ -1,8 +1,16 @@
-Pmin=? [ F (balance0 = 4) ]
+Pmin=? [ F (balance0=4) ]
 
-Pmax=? [ F (balance0 = 4) ]
+Pmax=? [ F (balance0=4) ]
 
-Pmin=? [ F (balance1 = 4) ]
+Pmin=? [ F (balance1=4) ]
 
-Pmax=? [ F  (balance1 = 4) ]
+Pmax=? [ F (balance1=4) ]
+
+Pmin=? [ F "alice_finish" & (balance0 >= 2) ]
+
+Pmax=? [ F "alice_finish" & (balance0 >= 2) ]
+
+Pmax=? [ F "bob_finish" & (balance1 >= 2) ]
+
+Pmax=? [ F "bob_finish" & (balance1 >= 2) ]
 

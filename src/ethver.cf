@@ -1,12 +1,22 @@
 comment "//" ;
 comment "/*" "*/" ;
 
-Prog.     Program  ::= [UserDecl] Contract Communication [Scenario] ;
+Prog.     Program  ::= [UserDecl] [ConstantDecl] Contract Communication [Scenario] ;
+
+terminator UserDecl ";" ;
+terminator ConstantDecl ";" ;
 terminator Scenario "" ;
+
+-- CONSTANTS
+
+Const.  ConstantDecl ::= Ident "=" Integer ;
 
 -- CONTRACT
 
 Contr.    Contract ::= "contract" Ident "{" [Decl] [Function] "}" ;
+
+terminator Decl ";" ;
+terminator Function "" ;
 
 -- COMMUNICATION
 
@@ -15,10 +25,6 @@ Comm.  Communication ::= "communication" "{" [Decl] [Function] "}" ;
 -- SCENARIO
 
 Scen.  Scenario ::= "scenario" Ident "{" [Decl] [Stm] "}" ;
-
-terminator UserDecl ";" ;
-terminator Decl ";" ;
-terminator Function "" ;
 
 UDec.   UserDecl ::= "user" String ;
 Dec.    Decl     ::= Type Ident ;

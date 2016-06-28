@@ -13,8 +13,9 @@ ethTree prog =
   
 
 ethProgram :: Program -> EthRes ()
-ethProgram (Prog _ contract communication scenarios) = do
+ethProgram (Prog _ _ contract communication scenarios) = do
   -- TODO: users?
+  -- TODO: constants
   ethContract contract
   ethCommunication communication
   mapM_ ethScenario scenarios

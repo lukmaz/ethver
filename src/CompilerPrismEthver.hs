@@ -5,6 +5,9 @@ import qualified Data.Map.Strict as Map
 
 import AbsEthver
 import AuxPrismEthver
+import AuxWorldPrismEthver
+import CodePrismEthver
+import WorldPrismEthver
 
 
 -- TODO: zliczanie stanów
@@ -16,8 +19,9 @@ verTree prog =
   in (generatePrism world, props world)
 
 verProgram :: Program -> VerRes ()
-verProgram (Prog users contract communication scenarios) = do
+verProgram (Prog users constants contract communication scenarios) = do
   mapM_ addUser users
+  mapM_ addConstant constants
 
   verContract contract
   verCommunication communication
