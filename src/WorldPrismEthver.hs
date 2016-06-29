@@ -4,6 +4,7 @@ import Control.Monad.State
 import qualified Data.Map.Strict as Map
 
 import AbsEthver
+import ConstantsEthver
 
 -- TYPES --
 
@@ -48,16 +49,16 @@ emptyVerWorld = VerWorld {
   argMap = Map.empty,
   playerNumbers = Map.empty, 
   returnVar = [], 
-  blockchain = emptyModule {stateVar = "bcstate", moduleName = "blockchain"}, 
-  contract = emptyModule {stateVar = "cstate", moduleName = "contract"}, 
-  communication = emptyModule {stateVar = "commstate", moduleName = "communication"},
-  player0 = emptyModule {number = 0, stateVar = "state0", moduleName = "player0"}, 
-  player1 = emptyModule {number = 1, stateVar = "state1", moduleName = "player1"}
+  blockchain = emptyModule {stateVar = sBCState, moduleName = sBCModule}, 
+  contract = emptyModule {stateVar = sContrState, moduleName = sContrModule}, 
+  communication = emptyModule {stateVar = sCommState, moduleName = sCommModule},
+  player0 = emptyModule {number = 0, stateVar = sP0State, moduleName = sP0Module}, 
+  player1 = emptyModule {number = 1, stateVar = sP1State, moduleName = sP1Module}
   } 
 
 emptyModule :: Module
-emptyModule = Module {number = 42, stateVar = "emptyState", moduleName = "noName", vars = Map.empty, 
-  numLocals = 0, currState = 1, numStates = 1, transs = []}
+emptyModule = Module {number = nUndefModuleNumber, stateVar = sEmptyState, moduleName = sEmptyModule, 
+  vars = Map.empty, numLocals = 0, currState = 1, numStates = 1, transs = []}
 
 ------------------------
 -- WORLD MODIFICATION --
@@ -102,7 +103,7 @@ addP1Var = addVar modifyPlayer1
 addLocal :: ModifyModuleType -> Type -> VerRes ()
 addLocal modifyModule typ = do
   mod <- modifyModule id
-  let varName = (moduleName mod) ++ "_local" ++ (show $ numLocals mod)
+  let varName = (moduleName mod) ++ sLocalSufix ++ (show $ numLocals mod)
   addVar modifyModule typ (Ident varName)
   _ <- modifyModule (\mod -> mod {numLocals = numLocals mod + 1})
   return ()

@@ -49,6 +49,15 @@ findVarType ident = do
                 Nothing -> return Nothing
 
 -----------
+-- Users --
+-----------
+
+addUser :: UserDecl -> VerRes ()
+addUser (UDec name) = do
+  addPlayer name
+
+
+-----------
 -- Trans --
 -----------
 
@@ -121,21 +130,65 @@ setCS :: Integer -> Trans -> Trans
 setCS number (_, guards, _) = 
   (
     "",
-    (ENot $ EVar $ Ident "critical_section0")
-      :(ENot $ EVar $ Ident "critical_section1")
+    (ENot $ EVar iCriticalSection0)
+      :(ENot $ EVar iCriticalSection1)
       :guards,
-    [[(Ident $ "critical_section" ++ (show number), ETrue)]]
+    [[(Ident $ sCriticalSection ++ (show number), ETrue)]]
   )
 
 unsetCS :: Integer -> Trans -> Trans
 unsetCS number (transName, guards, updates) =
   (
     transName,
-    (EVar $ Ident $ "critical_section" ++ (show number))
-      :(EEq (EVar $ Ident "cstate") (EInt 1))
+    (EVar $ Ident $ sCriticalSection ++ (show number))
+      :(EEq (EVar iContrState) (EInt 1))
       :guards,
-    (map ((Ident $ "critical_section" ++ (show number), EFalse):) updates)
+    (map ((Ident $ sCriticalSection ++ (show number), EFalse):) updates)
   )
+
+------------------------------
+-- Adversarial transactions --
+------------------------------
+addAdversarialTranssToPlayer :: ModifyModuleType -> Function -> VerRes ()
+addAdversarialTranssToPlayer modifyModule (FunV (Ident funName) args _) = do
+  mod <- modifyModule id  
+  let valName = Ident $ funName ++ sValueSufix ++ (show $ number mod)
+  maxValVal <- maxRealValue valName
+  let maxValsList = generateValsList maxValVal args
+  generateAdvTranss modifyModule True funName args maxValsList
+
+addAdversarialTranssToPlayer modifyModule (Fun (Ident funName) args _) = do
+  let maxValsList = generateValsListNoVal args
+  generateAdvTranss modifyModule False funName args maxValsList
+
+generateAdvTranss :: ModifyModuleType -> Bool -> String -> [Arg] -> [[Exp]] -> VerRes ()
+generateAdvTranss modifyModule withVal funName args maxes = do
+  mod <- modifyModule id
+  case maxes of
+    [] ->
+      addTransNoState
+        modifyModule
+        (sBroadcastPrefix ++ funName ++ (show $ number mod))
+        [   
+          ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
+          EEq (EVar iContrState) (EInt 1), 
+          EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
+        ]   
+        [[]]
+    maxValsList ->
+      forM_
+        maxValsList
+        (\vals -> addTransNoState
+          modifyModule
+          (sBroadcastPrefix ++ funName ++ (show $ number mod))
+          [
+            ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
+            EEq (EVar iContrState) (EInt 1),
+            EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
+          ]
+          (advUpdates withVal (number mod) funName args vals)
+        )
+
 
 ---------------------
 -- MONEY TRANSFERS --
@@ -144,7 +197,7 @@ unsetCS number (transName, guards, updates) =
 -- TODO: one MAX_USER_BALANCE for all users
 transferFromContract :: Ident -> Exp -> VerRes ()
 transferFromContract to value = do
-  transferMoney (Ident "contract_balance") to (EVar iMaxUserBalance) value
+  transferMoney iContractBalance to (EVar iMaxUserBalance) value
   
 
 transferMoney :: Ident -> Ident -> Exp -> Exp -> VerRes ()

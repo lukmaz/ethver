@@ -4,8 +4,9 @@ import Control.Monad.State
 import qualified Data.Map.Strict as Map
 
 import AbsEthver
-import WorldPrismEthver
 import AuxPrismEthver
+import ConstantsEthver
+import WorldPrismEthver
 
 --------------------------------
 -- CODE GENERATION FROM WORLD --
@@ -15,14 +16,14 @@ import AuxPrismEthver
 generatePrism :: VerWorld -> String
 generatePrism world = 
   "mdp\n\n" ++
-  "const int ADVERSARY;\n\n" ++ 
+  "const int " ++ sAdversaryFlag ++ ";\n\n" ++ 
   generateConstantConstants ++
   (generateNumStates world) ++
   (generateConstantsFromWorld world) ++
-  (generateModule blockchain "blockchain" blockchainPream world) ++
-  (generateModule contract "contract" contractPream world) ++
-  (generateModule player0 "player0" player0Pream world) ++
-  (generateModule player1 "player1" player1Pream world)
+  (generateModule blockchain sBCModule blockchainPream world) ++
+  (generateModule contract sContrModule contractPream world) ++
+  (generateModule player0 sP0Module player0Pream world) ++
+  (generateModule player1 sP1Module player1Pream world)
 
 generateModule :: (VerWorld -> Module) -> String -> String ->VerWorld -> String
 generateModule moduleFun moduleName pream world = 
@@ -36,60 +37,60 @@ generateModule moduleFun moduleName pream world =
 
 blockchainPream :: String
 blockchainPream =
-  "  sender : [0..1];\n" ++
+  "  " ++ sSender ++ " : [0..1];\n" ++
   -- TODO: skąd wziąć zakres val?
-  "  val : [0..2];\n"
+  "  " ++ sValue ++ " : [0..2];\n"
 
 contractPream :: String
 contractPream =
-  "  cstate : [0..NUM_CONTRACT_STATES] init 1;\n" ++
-  "  next_state : [0..NUM_CONTRACT_STATES];\n" ++
-  "  contract_balance : [0..MAX_CONTRACT_BALANCE];\n" ++
-  -- TODO: skąd wziąć zakresy balance?
-  "  balance0 : [0..MAX_USER_BALANCE] init 2;\n" ++
-  "  balance1 : [0..MAX_USER_BALANCE] init 2;\n"
+  "  " ++ sContrState ++ " : [0.." ++ sNumContractStates ++ "] init " ++ (show nInitContractState) ++ ";\n" ++
+  "  " ++ sNextState ++ " : [0.." ++ sNumContractStates ++ "];\n" ++
+  "  " ++ sContractBalance ++ " : [0.." ++ sMaxContractBalance ++ "];\n" ++
+  -- TODO: WCZYTYWAĆ INIT!
+  "  " ++ sP0Balance ++ " : [0.." ++ sMaxUserBalance ++ "] init " ++ (show nInitUserBalance) ++ ";\n" ++
+  "  " ++ sP1Balance ++ " : [0.." ++ sMaxUserBalance ++ "] init " ++ (show nInitUserBalance) ++ ";\n"
 
 player0Pream :: String
 player0Pream =
-  "  state0 : [-1..NUM_PLAYER0_STATES] init 0;\n" ++
-  "  critical_section0 : bool;\n"
+  "  " ++ sP0State ++ " : [" ++ (show nMinP0State) ++ ".." ++ sNumP0States ++ "] init " ++ (show nInitP0State) ++ 
+  ";\n" ++ "  " ++ sCriticalSection0 ++ " : bool;\n"
 
 player1Pream :: String
 player1Pream =
-  "  state1 : [-1..NUM_PLAYER1_STATES] init 0;\n" ++
-  "  critical_section1 : bool;\n"
+  "  " ++ sP1State ++ " : [" ++ (show nMinP1State) ++ ".." ++ sNumP1States ++ "] init " ++ (show nInitP1State) ++
+  ";\n" ++ "  " ++ sCriticalSection1 ++ " : bool;\n"
 
 generateConstantConstants :: String
 generateConstantConstants = 
-  "const int T_NONE = 0;\n" ++
-  "const int T_BROADCAST = 1;\n" ++
-  "const int T_EXECUTED = 2;\n" ++
-  "const int T_INVALIDATED = 3;\n\n"
+  "const int " ++ sTNone ++ " = " ++ (show nTNone) ++ ";\n" ++
+  "const int " ++ sTBroadcast ++ " = " ++ (show nTBroadcast) ++ ";\n" ++
+  "const int " ++ sTExecuted ++ " = " ++ (show nTExecuted) ++ ";\n" ++
+  "const int " ++ sTInvalidated ++ " = " ++ (show nTInvalidated) ++ ";\n\n"
 
 generateConstantsFromWorld :: VerWorld -> String
 generateConstantsFromWorld world = 
   Map.foldlWithKey
-    (\code ident value -> code ++ "const int " ++ (prismShowIdent ident)
+    (\code ident value -> code ++ "const int " ++ (unident ident)
       ++ " = " ++ (show value) ++ ";\n")
     ""
     (constants world)
 
 generateNumStates :: VerWorld -> String
 generateNumStates world = 
-  "const int NUM_CONTRACT_STATES = " ++
+  "const int " ++ sNumContractStates ++ " = " ++
   (show $ numStates $ contract world) ++
   ";\n" ++
-  "const int NUM_PLAYER0_STATES = " ++
+  "const int " ++ sNumP0States ++ " = " ++
   (show $ numStates $ player0 world) ++
   ";\n" ++
-  "const int NUM_PLAYER1_STATES = " ++
+  "const int " ++ sNumP1States ++ " = " ++
   (show $ numStates $ player1 world) ++
   ";\n\n"
 
 prismVars :: Map.Map Ident Type -> String
 prismVars vars = 
   Map.foldlWithKey
-    (\code ident typ -> code ++ "  " ++ (prismShowIdent ident)
+    (\code ident typ -> code ++ "  " ++ (unident ident)
       ++ " : " ++ (prismShowType typ) ++ ";\n")
     "" 
     vars
@@ -146,7 +147,7 @@ prismUpdatesDeterm (h:t) =
 
 prismUpdate :: (Ident, Exp) -> String
 prismUpdate (ident, exp) =
-  "(" ++ (prismShowIdent ident) ++ "' = " ++ (prismShowExp exp) ++ ")"
+  "(" ++ (unident ident) ++ "' = " ++ (prismShowExp exp) ++ ")"
 
 
 -- PRISM SHOW --
@@ -155,9 +156,6 @@ prismShowType :: Type -> String
 prismShowType (TUInt x) = "[0.." ++ (show $ x - 1) ++ "]" 
 prismShowType (TRUInt x) = "[0.." ++ (show x) ++ "]"
 prismShowType TBool = "bool"
-
-prismShowIdent :: Ident -> String
-prismShowIdent (Ident ident) = ident
 
 -- TODO: porównanie w ver jest =, a w sol jest ==. Ale chyba będą i tak dwie różne
 -- funkcje w CompilerEth i CompilerPrism. Wspólny chcemy mieć tylko typ Exp.
@@ -210,7 +208,7 @@ prismShowExp (ENeg e1) =
 
 -- TODO: szukać dokładniej, jeśli nazwy lok/glob się przekrywają
 prismShowExp (EVar ident) =
-  prismShowIdent ident
+  unident ident
 
 prismShowExp (EInt x) = 
   show x
@@ -219,10 +217,10 @@ prismShowExp (EStr s) =
   s
 
 prismShowExp ESender =
-  "sender"
+  sSender
 
 prismShowExp EValue =
-  "val"
+  sValue
 
 prismShowExp ETrue = 
   "true"
@@ -232,7 +230,7 @@ prismShowExp EFalse =
 
 prismShowExp (ECall (h:t) args) =
   foldl
-    (\acc ident -> acc ++ "." ++ (prismShowIdent ident))
-    (prismShowIdent h)
+    (\acc ident -> acc ++ "." ++ (unident ident))
+    (unident h)
     t
   
