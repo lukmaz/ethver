@@ -32,8 +32,8 @@ nTStates = 4
 
 -- Constants
 
-sMaxUserBalance = "MAX_USER_BALANCE"
-sMaxContractBalance = "MAX_CONTRACT_BALANCE"
+sMaxUserBalance = "USER_BALANCE_MAX"
+sMaxContractBalance = "CONTRACT_BALANCE_MAX"
 sNumContractStates = "NUM_CONTRACT_STATES"
 sNumP0States = "NUM_PLAYER0_STATES"
 sNumP1States = "NUM_PLAYER1_STATES"
