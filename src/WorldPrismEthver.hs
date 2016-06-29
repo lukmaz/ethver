@@ -83,23 +83,6 @@ addConstant (Const ident value) = do
   world <- get
   put $ world {constants = Map.insert ident value $ constants world}
 
-  
--- TODO: czy te 4 funkcje są potrzebne?
-addBcVar :: Type -> Ident -> VerRes ()
-addBcVar = addVar modifyBlockchain
-
-addContrVar :: Type -> Ident -> VerRes ()
-addContrVar = addVar modifyContract
-
-addCommVar :: Type -> Ident -> VerRes ()
-addCommVar = addVar modifyCommunication
-
-addP0Var :: Type -> Ident -> VerRes ()
-addP0Var = addVar modifyPlayer0
-
-addP1Var :: Type -> Ident -> VerRes ()
-addP1Var = addVar modifyPlayer1
-
 addLocal :: ModifyModuleType -> Type -> VerRes ()
 addLocal modifyModule typ = do
   mod <- modifyModule id

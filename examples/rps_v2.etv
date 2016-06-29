@@ -49,11 +49,11 @@ contract RPS {
     }
     if (msg.sender == "B") {
       if (reveal) {
-        if (commit1 == 3) {  //special value
+        if (commit1 == random_lazy(3)) {  //special value
           input1 = random(3);
           input1_set = true;
         }
-        if (commit1 != 3) {  //special value
+        else {  //special value
           input1 = commit1;
           input1_set = true;
         }

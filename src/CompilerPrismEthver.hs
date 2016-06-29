@@ -25,15 +25,13 @@ verProgram (Prog users constants contract communication scenarios) = do
   mapM_ addUser users
   mapM_ addConstant constants
 
-  verContract contract
+  -- communication before contract because contract reads communication variables
   verCommunication communication
+  verContract contract
+
   verScenarios scenarios
   addAdversarialTranss contract
-
-addAdversarialTranss :: Contract -> VerRes ()
-addAdversarialTranss (Contr _ _ funs) = do
-  mapM_ (addAdversarialTranssToPlayer modifyPlayer0) funs
-  mapM_ (addAdversarialTranssToPlayer modifyPlayer1) funs
+  -- TODO: addAdversarialTranss communication?
 
 --------------
 -- CONTRACT --
@@ -41,7 +39,7 @@ addAdversarialTranss (Contr _ _ funs) = do
 
 verContract :: Contract -> VerRes ()
 verContract (Contr name decls funs) = do
-  mapM_ verCoDecl decls
+  mapM_ (verDecl modifyContract) decls
   
   mapM_ (verFunBroadcast modifyPlayer0) funs
   mapM_ (verFunExecute modifyPlayer0) funs
@@ -55,7 +53,7 @@ verContract (Contr name decls funs) = do
 
 verCommunication :: Communication -> VerRes ()
 verCommunication (Comm decls funs) = do
-  mapM_ verCommDecl decls
+  mapM_ (verDecl modifyCommunication) decls
 
   --TODO: verFunBroadcast? 
   --TODO: verFunExecute?
@@ -63,27 +61,19 @@ verCommunication (Comm decls funs) = do
 
   mapM_ verFunCommunication funs
 
--- TODO: globalne, nieglobalne
-verCoDecl :: Decl -> VerRes ()
-verCoDecl (Dec typ ident) = do
-  addContrVar typ ident
+----------
+-- Decl --
+----------
 
+verDecl :: ModifyModuleType -> Decl -> VerRes ()
+
+verDecl modifyModule (Dec typ ident) = do
+  addVar modifyModule typ ident
 
 -- TODO: size inne niż 2
-verCoDecl (ArrDec typ (Ident ident) size) = do
-  addContrVar typ $ Ident $ ident ++ "_0"
-  addContrVar typ $ Ident $ ident ++ "_1"
-
-verCommDecl :: Decl -> VerRes ()
-
-verCommDecl (Dec typ ident) = do
-  addCommVar typ ident
-
---TODO: size inne niż 2
-verCommDecl (ArrDec typ (Ident ident) size) = do
-  addCommVar typ $ Ident $ ident ++ "_0"
-  addCommVar typ $ Ident $ ident ++ "_1"
-
+verDecl modifyModule (ArrDec typ (Ident ident) size) = do
+  addVar modifyModule typ $ Ident $ ident ++ "_0"
+  addVar modifyModule typ $ Ident $ ident ++ "_1"
 
 verFunBroadcast :: ModifyModuleType -> Function -> VerRes ()
 
@@ -158,15 +148,15 @@ verFunContract (FunV name args stms) =
 
 verFunContract (Fun name args stms) = do
   addFun (Fun name args stms)
-  addBcVar (TUInt nTStates) $ Ident $ unident name ++ sStateSufix ++ "0" 
-  addBcVar (TUInt nTStates) $ Ident $ unident name ++ sStateSufix ++ "1"
+  addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStateSufix ++ "0" 
+  addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStateSufix ++ "1"
 
   -- adds also to argMap
   mapM_ (addArgument name) args
 
   -- TODO: skąd wziąć zakres val?
-  addP0Var (TUInt 3) $ Ident $ unident name ++ sValueSufix ++ "0"
-  addP1Var (TUInt 3) $ Ident $ unident name ++ sValueSufix ++ "1"
+  addVar modifyPlayer0 (TUInt 3) $ Ident $ unident name ++ sValueSufix ++ "0"
+  addVar modifyPlayer1 (TUInt 3) $ Ident $ unident name ++ sValueSufix ++ "1"
 
   mod <- modifyContract id
   addCustomTrans
@@ -193,8 +183,9 @@ verFunContract (Fun name args stms) = do
   clearArgMap
 
 
-
--- COMMUNICATION
+-------------------
+-- COMMUNICATION --
+-------------------
 
 verFunCommunication :: Function -> VerRes ()
 
@@ -266,12 +257,4 @@ verScenario modifyModule decls stms = do
     (-1)
     [EEq (EVar iAdversaryFlag) (EInt $ number mod)]
     [[]]
-
-----------
--- Decl --
-----------
-
-verDecl :: ModifyModuleType -> Decl -> VerRes ()
-verDecl modifyModule (Dec typ ident) = do
-  addVar modifyModule typ ident
 

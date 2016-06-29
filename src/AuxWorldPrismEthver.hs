@@ -149,6 +149,12 @@ unsetCS number (transName, guards, updates) =
 ------------------------------
 -- Adversarial transactions --
 ------------------------------
+
+addAdversarialTranss :: Contract -> VerRes ()
+addAdversarialTranss (Contr _ _ funs) = do
+  mapM_ (addAdversarialTranssToPlayer modifyPlayer0) funs
+  mapM_ (addAdversarialTranssToPlayer modifyPlayer1) funs
+
 addAdversarialTranssToPlayer :: ModifyModuleType -> Function -> VerRes ()
 addAdversarialTranssToPlayer modifyModule (FunV (Ident funName) args _) = do
   mod <- modifyModule id  

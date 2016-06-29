@@ -19,6 +19,11 @@ contract RPS {
   uint(2) is_committed[2];
   uint(2) is_signed[2];
 
+  bool wa;
+  bool wb;
+  bool wc;
+  uint(10) a;
+
   function ask_payment(random_uint(3) c) {
     commit[msg.sender] = c;
     is_committed[msg.sender] = 1;
@@ -51,6 +56,37 @@ contract RPS {
         is_committed[msg.sender] = 0;
         is_signed[msg.sender] = 0;
       }
+    }
+  }
+
+  function dupa() {
+    if ((2+2) == 4) {
+      is_signed[msg.sender] = 1;
+    }
+    else {
+      is_signed[msg.sender] = 0;
+    }
+    is_committed[msg.sender] = 1;
+  }
+  
+  function abc() {
+    if (wa) {
+      if (wb) {
+        a = 1;
+      }
+      else {
+        a = 2;
+      }
+      if (wc) {
+        a = 3;
+      }
+    }
+    else {
+      a = 4;
+    }
+    a = 5;
+    if (wa) {
+      a = 6;
     }
   }
 }

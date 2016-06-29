@@ -9,14 +9,13 @@ USER1_BALANCE_INIT = 0;
 
 
 contract RPS {
-/*  function get_payment() {
+  function get_payment() {
     if (is_signed[msg.sender] && is_opened[msg.sender]) {
       if (randM[msg.sender] == randU[msg.sender]) {
         msg.sender.send(1);
       }
     }
   }
-*/
 }
 
 communication {
