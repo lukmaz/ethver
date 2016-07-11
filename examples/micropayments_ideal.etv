@@ -9,6 +9,13 @@ USER1_BALANCE_INIT = 0;
 
 
 contract RPS {
+  random_uint(3) commit[2];
+  bool is_committed[2];
+  bool is_opened[2];
+  bool is_signed[2];
+  uint(3) randM[2];
+  uint(3) randU[2];
+
   function get_payment() {
     if (is_signed[msg.sender] && is_opened[msg.sender]) {
       if (randM[msg.sender] == randU[msg.sender]) {
@@ -19,14 +26,7 @@ contract RPS {
 }
 
 communication {
- /* uint(10) products_sent;
-
-  random_uint(3) commit[2];
-  bool is_committed[2];
-  bool is_opened[2];
-  uint(3) randU[2];
-  bool is_signed[2];
-  uint(3) randM[2];
+  uint(10) products_sent;
 
   function ask_payment(random_uint(3) commit) {
     if (!is_committed[msg.sender]) {
@@ -58,8 +58,8 @@ communication {
       is_signed[merchant] = true;
     }
   }
-*/
-/*
+
+
   function reset() {
     if (is_signed[msg.sender] && is_opened[msg.sender]) {
       commit[msg.sender] = 0;
@@ -70,16 +70,14 @@ communication {
       is_signed[msg.sender] = false;
     }
   }
-*/
+
 }
 
 scenario U {
-/*
   uint(3) r0;
   r0 = random(3);
   wait(is_committed["M"]);
-  send_ticket.sendCommunication(1, r0);
-*/
+  //send_ticket.sendCommunication(1, r0);
 }
 
 scenario M {

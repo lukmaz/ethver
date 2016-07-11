@@ -25,9 +25,9 @@ verProgram (Prog users constants contract communication scenarios) = do
   mapM_ addUser users
   mapM_ addConstant constants
 
-  -- communication before contract because contract reads communication variables
-  verCommunication communication
+  -- contract before communication because contract reads communication variables
   verContract contract
+  verCommunication communication
 
   verScenarios scenarios
   addAdversarialTranss contract
@@ -41,15 +41,24 @@ verContract :: Contract -> VerRes ()
 verContract (Contr name decls funs) = do
   mapM_ (verDecl modifyContract) decls
   
+  -- adds a command to blockchain module, that a function has just been broadcast by a particular player
   mapM_ (verFunBroadcast modifyPlayer0) funs
+  -- adds two commands to blockchain module, that a transaction has been executed or not by a particular player
+  -- depending if he holds enough money or not
   mapM_ (verFunExecute modifyPlayer0) funs
   mapM_ (verFunBroadcast modifyPlayer1) funs
   mapM_ (verFunExecute modifyPlayer1) funs
 
+  -- adds to contract module a transaction that a particular player is executing the function
   verExecTransaction modifyPlayer0
   verExecTransaction modifyPlayer1
 
+  -- adds to contract module  all commands generated from a particular function definition
   mapM_ verFunContract funs
+
+-------------------
+-- COMMUNICATION --
+-------------------
 
 verCommunication :: Communication -> VerRes ()
 verCommunication (Comm decls funs) = do
@@ -60,6 +69,11 @@ verCommunication (Comm decls funs) = do
   --TODO: verExecTransaction?
 
   mapM_ verFunCommunication funs
+
+verFunCommunication :: Function -> VerRes ()
+
+-- TODO
+verFunCommunication _ = return ()
 
 ----------
 -- Decl --
@@ -75,6 +89,10 @@ verDecl modifyModule (ArrDec typ (Ident ident) size) = do
   addVar modifyModule typ $ Ident $ ident ++ "_0"
   addVar modifyModule typ $ Ident $ ident ++ "_1"
 
+------------------
+-- verFunBroadcast
+------------------
+-- adds a command to blockchain module, that a function has just been broadcast by a particular player
 verFunBroadcast :: ModifyModuleType -> Function -> VerRes ()
 
 verFunBroadcast modifyModule (FunV name args stms) = 
@@ -92,6 +110,11 @@ verFunBroadcast modifyModule (Fun name args stms) = do
     ]
     [[(Ident $ unident name ++ sStateSufix ++ (show $ number mod), EVar (Ident sTBroadcast))]]
 
+----------------
+-- verFunExecute
+----------------
+-- adds two commands to blockchain module, that a transaction has been executed or not by a particular player
+-- depending if he holds enough money or not
 verFunExecute :: ModifyModuleType -> Function -> VerRes ()
 
 verFunExecute modifyModule (FunV name args stms) =
@@ -141,59 +164,10 @@ verFunExecute modifyModule (Fun name args stms) = do
       [(Ident $ unident name ++ sStateSufix ++ (show $ number mod), EVar iTInvalidated)]
     ]
 
-verFunContract :: Function -> VerRes ()
-
-verFunContract (FunV name args stms) = 
-  verFunContract (Fun name args stms) 
-
-verFunContract (Fun name args stms) = do
-  addFun (Fun name args stms)
-  addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStateSufix ++ "0" 
-  addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStateSufix ++ "1"
-
-  -- adds also to argMap
-  mapM_ (addArgument name) args
-
-  -- TODO: skąd wziąć zakres val?
-  addVar modifyPlayer0 (TUInt 3) $ Ident $ unident name ++ sValueSufix ++ "0"
-  addVar modifyPlayer1 (TUInt 3) $ Ident $ unident name ++ sValueSufix ++ "1"
-
-  mod <- modifyContract id
-  addCustomTrans
-    modifyContract
-    (sBroadcastPrefix ++ (unident name))
-    1
-    0
-    []
-    [[(iNextState, EInt $ numStates mod + 1)]]
-  
-  modifyContract (\mod -> mod {currState = numStates mod + 1, numStates = numStates mod + 1})
-  
-  mapM_ (verStm modifyContract) stms
-
-  mod <- modifyContract id
-  addCustomTrans
-    modifyContract
-    ""
-    (numStates mod)
-    1
-    []
-    [[]]
-  
-  clearArgMap
-
-
--------------------
--- COMMUNICATION --
--------------------
-
-verFunCommunication :: Function -> VerRes ()
-
--- TODO
-verFunCommunication _ = return ()
-
-
-
+---------------------
+-- verExecTransaction
+---------------------
+-- adds to contract module a transaction that a particular player is executing the function
 verExecTransaction :: ModifyModuleType -> VerRes ()
 verExecTransaction modifyModule = do
   mod <- modifyModule id
@@ -213,6 +187,55 @@ verExecTransaction modifyModule = do
       (iContractBalance,
         EAdd (EVar iContractBalance) (EVar iValue))
     ]]
+
+-----------------
+-- verFunContract
+-----------------
+-- adds to contract module  all commands generated from a particular function definition
+verFunContract :: Function -> VerRes ()
+
+verFunContract (FunV name args stms) = 
+  verFunContract (Fun name args stms) 
+
+verFunContract (Fun name args stms) = do
+  addFun (Fun name args stms)
+  addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStateSufix ++ "0" 
+  addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStateSufix ++ "1"
+
+  -- adds also to argMap
+  mapM_ (addArgument name) args
+
+  -- TODO: skąd wziąć zakres val?
+  addVar modifyPlayer0 (TUInt 3) $ Ident $ unident name ++ sValueSufix ++ "0"
+  addVar modifyPlayer1 (TUInt 3) $ Ident $ unident name ++ sValueSufix ++ "1"
+
+  mod <- modifyContract id
+  -- adds a command that the transaction is being broadcast
+  addCustomTrans
+    modifyContract
+    (sBroadcastPrefix ++ (unident name))
+    1
+    0
+    []
+    [[(iNextState, EInt $ numStates mod + 1)]]
+  
+  modifyContract (\mod -> mod {currState = numStates mod + 1, numStates = numStates mod + 1})
+  
+  -- verifying all statemants
+  mapM_ (verStm modifyContract) stms
+
+  mod <- modifyContract id
+  -- final command
+  addCustomTrans
+    modifyContract
+    ""
+    (numStates mod)
+    1
+    []
+    [[]]
+  
+  clearArgMap
+
 
 
 --------------
