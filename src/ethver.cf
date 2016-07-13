@@ -7,6 +7,10 @@ terminator UserDecl ";" ;
 terminator ConstantDecl ";" ;
 terminator Scenario "" ;
 
+-- USERS
+
+UDec.   UserDecl ::= "user" String ;
+
 -- CONSTANTS
 
 Const.  ConstantDecl ::= Ident "=" Integer ;
@@ -14,6 +18,8 @@ Const.  ConstantDecl ::= Ident "=" Integer ;
 -- CONTRACT
 
 Contr.    Contract ::= "contract" Ident "{" [Decl] [Function] "}" ;
+Dec.      Decl     ::= Type Ident ;
+ArrDec.   Decl     ::= Type Ident "[" Integer "]" ;
 
 terminator Decl ";" ;
 terminator Function "" ;
@@ -25,10 +31,6 @@ Comm.  Communication ::= "communication" "{" [Decl] [Function] "}" ;
 -- SCENARIO
 
 Scen.  Scenario ::= "scenario" Ident "{" [Decl] [Stm] "}" ;
-
-UDec.   UserDecl ::= "user" String ;
-Dec.    Decl     ::= Type Ident ;
-ArrDec. Decl     ::= Type Ident "[" Integer "]" ;
 
 Fun.      Function ::= "function" Ident "(" [Arg] ")" "{" [Stm] "}" ;
 FunV.     Function ::= "function_with_value" Ident "(" [Arg] ")" "{" [Stm] "}" ;

@@ -65,6 +65,7 @@ sLocalSufix = "_local"
 sStateSufix = "_state"
 sValueSufix = "_value"
 sBroadcastPrefix = "broadcast_"
+sCommunicatePrefix = "communicate_"
 
 sCriticalSection = "critical_section"
 sCriticalSection0 = "critical_section0"
@@ -81,6 +82,7 @@ sTExecuted = "T_EXECUTED"
 sTInvalidated = "T_INVALIDATED"
 
 sSendTransaction = "sendTransaction"
+sSendCommunication = "sendCommunication"
 sCall = "call"
 sRandom = "random"
 sRandomLazy = "random_lazy"
@@ -112,6 +114,7 @@ iTInvalidated = Ident sTInvalidated
 iAdversaryFlag = Ident sAdversaryFlag
 
 iSendTransaction = Ident sSendTransaction
+iSendCommunication = Ident sSendCommunication
 iCall = Ident sCall
 iRandom = Ident sRandom
 iRandomLazy = Ident sRandomLazy

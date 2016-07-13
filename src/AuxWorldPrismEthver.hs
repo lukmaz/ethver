@@ -41,12 +41,15 @@ findVarType ident = do
       case Map.lookup ident (vars $ contract world) of
         Just typ -> return (Just typ)
         Nothing ->  
-          case Map.lookup ident (vars $ player0 world) of
+          case Map.lookup ident (vars $ communication world) of
             Just typ -> return (Just typ)
-            Nothing ->
-              case Map.lookup ident (vars $ player1 world) of
+            Nothing ->  
+              case Map.lookup ident (vars $ player0 world) of
                 Just typ -> return (Just typ)
-                Nothing -> return Nothing
+                Nothing ->
+                  case Map.lookup ident (vars $ player1 world) of
+                    Just typ -> return (Just typ)
+                    Nothing -> return Nothing
 
 -----------
 -- Users --

@@ -25,7 +25,9 @@ verProgram (Prog users constants contract communication scenarios) = do
   mapM_ addUser users
   mapM_ addConstant constants
 
-  -- contract before communication because contract reads communication variables
+  verContractDecl contract
+  verCommunicationDecl communication
+
   verContract contract
   verCommunication communication
 
@@ -33,14 +35,20 @@ verProgram (Prog users constants contract communication scenarios) = do
   addAdversarialTranss contract
   -- TODO: addAdversarialTranss communication?
 
+verContractDecl :: Contract -> VerRes ()
+verContractDecl (Contr _ decls _) = do
+  mapM_ (verDecl modifyContract) decls
+
+verCommunicationDecl :: Communication -> VerRes ()
+verCommunicationDecl (Comm decls _) = do
+  mapM_ (verDecl modifyCommunication) decls
+
 --------------
 -- CONTRACT --
 --------------
 
 verContract :: Contract -> VerRes ()
 verContract (Contr name decls funs) = do
-  mapM_ (verDecl modifyContract) decls
-  
   -- adds a command to blockchain module, that a function has just been broadcast by a particular player
   mapM_ (verFunBroadcast modifyPlayer0) funs
   -- adds two commands to blockchain module, that a transaction has been executed or not by a particular player
@@ -62,18 +70,12 @@ verContract (Contr name decls funs) = do
 
 verCommunication :: Communication -> VerRes ()
 verCommunication (Comm decls funs) = do
-  mapM_ (verDecl modifyCommunication) decls
-
   --TODO: verFunBroadcast? 
   --TODO: verFunExecute?
   --TODO: verExecTransaction?
 
+  -- adds to communication module all commands generated from a particular function definition
   mapM_ verFunCommunication funs
-
-verFunCommunication :: Function -> VerRes ()
-
--- TODO
-verFunCommunication _ = return ()
 
 ----------
 -- Decl --
@@ -193,7 +195,7 @@ verExecTransaction modifyModule = do
 -----------------
 -- adds to contract module  all commands generated from a particular function definition
 verFunContract :: Function -> VerRes ()
-
+-- TODO: bez V nie potrzebne value
 verFunContract (FunV name args stms) = 
   verFunContract (Fun name args stms) 
 
@@ -221,13 +223,47 @@ verFunContract (Fun name args stms) = do
   
   modifyContract (\mod -> mod {currState = numStates mod + 1, numStates = numStates mod + 1})
   
-  -- verifying all statemants
+  -- verifying all statements
   mapM_ (verStm modifyContract) stms
 
   mod <- modifyContract id
   -- final command
   addCustomTrans
     modifyContract
+    ""
+    (numStates mod)
+    1
+    []
+    [[]]
+  
+  clearArgMap
+
+
+-------------------------
+-- verFunCommunication --
+-------------------------
+verFunCommunication :: Function -> VerRes ()
+-- TODO: sprawdzać, że nikt nie wykonuje FunV
+verFunCommunication (Fun name args stms) = do
+  addFun (Fun name args stms)
+  
+  -- adds also to argMap (?)
+  mapM_ (addArgument name) args
+
+  -- adds a command that the transaction is being communicated
+  addTransToNewState
+    modifyCommunication
+    (sCommunicatePrefix ++ (unident name))
+    []
+    [[]]
+
+  -- veryfing all statements
+  mapM_ (verStm modifyCommunication) stms
+
+  mod <- modifyCommunication id
+  -- final command
+  addCustomTrans
+    modifyCommunication
     ""
     (numStates mod)
     1

@@ -96,6 +96,10 @@ verExp modifyModule (EAnd exp1 exp2) = verMathExp modifyModule (EAnd exp1 exp2)
 verExp modifyModule (EOr exp1 exp2) = verMathExp modifyModule (EOr exp1 exp2)
 verExp modifyModule (EEq exp1 exp2) = verMathExp modifyModule (EEq exp1 exp2)
 verExp modifyModule (ENe exp1 exp2) = verMathExp modifyModule (ENe exp1 exp2)
+verExp modifyModule (ELt exp1 exp2) = verMathExp modifyModule (ELt exp1 exp2)
+verExp modifyModule (ELe exp1 exp2) = verMathExp modifyModule (ELe exp1 exp2)
+verExp modifyModule (EGt exp1 exp2) = verMathExp modifyModule (EGt exp1 exp2)
+verExp modifyModule (EGe exp1 exp2) = verMathExp modifyModule (EGe exp1 exp2)
 verExp modifyModule (EAdd exp1 exp2) = verMathExp modifyModule (EAdd exp1 exp2)
 verExp modifyModule (ESub exp1 exp2) = verMathExp modifyModule (ESub exp1 exp2)
 verExp modifyModule (EMul exp1 exp2) = verMathExp modifyModule (EMul exp1 exp2)
@@ -140,6 +144,26 @@ verMathExp modifyModule (ENe exp1 exp2) = do
   evalExp1 <- verExp modifyModule exp1
   evalExp2 <- verExp modifyModule exp2
   return (ENe evalExp1 evalExp2)
+
+verMathExp modifyModule (ELt exp1 exp2) = do
+  evalExp1 <- verExp modifyModule exp1
+  evalExp2 <- verExp modifyModule exp2
+  return (ELt evalExp1 evalExp2)
+
+verMathExp modifyModule (ELe exp1 exp2) = do
+  evalExp1 <- verExp modifyModule exp1
+  evalExp2 <- verExp modifyModule exp2
+  return (ELe evalExp1 evalExp2)
+
+verMathExp modifyModule (EGt exp1 exp2) = do
+  evalExp1 <- verExp modifyModule exp1
+  evalExp2 <- verExp modifyModule exp2
+  return (EGt evalExp1 evalExp2)
+
+verMathExp modifyModule (EGe exp1 exp2) = do
+  evalExp1 <- verExp modifyModule exp1
+  evalExp2 <- verExp modifyModule exp2
+  return (EGe evalExp1 evalExp2)
 
 verMathExp modifyModule (EAnd exp1 exp2) = do
   evalExp1 <- verExp modifyModule exp1
@@ -330,6 +354,9 @@ verCallExp modifyModule (ECall idents args) = do
       | sufix == iSendTransaction -> do 
         verSendTAux modifyModule funName args
         return (ECall idents args)
+      | sufix == iSendCommunication -> do
+        verSendCAux modifyModule funName args
+        return (ECall idents args)
       | sufix == iCall -> do
         verCallAux modifyModule funName args
     [ident]
@@ -459,6 +486,62 @@ verSendTAux modifyModule funName argsVals = do
             (EVar iTExecuted)
         ]
         [[]]
+
+-----------
+-- SendC --
+-----------
+
+
+
+
+
+
+
+
+
+-- SPRAWDZIĆ BO NA PAŁĘ PRZEPISAŁEM Z verSendTAux
+
+
+verSendCAux :: ModifyModuleType -> Ident -> [CallArg] -> VerRes ()
+verSendCAux modifyModule funName argsVals = do
+  world <- get
+  mod <- modifyModule id
+  case Map.lookup funName (funs world) of
+    Just fun -> do
+      let argNames = getArgNames fun
+      let expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
+      -- TODO: olewamy "from", bo sender jest wiadomy ze scenariusza
+
+      -- TU CHYBA W OGÓLE NIE POTRZEBUJEMY ABra
+      let (value, guards1) = case (last argsVals) of (ABra _ value) -> (value, [])
+
+      let updates0 = [[(Ident $ (unident funName) ++ sValueSufix ++ (show $ number mod), value)]]
+      let addAssignment acc (argName, argVal) = acc ++ [createAssignment (number mod) funName argName argVal]
+      let updates1 = [foldl addAssignment (head updates0) $ zip argNames expArgsVals]
+
+      addTransToNewState
+        modifyModule
+        (sCommunicatePrefix ++ (unident funName) ++ (show $ number mod))
+        guards1
+        updates1
+
+      addTransToNewState
+        modifyModule
+        ""
+        [
+          EEq
+            (EVar (Ident (unident funName ++ sStateSufix ++ (show $ number mod))))
+            -- TO JEST NA PEWNO ŹLE, BO NIE MA EXECUTED W COMMUNICATION
+            (EVar iTExecuted)
+        ]
+        [[]]
+
+
+
+
+
+
+
 
 createAssignment :: Integer -> Ident -> Arg -> Exp -> (Ident, Exp)
 createAssignment playerNumber funName (Ar _ (Ident varName)) exp =
