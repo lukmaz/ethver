@@ -22,6 +22,7 @@ generatePrism world =
   (generateConstantsFromWorld world) ++
   (generateModule blockchain sBCModule blockchainPream world) ++
   (generateModule contract sContrModule contractPream world) ++
+  (generateModule communication sCommModule communicationPream world) ++
   (generateModule player0 sP0Module player0Pream world) ++
   (generateModule player1 sP1Module player1Pream world)
 
@@ -49,6 +50,11 @@ contractPream =
   -- TODO: WCZYTYWAĆ INIT!
   "  " ++ sP0Balance ++ " : [0.." ++ sMaxUserBalance ++ "] init " ++ (show nInitUserBalance) ++ ";\n" ++
   "  " ++ sP1Balance ++ " : [0.." ++ sMaxUserBalance ++ "] init " ++ (show nInitUserBalance) ++ ";\n"
+
+communicationPream :: String
+communicationPream = 
+  "  "
+
 
 player0Pream :: String
 player0Pream =

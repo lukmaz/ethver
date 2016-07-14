@@ -129,11 +129,11 @@ verMathExp :: ModifyModuleType -> Exp -> VerRes Exp
 
 verMathExp modifyModule (ENot exp) = do
   evalExp <- verExp modifyModule exp
-  return (ENot exp)
+  return (ENot evalExp)
 
 verMathExp modifyModule (ENeg exp) = do
   evalExp <- verExp modifyModule exp
-  return (ENeg exp)
+  return (ENeg evalExp)
 
 verMathExp modifyModule (EEq exp1 exp2) = do
   evalExp1 <- verExp modifyModule exp1
@@ -466,6 +466,7 @@ verSendTAux modifyModule funName argsVals = do
       
       let (value, guards1) = case (last argsVals) of (ABra _ value) -> (value, [])
        
+      -- TODO: ta linijka chyba jest nie potrzebna w function_without_value
       let updates0 = [[(Ident $ (unident funName) ++ sValueSufix ++ (show $ number mod), value)]]
       let addAssignment acc (argName, argVal) = acc ++ [createAssignment (number mod) funName argName argVal]
       let updates1 = [foldl addAssignment (head updates0) $ zip argNames expArgsVals]
@@ -509,22 +510,17 @@ verSendCAux modifyModule funName argsVals = do
   case Map.lookup funName (funs world) of
     Just fun -> do
       let argNames = getArgNames fun
-      let expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
+      let expArgsVals = map (\(AExp exp) -> exp) argsVals
       -- TODO: olewamy "from", bo sender jest wiadomy ze scenariusza
-
-      -- TU CHYBA W OGÓLE NIE POTRZEBUJEMY ABra
-      let (value, guards1) = case (last argsVals) of (ABra _ value) -> (value, [])
-
-      let updates0 = [[(Ident $ (unident funName) ++ sValueSufix ++ (show $ number mod), value)]]
       let addAssignment acc (argName, argVal) = acc ++ [createAssignment (number mod) funName argName argVal]
-      let updates1 = [foldl addAssignment (head updates0) $ zip argNames expArgsVals]
+      let updates1 = [foldl addAssignment [] $ zip argNames expArgsVals]
 
       addTransToNewState
         modifyModule
         (sCommunicatePrefix ++ (unident funName) ++ (show $ number mod))
-        guards1
+        []
         updates1
-
+{-
       addTransToNewState
         modifyModule
         ""
@@ -535,7 +531,7 @@ verSendCAux modifyModule funName argsVals = do
             (EVar iTExecuted)
         ]
         [[]]
-
+-}
 
 
 
