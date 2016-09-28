@@ -38,7 +38,7 @@ generateModule moduleFun moduleName pream world =
 
 blockchainPream :: String
 blockchainPream =
-  "  " ++ sSender ++ " : [0..1];\n" ++
+  "  " ++ sContrSender ++ " : [0..1];\n" ++
   -- TODO: skąd wziąć zakres val?
   "  " ++ sValue ++ " : [0..2];\n"
 
@@ -53,8 +53,8 @@ contractPream =
 
 communicationPream :: String
 communicationPream = 
-  "  "
-
+  "  " ++ sCommSender ++ " : [0..1];\n" ++
+  "  " ++ sCommState ++ " : [1.." ++ sNumCommStates ++ "] init " ++ (show nInitCommState) ++ ";\n" 
 
 player0Pream :: String
 player0Pream =
@@ -85,6 +85,9 @@ generateNumStates :: VerWorld -> String
 generateNumStates world = 
   "const int " ++ sNumContractStates ++ " = " ++
   (show $ numStates $ contract world) ++
+  ";\n" ++
+  "const int " ++ sNumCommStates ++ " = " ++
+  (show $ numStates $ communication world) ++
   ";\n" ++
   "const int " ++ sNumP0States ++ " = " ++
   (show $ numStates $ player0 world) ++
@@ -222,8 +225,8 @@ prismShowExp (EInt x) =
 prismShowExp (EStr s) =
   s
 
-prismShowExp ESender =
-  sSender
+--prismShowExp ESender =
+--  sSender
 
 prismShowExp EValue =
   sValue

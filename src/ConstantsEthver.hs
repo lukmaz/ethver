@@ -9,6 +9,7 @@ import AbsEthver
 nUndefModuleNumber = 42
 nWrongExp = 43
 nInitContractState = 1
+nInitCommState = 1
 
 -- TODO: wczytywać
 nInitUserBalance = 2
@@ -35,6 +36,7 @@ nTStates = 4
 sMaxUserBalance = "USER_BALANCE_MAX"
 sMaxContractBalance = "CONTRACT_BALANCE_MAX"
 sNumContractStates = "NUM_CONTRACT_STATES"
+sNumCommStates = "NUM_COMMUNICATION_STATES"
 sNumP0States = "NUM_PLAYER0_STATES"
 sNumP1States = "NUM_PLAYER1_STATES"
 
@@ -72,7 +74,9 @@ sCriticalSection0 = "critical_section0"
 sCriticalSection1 = "critical_section1"
 
 sAdversaryFlag = "ADVERSARY"
-sSender = "sender"
+--sSender = "sender"
+sContrSender = "contr_sender"
+sCommSender = "comm_sender"
 sValue = "value"
 
 -- transaction states
@@ -93,6 +97,7 @@ sReturnValueSufix = "_returnValue"
 -- IDENTS
 
 iContrState = Ident sContrState
+iCommState = Ident sCommState
 iMaxUserBalance = Ident sMaxUserBalance
 iMaxContractBalance = Ident sMaxContractBalance
 iNextState = Ident sNextState
@@ -103,7 +108,9 @@ iCriticalSection = Ident sCriticalSection
 iCriticalSection0 = Ident sCriticalSection0
 iCriticalSection1 = Ident sCriticalSection1
 
-iSender = Ident sSender
+--iSender = Ident sSender
+iContrSender = Ident sContrSender
+iCommSender = Ident sCommSender
 iValue = Ident sValue
 
 iTNone = Ident sTNone

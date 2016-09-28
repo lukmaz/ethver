@@ -34,7 +34,8 @@ data Module = Module {
   numLocals :: Integer,
   currState :: Integer,
   numStates :: Integer,
-  transs :: [Trans]
+  transs :: [Trans],
+  whichSender :: Ident
   }
   
 
@@ -49,9 +50,9 @@ emptyVerWorld = VerWorld {
   argMap = Map.empty,
   playerNumbers = Map.empty, 
   returnVar = [], 
-  blockchain = emptyModule {stateVar = sBCState, moduleName = sBCModule}, 
-  contract = emptyModule {stateVar = sContrState, moduleName = sContrModule}, 
-  communication = emptyModule {stateVar = sCommState, moduleName = sCommModule},
+  blockchain = emptyModule {stateVar = sBCState, moduleName = sBCModule, whichSender = iContrSender}, 
+  contract = emptyModule {stateVar = sContrState, moduleName = sContrModule, whichSender = iContrSender}, 
+  communication = emptyModule {stateVar = sCommState, moduleName = sCommModule, whichSender = iCommSender},
   player0 = emptyModule {number = 0, stateVar = sP0State, moduleName = sP0Module}, 
   player1 = emptyModule {number = 1, stateVar = sP1State, moduleName = sP1Module}
   } 

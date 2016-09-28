@@ -54,7 +54,10 @@ verContract (Contr name decls funs) = do
   -- adds two commands to blockchain module, that a transaction has been executed or not by a particular player
   -- depending if he holds enough money or not
   mapM_ (verFunExecute modifyPlayer0) funs
+
+  -- analogous for second player
   mapM_ (verFunBroadcast modifyPlayer1) funs
+  -- analogous for second player
   mapM_ (verFunExecute modifyPlayer1) funs
 
   -- adds to contract module a transaction that a particular player is executing the function
@@ -127,7 +130,7 @@ verFunExecute modifyModule (Fun name args stms) = do
   mod <- modifyModule id
 
   let updates0 = [[
-        (iSender, EInt $ number mod), 
+        (iContrSender, EInt $ number mod), 
         (iValue, EVar $ Ident $ unident name ++ sValueSufix 
           ++ (show $ number mod)), (Ident $ unident name ++ sStateSufix 
           ++ (show $ number mod), EVar (Ident sTExecuted))]]
@@ -178,7 +181,7 @@ verExecTransaction modifyModule = do
     ""
     [
       EEq (EVar iContrState) (EInt 0),
-      EEq (EVar iSender) (EInt $ number mod),
+      EEq (EVar iContrSender) (EInt $ number mod),
       EGe (EVar $ Ident $ sBalancePrefix ++ (show $ number mod)) (EVar iValue),
       ELe (EAdd (EVar iContractBalance) (EVar iValue)) (EVar iMaxContractBalance)
     ]
@@ -218,7 +221,7 @@ verFunContract (Fun name args stms) = do
     (sBroadcastPrefix ++ (unident name))
     1
     0
-    []
+    [EEq (EVar iCommState) (EInt 1)]
     [[(iNextState, EInt $ numStates mod + 1)]]
   
   modifyContract (\mod -> mod {currState = numStates mod + 1, numStates = numStates mod + 1})
@@ -254,7 +257,7 @@ verFunCommunication (Fun name args stms) = do
   addTransToNewState
     modifyCommunication
     (sCommunicatePrefix ++ (unident name))
-    []
+    [EEq (EVar iContrState) (EInt 1)]
     [[]]
 
   -- veryfing all statements
@@ -298,7 +301,7 @@ verScenario modifyModule decls stms = do
   --------------------------------------------------
 
   -- add critical sections stuff 
-  _ <- modifyModule addCS
+  -- _ <- modifyModule addCS
   
   -- TODO: zmienić 0 i 1 na stałe
   addFirstCustomTrans

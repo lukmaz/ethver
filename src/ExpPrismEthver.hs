@@ -227,16 +227,18 @@ verValExp modifyModule (EAss ident exp) = do
 verValExp modifyModule (EArrAss (Ident ident) index exp) = do
   case index of
     ESender -> do
+      mod <- modifyModule id
+      let actualSender = whichSender mod
       verStm 
         modifyModule 
         (SIf 
-          (EEq (EVar iSender) (EInt 0))
+          (EEq (EVar actualSender) (EInt 0))
           (SExp $ EAss (Ident $ ident ++ "_0") exp)
         )
       verStm
         modifyModule
         (SIf
-          (EEq (EVar iSender) (EInt 1))
+          (EEq (EVar actualSender) (EInt 1))
           (SExp $ EAss (Ident $ ident ++ "_1") exp)
         )
       return $ EInt nWrongExp
@@ -280,16 +282,18 @@ verValExp modifyModule (EArray (Ident ident) index) = do
       case maybeType of
         Just typ -> do 
           addLocal modifyModule typ
+          mod <- modifyModule id
+          let actualSender = whichSender mod
           verStm 
             modifyModule 
             (SIf 
-              (EEq (EVar iSender) (EInt 0))
+              (EEq (EVar actualSender) (EInt 0))
               (SExp $ EAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_0"))
             )
           verStm
             modifyModule
             (SIf
-              (EEq (EVar iSender) (EInt 1))
+              (EEq (EVar actualSender) (EInt 1))
               (SExp $ EAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_1"))
             )
           return $ EVar $ Ident localVarName
@@ -324,8 +328,11 @@ verValExp modifyModule (EArray (Ident ident) index) = do
 verValExp modifyModule EValue = do
   return EValue
 
+-- czy na pewno tak można?
 verValExp modifyModule ESender = do
-  return ESender
+  mod <- modifyModule id
+  let actualSender = whichSender mod
+  return $ EVar actualSender
 
 verValExp modifyModule (EInt x) =
   return (EInt x)
@@ -370,18 +377,20 @@ verCallExp modifyModule (ESend receiverExp args) = do
   case args of
     [AExp arg] -> do
       val <- verExp modifyModule arg
+      mod <- modifyModule id
+      let actualSender = whichSender mod
       case receiverExp of
         ESender -> do
           verStm 
             modifyModule 
             (SIf 
-              (EEq (EVar iSender) (EInt 0))
+              (EEq (EVar actualSender) (EInt 0))
               (SExp $ ESend (EInt 0) args)
             )
           verStm
             modifyModule
             (SIf
-              (EEq (EVar iSender) (EInt 1))
+              (EEq (EVar actualSender) (EInt 1))
               (SExp $ ESend (EInt 1) args)
             )
         EStr receiverAddress -> do

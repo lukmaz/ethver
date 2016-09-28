@@ -8,17 +8,21 @@ USER0_BALANCE_INIT = 0;
 USER1_BALANCE_INIT = 0;
 
 contract RPS {
+  uint(2) a;
   function get_payment() {
-    if (is_signed[msg.sender] && is_opened[msg.sender]) {
+    a = 1;
+/*
+  if (is_signed[msg.sender] && is_opened[msg.sender]) {
       if (randM[msg.sender] == randU[msg.sender]) {
         msg.sender.send(1);
       }
     }
+*/
   }
-  
 }
 
 communication {
+
   random_uint(3) commit[2];
   bool is_committed[2];
   bool is_opened[2];
@@ -26,6 +30,7 @@ communication {
   uint(3) randM[2];
   uint(3) randU[2];
   uint(10) products_sent;
+  
 
   function ask_payment(random_uint(3) commit) {
     if (!is_committed[msg.sender]) {
@@ -51,16 +56,16 @@ communication {
       is_opened[msg.sender] = true;
     }
   }
-
-
+*/
+/*
   function send_ticket(uint(2) merchant, uint(3) r) {
     if (((msg.sender == "U") && (is_committed[merchant])) && ((!is_opened[merchant]) && (!is_signed[merchant]))) {
       randU[merchant] = r;
       is_signed[merchant] = true;
     }
   }
-
-
+*/
+/*
   function reset() {
     if (is_signed[msg.sender] && is_opened[msg.sender]) {
       commit[msg.sender] = 0;
