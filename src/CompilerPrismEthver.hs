@@ -107,9 +107,9 @@ verFunBroadcast modifyModule (Fun name args stms) = do
     (sBroadcastPrefix ++ (unident name) ++ (show $ number mod))
     [
       EEq (EVar iContrState) (EInt 1), 
-      ENe (EVar $ Ident $ unident name ++ sStateSufix ++ (show $ number mod)) (EVar $ Ident sTBroadcast)
+      ENe (EVar $ Ident $ unident name ++ sStatusSufix ++ (show $ number mod)) (EVar $ Ident sTBroadcast)
     ]
-    [[(Ident $ unident name ++ sStateSufix ++ (show $ number mod), EVar (Ident sTBroadcast))]]
+    [[(Ident $ unident name ++ sStatusSufix ++ (show $ number mod), EVar (Ident sTBroadcast))]]
 
 ----------------
 -- verFunExecute
@@ -128,7 +128,7 @@ verFunExecute modifyModule (Fun name args stms) = do
   let updates0 = [[
         (iContrSender, EInt $ number mod), 
         (iValue, EVar $ Ident $ unident name ++ sValueSufix 
-          ++ (show $ number mod)), (Ident $ unident name ++ sStateSufix 
+          ++ (show $ number mod)), (Ident $ unident name ++ sStatusSufix 
           ++ (show $ number mod), EVar (Ident sTExecuted))]]
   let addAssignment acc (Ar _ (Ident varName)) = acc ++ 
         [(Ident $ unident name ++ "_" ++ varName, EVar $ Ident $ unident name ++ "_" 
@@ -141,7 +141,7 @@ verFunExecute modifyModule (Fun name args stms) = do
     [
       EEq (EVar iContrState) (EInt nInitContrState),
       EEq 
-        (EVar $ Ident $ unident name ++ sStateSufix ++ (show $ number mod)) 
+        (EVar $ Ident $ unident name ++ sStatusSufix ++ (show $ number mod)) 
         (EVar $ iTBroadcast),
       ELe 
         (EVar $ Ident $ unident name ++ sValueSufix ++ (show $ number mod)) 
@@ -155,14 +155,14 @@ verFunExecute modifyModule (Fun name args stms) = do
     [
       EEq (EVar iContrState) (EInt nInitContrState),
       EEq 
-        (EVar $ Ident $ unident name ++ sStateSufix ++ (show $ number mod)) 
+        (EVar $ Ident $ unident name ++ sStatusSufix ++ (show $ number mod)) 
         (EVar $ iTBroadcast),
       EGt 
         (EVar $ Ident $ unident name ++ sValueSufix ++ (show $ number mod)) 
         (EVar $ Ident $ sBalancePrefix ++ (show $ number mod))
     ]
     [
-      [(Ident $ unident name ++ sStateSufix ++ (show $ number mod), EVar iTInvalidated)]
+      [(Ident $ unident name ++ sStatusSufix ++ (show $ number mod), EVar iTInvalidated)]
     ]
 
 ---------------------
@@ -200,8 +200,8 @@ verFunContract (FunV name args stms) =
 
 verFunContract (Fun name args stms) = do
   addFun (Fun name args stms)
-  addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStateSufix ++ "0" 
-  addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStateSufix ++ "1"
+  addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStatusSufix ++ "0" 
+  addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStatusSufix ++ "1"
 
   -- adds also to argMap
   mapM_ (addContrArgument name) args

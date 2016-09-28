@@ -492,7 +492,7 @@ verSendTAux modifyModule funName argsVals = do
         ""
         [ 
           EEq 
-            (EVar (Ident (unident funName ++ sStateSufix ++ (show $ number mod)))) 
+            (EVar (Ident (unident funName ++ sStatusSufix ++ (show $ number mod)))) 
             (EVar iTExecuted)
         ]
         [[]]
