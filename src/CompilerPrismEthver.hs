@@ -208,7 +208,7 @@ verFunContract (Fun name args stms) = do
   addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStateSufix ++ "1"
 
   -- adds also to argMap
-  mapM_ (addArgument name) args
+  mapM_ (addContrArgument name) args
 
   -- TODO: skąd wziąć zakres val?
   addVar modifyPlayer0 (TUInt 3) $ Ident $ unident name ++ sValueSufix ++ "0"
@@ -221,7 +221,7 @@ verFunContract (Fun name args stms) = do
     (sBroadcastPrefix ++ (unident name))
     1
     0
-    [EEq (EVar iCommState) (EInt 1)]
+    []
     [[(iNextState, EInt $ numStates mod + 1)]]
   
   modifyContract (\mod -> mod {currState = numStates mod + 1, numStates = numStates mod + 1})
@@ -251,13 +251,13 @@ verFunCommunication (Fun name args stms) = do
   addFun (Fun name args stms)
   
   -- adds also to argMap (?)
-  mapM_ (addArgument name) args
+  mapM_ (addCommArgument name) args
 
   -- adds a command that the transaction is being communicated
   addTransToNewState
     modifyCommunication
     (sCommunicatePrefix ++ (unident name))
-    [EEq (EVar iContrState) (EInt 1)]
+    []
     [[]]
 
   -- veryfing all statements

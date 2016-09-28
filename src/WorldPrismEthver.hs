@@ -59,7 +59,7 @@ emptyVerWorld = VerWorld {
 
 emptyModule :: Module
 emptyModule = Module {number = nUndefModuleNumber, stateVar = sEmptyState, moduleName = sEmptyModule, 
-  vars = Map.empty, numLocals = 0, currState = 1, numStates = 1, transs = []}
+  vars = Map.empty, numLocals = 0, currState = 1, numStates = 1, transs = [], whichSender = Ident sEmptySender}
 
 ------------------------
 -- WORLD MODIFICATION --
@@ -98,8 +98,8 @@ addVar modifyModule typ ident = do
   _ <- modifyModule (addVarToModule typ ident)
   return ()
 
-addBcArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
-addBcArg modifyModule (Ident funName) (Ar typ (Ident varName)) = do
+addNoPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
+addNoPlayerArg modifyModule (Ident funName) (Ar typ (Ident varName)) = do
   addVar modifyModule typ (Ident $ funName ++ "_" ++ varName)
 
 addPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
@@ -117,9 +117,16 @@ clearArgMap = do
   world <- get
   put (world {argMap = Map.empty})
 
-addArgument :: Ident -> Arg -> VerRes ()
-addArgument funName arg = do
-  addBcArg modifyBlockchain funName arg
+addContrArgument :: Ident -> Arg -> VerRes ()
+addContrArgument funName arg = do
+  addNoPlayerArg modifyBlockchain funName arg
+  addPlayerArg modifyPlayer0 funName arg
+  addPlayerArg modifyPlayer1 funName arg
+  addArgToMap funName arg
+
+addCommArgument :: Ident -> Arg -> VerRes ()
+addCommArgument funName arg = do
+  addNoPlayerArg modifyCommunication funName arg
   addPlayerArg modifyPlayer0 funName arg
   addPlayerArg modifyPlayer1 funName arg
   addArgToMap funName arg

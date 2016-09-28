@@ -47,6 +47,7 @@ sP0State = "state0"
 sP1State = "state1"
 sStatePrefix = "state"
 sEmptyState = "emptyState"
+sEmptySender = "emptySender"
 
 sNextState = "next_state"
 
