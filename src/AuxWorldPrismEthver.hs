@@ -166,34 +166,42 @@ unsetCS number (transName, guards, updates) =
 -- Adversarial transactions --
 ------------------------------
 
-addAdversarialTranss :: Contract -> VerRes ()
-addAdversarialTranss (Contr _ _ funs) = do
-  mapM_ (addAdversarialTranssToPlayer modifyPlayer0) funs
-  mapM_ (addAdversarialTranssToPlayer modifyPlayer1) funs
+addAdversarialContrTranss :: Contract -> VerRes ()
+addAdversarialContrTranss (Contr _ _ funs) =
+  addAdversarialTranss funs sBroadcastPrefix iContrState
 
-addAdversarialTranssToPlayer :: ModifyModuleType -> Function -> VerRes ()
-addAdversarialTranssToPlayer modifyModule (FunV (Ident funName) args _) = do
+addAdversarialCommTranss :: Communication -> VerRes ()
+addAdversarialCommTranss (Comm _ funs) =
+  addAdversarialTranss funs sCommunicatePrefix iCommState
+
+addAdversarialTranss :: [Function] -> String -> Ident -> VerRes ()
+addAdversarialTranss funs whichPrefix whichState = do
+  mapM_ (addAdversarialTranssToPlayer modifyPlayer0 whichPrefix whichState) funs
+  mapM_ (addAdversarialTranssToPlayer modifyPlayer1 whichPrefix whichState) funs
+
+addAdversarialTranssToPlayer :: ModifyModuleType -> String -> Ident -> Function -> VerRes ()
+addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunV (Ident funName) args _) = do
   mod <- modifyModule id  
   let valName = Ident $ funName ++ sValueSufix ++ (show $ number mod)
   maxValVal <- maxRealValue valName
   let maxValsList = generateValsList maxValVal args
-  generateAdvTranss modifyModule True funName args maxValsList
+  generateAdvTranss modifyModule whichPrefix whichState True funName args maxValsList
 
-addAdversarialTranssToPlayer modifyModule (Fun (Ident funName) args _) = do
+addAdversarialTranssToPlayer modifyModule whichPrefix whichState (Fun (Ident funName) args _) = do
   let maxValsList = generateValsListNoVal args
-  generateAdvTranss modifyModule False funName args maxValsList
+  generateAdvTranss modifyModule whichPrefix whichState False funName args maxValsList
 
-generateAdvTranss :: ModifyModuleType -> Bool -> String -> [Arg] -> [[Exp]] -> VerRes ()
-generateAdvTranss modifyModule withVal funName args maxes = do
+generateAdvTranss :: ModifyModuleType -> String -> Ident -> Bool -> String -> [Arg] -> [[Exp]] -> VerRes ()
+generateAdvTranss modifyModule whichPrefix whichState withVal funName args maxes = do
   mod <- modifyModule id
   case maxes of
     [] ->
       addTransNoState
         modifyModule
-        (sBroadcastPrefix ++ funName ++ (show $ number mod))
+        (whichPrefix ++ funName ++ (show $ number mod))
         [   
           ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
-          EEq (EVar iContrState) (EInt 1), 
+          EEq (EVar whichState) (EInt 1), 
           EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
         ]   
         [[]]
@@ -202,10 +210,10 @@ generateAdvTranss modifyModule withVal funName args maxes = do
         maxValsList
         (\vals -> addTransNoState
           modifyModule
-          (sBroadcastPrefix ++ funName ++ (show $ number mod))
+          (whichPrefix ++ funName ++ (show $ number mod))
           [
             ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
-            EEq (EVar iContrState) (EInt 1),
+            EEq (EVar whichState) (EInt 1),
             EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
           ]
           (advUpdates withVal (number mod) funName args vals)

@@ -299,7 +299,7 @@ verScenario modifyModule decls stms = do
   --------------------------------------------------
 
   -- add critical sections stuff 
-  -- _ <- modifyModule addCS
+  _ <- modifyModule addCS
   
   -- TODO: zmienić 0 i 1 na stałe
   addFirstCustomTrans
