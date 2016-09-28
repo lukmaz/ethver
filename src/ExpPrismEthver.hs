@@ -501,17 +501,6 @@ verSendTAux modifyModule funName argsVals = do
 -- SendC --
 -----------
 
-
-
-
-
-
-
-
-
--- SPRAWDZIĆ BO NA PAŁĘ PRZEPISAŁEM Z verSendTAux
-
-
 verSendCAux :: ModifyModuleType -> Ident -> [CallArg] -> VerRes ()
 verSendCAux modifyModule funName argsVals = do
   world <- get
@@ -529,24 +518,6 @@ verSendCAux modifyModule funName argsVals = do
         (sCommunicatePrefix ++ (unident funName) ++ (show $ number mod))
         []
         updates1
-{-
-      addTransToNewState
-        modifyModule
-        ""
-        [
-          EEq
-            (EVar (Ident (unident funName ++ sStateSufix ++ (show $ number mod))))
-            -- TO JEST NA PEWNO ŹLE, BO NIE MA EXECUTED W COMMUNICATION
-            (EVar iTExecuted)
-        ]
-        [[]]
--}
-
-
-
-
-
-
 
 createAssignment :: Integer -> Ident -> Arg -> Exp -> (Ident, Exp)
 createAssignment playerNumber funName (Ar _ (Ident varName)) exp =

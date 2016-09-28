@@ -115,6 +115,19 @@ addFirstTransToModule :: Trans -> Module -> Module
 addFirstTransToModule tr mod =
   mod {transs = (transs mod) ++ [tr]}
 
+addCommunicateOnePlayer :: Ident -> Integer -> VerRes ()
+addCommunicateOnePlayer funName playerNumber = do
+  mod <- modifyCommunication id
+  let newState = numStates mod + 1 
+  addCustomTrans
+    modifyCommunication
+    (sCommunicatePrefix ++ (unident funName) ++ (show playerNumber))
+    1   
+    newState
+    []  
+    [[(iCommSender, EInt playerNumber)]]
+
+
 ----------------------
 -- Critical section --
 ----------------------

@@ -32,8 +32,8 @@ verProgram (Prog users constants contract communication scenarios) = do
   verCommunication communication
 
   verScenarios scenarios
-  addAdversarialTranss contract
-  -- TODO: addAdversarialTranss communication?
+  addAdversarialContrTranss contract
+  addAdversarialCommTranss communication
 
 verContractDecl :: Contract -> VerRes ()
 verContractDecl (Contr _ decls _) = do
@@ -73,10 +73,6 @@ verContract (Contr name decls funs) = do
 
 verCommunication :: Communication -> VerRes ()
 verCommunication (Comm decls funs) = do
-  --TODO: verFunBroadcast? 
-  --TODO: verFunExecute?
-  --TODO: verExecTransaction?
-
   -- adds to communication module all commands generated from a particular function definition
   mapM_ verFunCommunication funs
 
@@ -253,12 +249,14 @@ verFunCommunication (Fun name args stms) = do
   -- adds also to argMap (?)
   mapM_ (addCommArgument name) args
 
-  -- adds a command that the transaction is being communicated
-  addTransToNewState
-    modifyCommunication
-    (sCommunicatePrefix ++ (unident name))
-    []
-    [[]]
+  -- adds a command that the transaction is being communicated by a particular player
+  addCommunicateOnePlayer name 0
+  addCommunicateOnePlayer name 1
+  
+  mod <- modifyCommunication id
+  let newState = numStates mod + 1
+  _ <- modifyCommunication (setCurrState newState)
+  _ <- modifyCommunication (setNumStates newState)
 
   -- veryfing all statements
   mapM_ (verStm modifyCommunication) stms
