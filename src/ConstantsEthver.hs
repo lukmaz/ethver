@@ -46,7 +46,7 @@ sBCState = "bcstate"
 sP0State = "state0"
 sP1State = "state1"
 sStatePrefix = "state"
-sStatusSufix = "status"
+sStatusSufix = "_status"
 sEmptyState = "emptyState"
 sEmptySender = "emptySender"
 

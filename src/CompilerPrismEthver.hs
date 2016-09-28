@@ -230,7 +230,7 @@ verFunContract (Fun name args stms) = do
   addCustomTrans
     modifyContract
     ""
-    (numStates mod)
+    (currState mod)
     1
     []
     [[]]

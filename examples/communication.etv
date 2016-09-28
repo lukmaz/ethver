@@ -9,8 +9,19 @@ USER1_BALANCE_INIT = 0;
 
 contract RPS {
   uint(2) a;
+  uint(5) b;
   function get_payment() {
     a = 1;
+    b = 3;
+    if (a == 1) {
+      b = 2;
+    }
+    else {
+      b = 4;
+    }
+    b = 1;
+
+
 /*
   if (is_signed[msg.sender] && is_opened[msg.sender]) {
       if (randM[msg.sender] == randU[msg.sender]) {
