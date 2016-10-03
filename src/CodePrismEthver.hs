@@ -54,7 +54,8 @@ contractPream =
 communicationPream :: String
 communicationPream = 
   "  " ++ sCommSender ++ " : [0..1];\n" ++
-  "  " ++ sCommState ++ " : [1.." ++ sNumCommStates ++ "] init " ++ (show nInitCommState) ++ ";\n" 
+  -- TODO: state 0 not used
+  "  " ++ sCommState ++ " : [0.." ++ sNumCommStates ++ "] init " ++ (show nInitCommState) ++ ";\n" 
 
 player0Pream :: String
 player0Pream =

@@ -22,13 +22,13 @@ contract RPS {
     b = 1;
 
 
-/*
+
   if (is_signed[msg.sender] && is_opened[msg.sender]) {
       if (randM[msg.sender] == randU[msg.sender]) {
         msg.sender.send(1);
       }
     }
-*/
+
   }
 }
 

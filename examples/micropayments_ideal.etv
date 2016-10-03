@@ -39,7 +39,6 @@ communication {
     }
   }
 
-/*
   function open() {
     if (is_signed[msg.sender] && !is_opened[msg.sender]) {
       if (commit[msg.sender] == 3) {
@@ -52,14 +51,12 @@ communication {
     }
   }
 
-
   function send_ticket(uint(2) merchant, uint(3) r) {
     if (((msg.sender == "U") && (is_committed[merchant])) && ((!is_opened[merchant]) && (!is_signed[merchant]))) {
       randU[merchant] = r;
       is_signed[merchant] = true;
     }
   }
-
 
   function reset() {
     if (is_signed[msg.sender] && is_opened[msg.sender]) {
@@ -71,33 +68,29 @@ communication {
       is_signed[msg.sender] = false;
     }
   }
-*/
 }
 
 scenario U {
-  //uint(3) r0;
-  //r0 = random(3);
-  //wait(is_committed["M"]);
-  //send_ticket.sendCommunication(1, r0);
+  uint(3) r0;
+  r0 = random(3);
+  wait(is_committed["M"]);
+  send_ticket.sendCommunication(1, r0);
 }
 
 scenario M {
   random_uint(3) r1;
   r1 = random_lazy(3);
-//  if (contract_balance > 0) {
+  if (contract_balance > 0) {
     ask_payment.sendCommunication(r1);
-//    wait(is_signed["M"]);
-//    open.sendCommunication();
-//    if (randU["M"] == randM["M"]) {
+    wait(is_signed["M"]);
+    open.sendCommunication();
+    if (randU["M"] == randM["M"]) {
       get_payment.sendTransaction({from: "M", value: 0});
-//      reset.sendCommunication();
-//    }
-
-//    else {
-//      reset.sendCommunication();
-//    }
-
-//  }
-
+      reset.sendCommunication();
+    }
+    else {
+      reset.sendCommunication();
+    }
+  }
 }
 

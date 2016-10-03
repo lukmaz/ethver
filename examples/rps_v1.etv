@@ -13,6 +13,7 @@ contract RPS {
 	uint(3) input1;
   bool input0_set;
   bool input1_set;
+  bool finalized;
 
 	function_with_value player_input(uint(3) choice) {
 		if (msg.value == 2) {
@@ -28,7 +29,7 @@ contract RPS {
 	}
 
 	function finalize() {
-    if (input0_set && input1_set) {
+    if ((input0_set && input1_set) && finalized == false) {
       if ((((3 + input0) - input1)%3) == 1) {
         "A".send(2*2);
       }
@@ -39,8 +40,7 @@ contract RPS {
         "A".send(2);
         "B".send(2);
       }
-      input0_set = false;
-      input1_set = false;
+      finalized = true;
     }
   }
 }

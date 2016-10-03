@@ -1,1 +1,1 @@
-./MakeEthver examples/communication.etv
+./MakeEthver examples/rps_v1.etv
