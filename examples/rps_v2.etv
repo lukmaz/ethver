@@ -1,11 +1,11 @@
 user "A";
 user "B";
 
-CONTRACT_BALANCE_MAX = 4;
+CONTRACT_BALANCE_MAX = 2;
 CONTRACT_BALANCE_INIT = 0;
-USER_BALANCE_MAX = 4;
-USER0_BALANCE_INIT = 2;
-USER1_BALANCE_INIT = 2;
+USER_BALANCE_MAX = 2;
+USER0_BALANCE_INIT = 1;
+USER1_BALANCE_INIT = 1;
 
 contract RPS {
 
@@ -22,7 +22,7 @@ contract RPS {
   bool finalized;
 	
   function_with_value send_commit(random_uint(3) commit) {
-		if (msg.value == 2) {
+		if (msg.value == 1) {
       if ((msg.sender == "A") && (!committed0)) {
         commit0 = commit;
         committed0 = true;
@@ -34,21 +34,21 @@ contract RPS {
     }
   }
 
-	function send_open(bool reveal) {
+	function send_open() {
     if (msg.sender == "A") {
-      if (reveal) {
-        if (commit0 == 3) {  //special value
+      if (committed0 && (!input0_set)) {
+        if (commit0 == random_lazy(3)) {  //special value
           input0 = random(3);
           input0_set = true;
         }
-        if (commit0 != 3) {  //special value
+        if (commit0 != random_lazy(3)) {  //special value
           input0 = commit0;
           input0_set = true;
         }
       }
     }
     if (msg.sender == "B") {
-      if (reveal) {
+      if (committed1 && (!input1_set)) {
         if (commit1 == random_lazy(3)) {  //special value
           input1 = random(3);
           input1_set = true;
@@ -89,9 +89,9 @@ communication {
 scenario A {
   random_uint(3) inputA;
   inputA = random_lazy(3);  //sets special value
-  send_commit.sendTransaction(inputA, {from: "A", value: 2});
+  send_commit.sendTransaction(inputA, {from: "A", value: 1});
   wait(committed1);
-  send_open.sendTransaction(true, {from: "A", value: 0});
+  send_open.sendTransaction({from: "A", value: 0});
   wait(input1_set);
   finalize.sendTransaction({from: "A", value: 0});
 }
@@ -99,7 +99,7 @@ scenario A {
 scenario B {
   random_uint(3) inputB;
   inputB = random_lazy(3);  //sets special value
-  send_commit.sendTransaction(inputB, {from: "B", value: 2});
+  send_commit.sendTransaction(inputB, {from: "B", value: 1});
   wait(committed0);
-  send_open.sendTransaction(true, {from: "B", value: 0});
+  send_open.sendTransaction({from: "B", value: 0});
 }
