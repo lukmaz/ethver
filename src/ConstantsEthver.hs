@@ -11,9 +11,6 @@ nWrongExp = 43
 nInitContractState = 1
 nInitCommState = 1
 
--- TODO: wczytywać
-nInitUserBalance = 2
-
 nMinP0State = -1
 nMinP1State = -1
 nInitP0State = 0
@@ -39,6 +36,11 @@ sNumContractStates = "NUM_CONTRACT_STATES"
 sNumCommStates = "NUM_COMMUNICATION_STATES"
 sNumP0States = "NUM_PLAYER0_STATES"
 sNumP1States = "NUM_PLAYER1_STATES"
+
+-- TODO: wymagać, żeby było w .etv:
+sInitContractBalance = "CONTRACT_BALANCE_INIT"
+sInitUser0Balance = "USER0_BALANCE_INIT"
+sInitUser1Balance = "USER1_BALANCE_INIT"
 
 sContrState = "contrstate"
 sCommState = "commstate"
