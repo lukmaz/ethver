@@ -1,0 +1,20 @@
+Pmin=? [ F (balance0=4) ]
+
+Pmax=? [ F (balance0=4) ]
+
+Pmin=? [ F (balance1=4) ]
+
+Pmax=? [ F (balance1=4) ]
+
+Pmin=? [ F finalized & (balance0>=2) ]
+
+Pmax=? [ F finalized & balance1 = 4 ]
+
+Pmax=? [ F finalized & balance1 >=2 ]
+
+Pmax=? [ F (state1=NUM_PLAYER1_STATES)&(balance1>=2) ]
+
+E [ F finalized & input0 = 1 & balance0 = 0 ]
+
+Pmin = ? [ F finalized ]
+

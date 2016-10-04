@@ -23,11 +23,11 @@ contract RPS {
 	
   function_with_value send_commit(random_uint(3) commit) {
 		if (msg.value == 2) {
-      if (msg.sender == "A") {
+      if ((msg.sender == "A") && (!committed0)) {
         commit0 = commit;
         committed0 = true;
       }
-      if (msg.sender == "B") {
+      if ((msg.sender == "B") && (!committed1)){
         commit1 = commit;
         committed1 = true;
       }

@@ -32,6 +32,6 @@ src/PrintEthver.hs
 src/SkelEthver.hs
 src/TestEthver.hs
 examples/*.prism
-examples/*.props
+examples/.props
 .DS_Store
 src/TestEthver
