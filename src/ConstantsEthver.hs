@@ -41,6 +41,7 @@ sNumP1States = "NUM_PLAYER1_STATES"
 sInitContractBalance = "CONTRACT_BALANCE_INIT"
 sInitUser0Balance = "USER0_BALANCE_INIT"
 sInitUser1Balance = "USER1_BALANCE_INIT"
+sMaxValue = "MAX_VALUE"
 
 sContrState = "contrstate"
 sCommState = "commstate"
