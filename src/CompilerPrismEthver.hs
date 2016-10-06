@@ -251,7 +251,7 @@ verFunCommunication (Fun funName args stms) = do
   -- adds also to argMap (?) - co to jest argmap?
   mapM_ (addCommArgument funName) args
 
-  -- adds a command that the transaction is being communicated by a particular player
+  -- adds to Communication module  a command that the transaction is being communicated by a particular player
   addCommunicateOnePlayer funName args 0
   addCommunicateOnePlayer funName args 1
   
