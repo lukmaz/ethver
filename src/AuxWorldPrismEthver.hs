@@ -165,6 +165,7 @@ unsetCS number (transName, guards, updates) =
     transName,
     (EVar $ Ident $ sCriticalSection ++ (show number))
       :(EEq (EVar iContrState) (EInt 1))
+      :(EEq (EVar iCommState) (EInt 1))
       :guards,
     (map ((Ident $ sCriticalSection ++ (show number), EFalse):) updates)
   )
@@ -208,7 +209,8 @@ generateAdvTranss modifyModule whichPrefix whichState withVal funName args maxes
         (whichPrefix ++ funName ++ (show $ number mod))
         [   
           ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
-          EEq (EVar whichState) (EInt 1), 
+          EEq (EVar iContrState) (EInt 1), 
+          EEq (EVar iCommState) (EInt 1), 
           EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
         ]   
         [[]]
@@ -220,7 +222,8 @@ generateAdvTranss modifyModule whichPrefix whichState withVal funName args maxes
           (whichPrefix ++ funName ++ (show $ number mod))
           [
             ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
-            EEq (EVar whichState) (EInt 1),
+            EEq (EVar iContrState) (EInt 1),
+            EEq (EVar iCommState) (EInt 1),
             EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
           ]
           (advUpdates withVal (number mod) funName args vals)
