@@ -245,15 +245,15 @@ verFunContract (Fun name args stms) = do
 -------------------------
 verFunCommunication :: Function -> VerRes ()
 -- TODO: sprawdzać, że nikt nie wykonuje FunV
-verFunCommunication (Fun name args stms) = do
-  addFun (Fun name args stms)
+verFunCommunication (Fun funName args stms) = do
+  addFun (Fun funName args stms)
   
-  -- adds also to argMap (?)
-  mapM_ (addCommArgument name) args
+  -- adds also to argMap (?) - co to jest argmap?
+  mapM_ (addCommArgument funName) args
 
   -- adds a command that the transaction is being communicated by a particular player
-  addCommunicateOnePlayer name 0
-  addCommunicateOnePlayer name 1
+  addCommunicateOnePlayer funName args 0
+  addCommunicateOnePlayer funName args 1
   
   mod <- modifyCommunication id
   let newState = numStates mod + 1

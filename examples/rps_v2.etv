@@ -7,6 +7,7 @@ USER_BALANCE_MAX = 2;
 USER0_BALANCE_INIT = 1;
 USER1_BALANCE_INIT = 1;
 MAX_VALUE = 1;
+MAX_TIME = 10;
 
 contract RPS {
 
@@ -21,6 +22,9 @@ contract RPS {
   bool input1_set;
 
   bool finalized;
+
+  timer t0;
+  timer t1;
 	
   function_with_value send_commit(random_uint(3) commit) {
 		if (msg.value == 1) {

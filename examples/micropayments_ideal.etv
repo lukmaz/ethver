@@ -6,6 +6,7 @@ CONTRACT_BALANCE_INIT = 1;
 USER_BALANCE_MAX = 4;
 USER0_BALANCE_INIT = 0;
 USER1_BALANCE_INIT = 0;
+MAX_VALUE = 5;
 
 contract RPS {
   function get_payment() {

@@ -115,17 +115,24 @@ addFirstTransToModule :: Trans -> Module -> Module
 addFirstTransToModule tr mod =
   mod {transs = (transs mod) ++ [tr]}
 
-addCommunicateOnePlayer :: Ident -> Integer -> VerRes ()
-addCommunicateOnePlayer funName playerNumber = do
+addCommunicateOnePlayer :: Ident -> [Arg] -> Integer -> VerRes ()
+addCommunicateOnePlayer funName args playerNumber = do
   mod <- modifyCommunication id
   let newState = numStates mod + 1 
+
+  let updates0 = [[(iCommSender, EInt playerNumber)]]
+  let addAssignment acc (Ar _ (Ident varName)) = acc ++
+        [(Ident $ unident funName ++ "_" ++ varName, 
+          EVar $ Ident $ unident funName ++ "_" ++ varName ++ (show playerNumber))]
+  let updates = [foldl addAssignment (head updates0) args]
+
   addCustomTrans
     modifyCommunication
     (sCommunicatePrefix ++ (unident funName) ++ (show playerNumber))
     1   
     newState
     []  
-    [[(iCommSender, EInt playerNumber)]]
+    updates
 
 
 ----------------------

@@ -107,6 +107,7 @@ addPlayerArg modifyModule (Ident funName) (Ar typ (Ident varName)) = do
   mod <- modifyModule id
   addVar modifyModule typ (Ident $ funName ++ "_" ++ varName ++ (show $ number mod))
 
+-- TODO: co to jest ten argmap?
 addArgToMap :: Ident -> Arg -> VerRes ()
 addArgToMap (Ident funName) (Ar _ (Ident varName)) = do
   world <- get
