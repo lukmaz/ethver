@@ -10,10 +10,8 @@ MAX_VALUE = 1;
 
 contract RPS {
 
-	random_uint(3) commit0;
-	random_uint(3) commit1;
-  bool committed0;
-  bool committed1;
+	random_uint(3) commit[2];
+  bool committed[2];
 
 	uint(3) input0;
 	uint(3) input1;
@@ -21,16 +19,15 @@ contract RPS {
   bool input1_set;
 
   bool finalized;
-	
+  
+  //timer t0;
+  //timer t1;
+
   function_with_value send_commit(random_uint(3) commit) {
 		if (msg.value == 1) {
-      if ((msg.sender == "A") && (!committed0)) {
-        commit0 = commit;
-        committed0 = true;
-      }
-      if ((msg.sender == "B") && (!committed1)){
-        commit1 = commit;
-        committed1 = true;
+      if (committed[msg.sender]) {
+        commit[msg.sender] = commit;
+        committed[msg.sender] = true;
       }
     }
   }
