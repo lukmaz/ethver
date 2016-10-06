@@ -204,7 +204,7 @@ verFunContract (Fun name args stms) = do
   -- adds also to argMap
   mapM_ (addContrArgument name) args
 
-  -- TODO: skąd wziąć zakres val?
+  -- TODO: skąd wziąć zakres val - rozwiązane na razie jednym MAX_VALUE
   world <- get
   let maxValue = case Map.lookup (Ident sMaxValue) $ constants world of
         Just value -> value
