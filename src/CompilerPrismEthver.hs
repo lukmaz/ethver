@@ -12,8 +12,6 @@ import ExpPrismEthver
 import WorldPrismEthver
 
 
--- TODO: zliczanie stanów
-
 -- generates (prism model code, prism properties)
 verTree :: Program -> (String, String)
 verTree prog =
@@ -206,9 +204,13 @@ verFunContract (Fun name args stms) = do
   -- adds also to argMap
   mapM_ (addContrArgument name) args
 
-  -- TODO: skąd wziąć zakres val?
-  addVar modifyPlayer0 (TUInt 3) $ Ident $ unident name ++ sValueSufix ++ "0"
-  addVar modifyPlayer1 (TUInt 3) $ Ident $ unident name ++ sValueSufix ++ "1"
+  -- TODO: skąd wziąć zakres val - rozwiązane na razie jednym MAX_VALUE
+  world <- get
+  let maxValue = case Map.lookup (Ident sMaxValue) $ constants world of
+        Just value -> value
+
+  addVar modifyPlayer0 (TUInt (maxValue + 1)) $ Ident $ unident name ++ sValueSufix ++ "0"
+  addVar modifyPlayer1 (TUInt (maxValue + 1)) $ Ident $ unident name ++ sValueSufix ++ "1"
 
   mod <- modifyContract id
   -- adds a command that the transaction is being broadcast
