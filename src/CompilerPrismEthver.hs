@@ -320,3 +320,12 @@ verScenario modifyModule decls stms = do
     [EEq (EVar iAdversaryFlag) (EInt $ number mod)]
     [[]]
 
+  -- ability for adversary to interrupt the protocol
+  addCustomTrans
+    modifyModule
+    ""
+    (-1)
+    (-2)
+    []
+    [[]]
+
