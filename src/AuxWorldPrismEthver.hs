@@ -170,6 +170,38 @@ unsetCS number (transName, guards, updates) =
     (map ((Ident $ sCriticalSection ++ (show number), EFalse):) updates)
   )
 
+--------------------------------
+-- Alternative approach to CS --
+--------------------------------
+
+
+-- converts all commands in a module by adding critical section stuff
+addCS2 :: Module -> Module
+addCS2 mod = 
+  mod { transs = reverse $ setCS2 (number mod) ++
+    (foldl
+      (\acc tr -> ((unsetCS (number mod) tr):acc))
+      []
+      (transs mod)
+    )
+  }
+
+-- only two commands for the whole scenario
+setCS2 :: Integer -> [Trans]
+setCS2 number  = 
+  [(
+    "",
+    [ENot $ EVar iCriticalSection0,
+      ENot $ EVar iCriticalSection1,
+      EGt (EVar $ Ident $ sStatePrefix ++ (show number)) (EInt 0)],
+    [[(Ident $ sCriticalSection ++ (show number), ETrue)]]
+  ),
+  (
+    "",
+    [EVar $ Ident $ sCriticalSection ++ (show number)],
+    [[(Ident $ sCriticalSection ++ (show number), EFalse)]]
+  )]
+
 ------------------------------
 -- Adversarial transactions --
 ------------------------------
