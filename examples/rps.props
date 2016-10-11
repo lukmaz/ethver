@@ -1,8 +1,10 @@
-Pmin=? [ F finalized & balance0>=1 ]
+Pmin=? [ F finalized & balance0 = 2 ]
 
-Pmax=? [ F finalized&balance1=2 ]
+Pmin=? [ F finalized & balance0 >= 1 ]
 
-Pmax=? [ F finalized&balance1>=1 ]
+Pmax=? [ F finalized & balance1 =2 ]
+
+Pmax=? [ F finalized & balance1 >= 1 ]
 
 Pmin=? [ F finalized ]
 
