@@ -512,12 +512,18 @@ verSendCAux modifyModule funName argsVals = do
       -- TODO: olewamy "from", bo sender jest wiadomy ze scenariusza
       let addAssignment acc (argName, argVal) = acc ++ [createAssignment (number mod) funName argName argVal]
       let updates1 = [foldl addAssignment [] $ zip argNames expArgsVals]
+      
+      addTransToNewState
+        modifyModule
+        ""
+        []
+        updates1
 
       addTransToNewState
         modifyModule
         (sCommunicatePrefix ++ (unident funName) ++ (show $ number mod))
         []
-        updates1
+        [[]]
 
 createAssignment :: Integer -> Ident -> Arg -> Exp -> (Ident, Exp)
 createAssignment playerNumber funName (Ar _ (Ident varName)) exp =

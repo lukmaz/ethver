@@ -245,15 +245,15 @@ verFunContract (Fun name args stms) = do
 -------------------------
 verFunCommunication :: Function -> VerRes ()
 -- TODO: sprawdzać, że nikt nie wykonuje FunV
-verFunCommunication (Fun name args stms) = do
-  addFun (Fun name args stms)
+verFunCommunication (Fun funName args stms) = do
+  addFun (Fun funName args stms)
   
-  -- adds also to argMap (?)
-  mapM_ (addCommArgument name) args
+  -- adds also to argMap (?) - co to jest argmap?
+  mapM_ (addCommArgument funName) args
 
-  -- adds a command that the transaction is being communicated by a particular player
-  addCommunicateOnePlayer name 0
-  addCommunicateOnePlayer name 1
+  -- adds to Communication module  a command that the transaction is being communicated by a particular player
+  addCommunicateOnePlayer funName args 0
+  addCommunicateOnePlayer funName args 1
   
   mod <- modifyCommunication id
   let newState = numStates mod + 1
@@ -301,7 +301,7 @@ verScenario modifyModule decls stms = do
   --------------------------------------------------
 
   -- add critical sections stuff 
-  _ <- modifyModule addCS
+  _ <- modifyModule addCS2
   
   -- TODO: zmienić 0 i 1 na stałe
   addFirstCustomTrans
@@ -318,5 +318,14 @@ verScenario modifyModule decls stms = do
     0
     (-1)
     [EEq (EVar iAdversaryFlag) (EInt $ number mod)]
+    [[]]
+
+  -- ability for adversary to interrupt the protocol
+  addCustomTrans
+    modifyModule
+    ""
+    (-1)
+    (-2)
+    []
     [[]]
 

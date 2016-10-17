@@ -115,17 +115,24 @@ addFirstTransToModule :: Trans -> Module -> Module
 addFirstTransToModule tr mod =
   mod {transs = (transs mod) ++ [tr]}
 
-addCommunicateOnePlayer :: Ident -> Integer -> VerRes ()
-addCommunicateOnePlayer funName playerNumber = do
+addCommunicateOnePlayer :: Ident -> [Arg] -> Integer -> VerRes ()
+addCommunicateOnePlayer funName args playerNumber = do
   mod <- modifyCommunication id
   let newState = numStates mod + 1 
+
+  let updates0 = [[(iCommSender, EInt playerNumber)]]
+  let addAssignment acc (Ar _ (Ident varName)) = acc ++
+        [(Ident $ unident funName ++ "_" ++ varName, 
+          EVar $ Ident $ unident funName ++ "_" ++ varName ++ (show playerNumber))]
+  let updates = [foldl addAssignment (head updates0) args]
+
   addCustomTrans
     modifyCommunication
     (sCommunicatePrefix ++ (unident funName) ++ (show playerNumber))
     1   
     newState
     []  
-    [[(iCommSender, EInt playerNumber)]]
+    updates
 
 
 ----------------------
@@ -158,9 +165,42 @@ unsetCS number (transName, guards, updates) =
     transName,
     (EVar $ Ident $ sCriticalSection ++ (show number))
       :(EEq (EVar iContrState) (EInt 1))
+      :(EEq (EVar iCommState) (EInt 1))
       :guards,
     (map ((Ident $ sCriticalSection ++ (show number), EFalse):) updates)
   )
+
+--------------------------------
+-- Alternative approach to CS --
+--------------------------------
+
+
+-- converts all commands in a module by adding critical section stuff
+addCS2 :: Module -> Module
+addCS2 mod = 
+  mod { transs = reverse $ setCS2 (number mod) ++
+    (foldl
+      (\acc tr -> ((unsetCS (number mod) tr):acc))
+      []
+      (transs mod)
+    )
+  }
+
+-- only two commands for the whole scenario
+setCS2 :: Integer -> [Trans]
+setCS2 number  = 
+  [(
+    "",
+    [ENot $ EVar iCriticalSection0,
+      ENot $ EVar iCriticalSection1,
+      EGt (EVar $ Ident $ sStatePrefix ++ (show number)) (EInt 0)],
+    [[(Ident $ sCriticalSection ++ (show number), ETrue)]]
+  ),
+  (
+    "",
+    [EVar $ Ident $ sCriticalSection ++ (show number)],
+    [[(Ident $ sCriticalSection ++ (show number), EFalse)]]
+  )]
 
 ------------------------------
 -- Adversarial transactions --
@@ -201,7 +241,8 @@ generateAdvTranss modifyModule whichPrefix whichState withVal funName args maxes
         (whichPrefix ++ funName ++ (show $ number mod))
         [   
           ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
-          EEq (EVar whichState) (EInt 1), 
+          EEq (EVar iContrState) (EInt 1), 
+          EEq (EVar iCommState) (EInt 1), 
           EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
         ]   
         [[]]
@@ -213,7 +254,8 @@ generateAdvTranss modifyModule whichPrefix whichState withVal funName args maxes
           (whichPrefix ++ funName ++ (show $ number mod))
           [
             ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
-            EEq (EVar whichState) (EInt 1),
+            EEq (EVar iContrState) (EInt 1),
+            EEq (EVar iCommState) (EInt 1),
             EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
           ]
           (advUpdates withVal (number mod) funName args vals)

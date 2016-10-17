@@ -11,8 +11,8 @@ nWrongExp = 43
 nInitContractState = 1
 nInitCommState = 1
 
-nMinP0State = -1
-nMinP1State = -1
+nMinP0State = -2
+nMinP1State = -2
 nInitP0State = 0
 nInitP1State = 0
 nInitContrState = 1
