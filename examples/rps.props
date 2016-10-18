@@ -1,10 +1,38 @@
-Pmin=? [ F finalized & balance0 = 2 ]
+Pmin=? [ F finalized&balance0=2 ]
 
-Pmin=? [ F finalized & balance0 >= 1 ]
+Pmin=? [ F finalized&balance0>=1 ]
 
-Pmax=? [ F finalized & balance1 =2 ]
+Pmax=? [ F finalized&balance1=2 ]
 
-Pmax=? [ F finalized & balance1 >= 1 ]
+Pmax=? [ F finalized&balance1>=1 ]
 
 Pmin=? [ F finalized ]
+
+Pmin=? [F cp0]
+
+Pmin=? [F cp2 | cp1]
+
+E [F cp02]
+
+Pmin=? [F cp2 | cp05]
+
+Pmin=? [F cp2 | c0]
+
+Pmin=? [F cp2 | c1]
+
+Pmin=? [F cp2 | c2]
+
+Pmin=? [F cp2 | c3]
+
+Pmin=? [F cp2 | c4]
+
+Pmin=? [F cp2 | c5]
+
+Pmin=? [F cp2 | cp02]
+
+E [F state0=9 & c4 & contrstate = 1 & !(contrstate = 1 & send_open_status0 = T_EXECUTED)]
+
+Pmin=? [F cp2 | state0=10]
+
+Pmin=? [F cp2 | state0=9]
 

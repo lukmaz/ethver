@@ -1,0 +1,149 @@
+user "A";
+user "B";
+
+CONTRACT_BALANCE_MAX = 2;
+CONTRACT_BALANCE_INIT = 0;
+USER_BALANCE_MAX = 2;
+USER0_BALANCE_INIT = 1;
+USER1_BALANCE_INIT = 1;
+MAX_VALUE = 1;
+MAX_TIME = 10;
+
+contract RPS {
+
+	random_uint(3) commit0;
+	random_uint(3) commit1;
+  bool committed0;
+  bool committed1;
+
+	uint(3) input0;
+	uint(3) input1;
+  bool input0_set;
+  bool input1_set;
+
+  bool finalized;
+  bool withdrawn0;
+  bool withdrawn1;
+
+  bool c0;
+  bool c1;
+  bool c2;
+  bool c3;
+  bool c4;
+  bool c5;
+
+  function_with_value send_commit(random_uint(3) commit) {
+		if (msg.value == 1) {
+      if ((msg.sender == "A") && (!committed0)) {
+        commit0 = commit;
+        committed0 = true;
+      }
+      if ((msg.sender == "B") && (!committed1)){
+        commit1 = commit;
+        committed1 = true;
+      }
+    }
+  }
+
+	function send_open() {
+    c0 = true;
+    if (msg.sender == "A") {
+      c1 = true;
+      if (committed0 && (!input0_set)) {
+        c2 = true;
+        if (commit0 == random_lazy(3)) {  //special value
+          c3 = true;
+          input0 = random(3);
+          input0_set = true;
+          c4 = true;
+        }
+        if (commit0 != random_lazy(3)) {  //special value
+          input0 = commit0;
+          input0_set = true;
+        }
+      }
+    }
+    if (msg.sender == "B") {
+      if (committed1 && (!input1_set)) {
+        if (commit1 == random_lazy(3)) {  //special value
+          input1 = random(3);
+          input1_set = true;
+        }
+        else {  //special value
+          input1 = commit1;
+          input1_set = true;
+        }
+      }
+    }
+    c5 = true;
+	}
+
+	function finalize() {
+    if (!finalized) {
+      if (input0_set && input1_set) {
+        if ((((3 + input0) - input1)%3) == 1) {
+          "A".send(2*1);
+        }
+        if ((((3 + input0) - input1)%3) == 2) {
+          "B".send(2*1);
+        }
+        if ((((3 + input0) - input1)%3) == 0) {
+          "A".send(1);
+          "B".send(1);
+        }
+        finalized = true;
+      }
+    }
+    if ((input0_set && !withdrawn0) && timelocksReleased) {
+      "A".send(1);
+      withdrawn0 = true;
+      finalized = true;
+    }
+    if ((input1_set && !withdrawn1) && timelocksReleased) {
+      "B".send(1);
+      withdrawn1 = true;
+      finalized = true;
+    }
+  }
+}
+
+communication {
+
+}
+
+scenario A {
+  bool endA;
+  bool cp0;
+  bool cp02;
+  bool cp05;
+  bool cp1;
+  bool cp2;
+  random_uint(3) inputA;
+  inputA = random_lazy(3);  //sets special value
+  send_commit.sendTransaction(inputA, {from: "A", value: 1});
+  wait(committed1);
+  cp0 = true;
+  if (committed1) {
+    cp02 = true;
+    send_open.sendTransaction({from: "A", value: 0});
+    cp05 = true;
+    wait(input1_set);
+    cp1 = true;
+    finalize.sendTransaction({from: "A", value: 0});
+  }
+  else {
+    cp2 = true;
+    finalize.sendTransaction({from: "A", value: 0});
+  }
+  endA = true;
+}
+
+scenario B {
+  bool endB;
+  random_uint(3) inputB;
+  inputB = random_lazy(3);  //sets special value
+  send_commit.sendTransaction(inputB, {from: "B", value: 1});
+  wait(committed0);
+  send_open.sendTransaction({from: "B", value: 0});
+  endB = true;
+}

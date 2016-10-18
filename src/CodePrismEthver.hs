@@ -40,7 +40,8 @@ blockchainPream :: String
 blockchainPream =
   "  " ++ sContrSender ++ " : [0..1];\n" ++
   -- TODO: skąd wziąć zakres val?
-  "  " ++ sValue ++ " : [0.." ++ sMaxValue ++ "];\n"
+  "  " ++ sValue ++ " : [0.." ++ sMaxValue ++ "];\n" ++
+  "  " ++ sTimelocksReleased ++ " : bool init false;"
 
 contractPream :: String
 contractPream =

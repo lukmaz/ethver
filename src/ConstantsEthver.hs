@@ -52,7 +52,8 @@ sStatePrefix = "state"
 sStatusSufix = "_status"
 sEmptyState = "emptyState"
 sEmptySender = "emptySender"
-
+sReleaseTimelocks = "releaseTimelocks"
+sTimelocksReleased = "timelocksReleased"
 sNextState = "next_state"
 
 sEmptyModule = "emptyModule"

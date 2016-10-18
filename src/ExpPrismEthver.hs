@@ -407,7 +407,7 @@ verCallExp modifyModule (EWait cond) = do
   addTransToNewState
     modifyModule
     ""
-    [evalCond]
+    [EOr evalCond $ EVar $ Ident sTimelocksReleased]
     [[]]
   return (EWait evalCond)
 

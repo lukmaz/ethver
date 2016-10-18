@@ -320,12 +320,17 @@ verScenario modifyModule decls stms = do
     [EEq (EVar iAdversaryFlag) (EInt $ number mod)]
     [[]]
 
-  -- ability for adversary to interrupt the protocol
+  -- two transitions for ability for adversary to interrupt the protocol
   addCustomTrans
     modifyModule
-    ""
+    (sReleaseTimelocks ++ (show $ number mod))
     (-1)
     (-2)
     []
     [[]]
-
+  
+  addTransNoState
+    modifyBlockchain
+    (sReleaseTimelocks ++ (show $ number mod))
+    [EEq (EVar $ Ident $ sTimelocksReleased) EFalse]
+    [[(Ident sTimelocksReleased, ETrue)]]
