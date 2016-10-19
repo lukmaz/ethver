@@ -8,31 +8,13 @@ Pmax=? [ F finalized&balance1>=1 ]
 
 Pmin=? [ F finalized ]
 
-Pmin=? [F cp0]
+Pmin=? [ F cp02 ]
 
-Pmin=? [F cp2 | cp1]
+Pmin=? [ F cp05 ]
 
-E [F cp02]
+Pmin=? [ F state0=7 & send_open_status0 = T_EXECUTED & contrstate = 1 ]
 
-Pmin=? [F cp2 | cp05]
+Pmin=? [ F state0=7 & send_open_status0 = T_EXECUTED & contrstate = 1 & critical_section0 ]
 
-Pmin=? [F cp2 | c0]
-
-Pmin=? [F cp2 | c1]
-
-Pmin=? [F cp2 | c2]
-
-Pmin=? [F cp2 | c3]
-
-Pmin=? [F cp2 | c4]
-
-Pmin=? [F cp2 | c5]
-
-Pmin=? [F cp2 | cp02]
-
-E [F state0=9 & c4 & contrstate = 1 & !(contrstate = 1 & send_open_status0 = T_EXECUTED)]
-
-Pmin=? [F cp2 | state0=10]
-
-Pmin=? [F cp2 | state0=9]
+E [ F state0=7 & send_open_status0 = T_EXECUTED & contrstate = 1 & !critical_section0 ]
 
