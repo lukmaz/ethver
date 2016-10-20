@@ -24,7 +24,10 @@ contract RPS {
   bool finalized;
 
   function_with_value send_commit(random_uint(3) commit) {
-		if (msg.value == 1) {
+    if (finalized) {
+      msg.sender.send(msg.value);
+    }
+    else if (msg.value == 1) {
       if ((msg.sender == "A") && (!committed0)) {
         commit0 = commit;
         committed0 = true;
@@ -84,12 +87,11 @@ contract RPS {
   function withdraw() {
     if ((input0_set && !finalized) && timelocksReleased) {
       "A".send(1);
-      finalized = true;
     }
     if ((input1_set && !finalized) && timelocksReleased) {
       "B".send(1);
-      finalized = true;
     }
+    finalized = true;
   }
 }
 
@@ -99,32 +101,21 @@ communication {
 
 scenario A {
   bool endA;
-  bool cp0;
-  bool cp02;
-  bool cp05;
-  bool cp1;
-  bool cp2;
   random_uint(3) inputA;
   inputA = random_lazy(3);  //sets special value
   send_commit.sendTransaction(inputA, {from: "A", value: 1});
   wait(committed1);
-  cp0 = true;
   if (committed1) {
-    cp02 = true;
     send_open.sendTransaction({from: "A", value: 0});
-    cp05 = true;
     wait(input1_set);
     if (input1_set) {
-      cp1 = true;
       finalize.sendTransaction({from: "A", value: 0});
     }
     else {
-      cp2 = true;
       withdraw.sendTransaction({from: "A", value: 0});
     }
   }
   else {
-    cp2 = true;
     withdraw.sendTransaction({from: "A", value: 0});
   }
   endA = true;
@@ -135,7 +126,19 @@ scenario B {
   random_uint(3) inputB;
   inputB = random_lazy(3);  //sets special value
   send_commit.sendTransaction(inputB, {from: "B", value: 1});
-  wait(committed0);
-  send_open.sendTransaction({from: "B", value: 0});
+  wait(committed1);
+  if (committed1) {
+    send_open.sendTransaction({from: "B", value: 0});
+    wait(input1_set);
+    if (input1_set) {
+      finalize.sendTransaction({from: "B", value: 0});
+    }
+    else {
+      withdraw.sendTransaction({from: "B", value: 0});
+    }
+  }
+  else {
+    withdraw.sendTransaction({from: "B", value: 0});
+  }
   endB = true;
 }

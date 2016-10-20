@@ -1,10 +1,22 @@
-Pmin=? [ F final0&balance0=2 ]
+Pmin=? [ F endA ]
 
-Pmin=? [ F final0&balance0>=1 ]
+Pmin=? [ F endA & balance0=2 ]
 
-Pmax=? [ F final0&balance1=2 ]
+Pmax=? [ F endA & balance0=2 ]
 
-Pmax=? [ F final0&balance1>=1 ]
+Pmin=? [ F endA & balance0>=1 ]
 
-Pmin=? [ F final0 ]
+Pmax=? [ F endA & balance0>=1 ]
+
+Pmin=? [ F endA & balance1=2 ]
+
+Pmax=? [ F endA & balance1=2 ]
+
+Pmin=? [ F endA & balance1>=1 ]
+
+Pmax=? [ F endA & balance1>=1 ]
+
+Pmin=? [ F finalized ]
+
+E [ F "deadlock" ]
 
