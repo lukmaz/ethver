@@ -163,11 +163,14 @@ unsetCS :: Integer -> Trans -> Trans
 unsetCS number (transName, guards, updates) =
   (
     transName,
-    (EVar $ Ident $ sCriticalSection ++ (show number))
-      :(EEq (EVar iContrState) (EInt 1))
+    -- critical section
+    --(EVar $ Ident $ sCriticalSection ++ (show number))
+    (EEq (EVar iContrState) (EInt 1))
       :(EEq (EVar iCommState) (EInt 1))
       :guards,
-    (map ((Ident $ sCriticalSection ++ (show number), EFalse):) updates)
+    -- critical section
+    --(map ((Ident $ sCriticalSection ++ (show number), EFalse):) updates)
+    updates
   )
 
 --------------------------------
