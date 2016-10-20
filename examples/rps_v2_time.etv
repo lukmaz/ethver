@@ -85,13 +85,15 @@ contract RPS {
   }
 
   function withdraw() {
-    if ((input0_set && !finalized) && timelocksReleased) {
-      "A".send(1);
+    if (timelocksReleased) {
+      if (committed0 && !finalized) {
+        "A".send(1);
+      }
+      if (committed1 && !finalized) {
+        "B".send(1);
+      }
+      finalized = true;
     }
-    if ((input1_set && !finalized) && timelocksReleased) {
-      "B".send(1);
-    }
-    finalized = true;
   }
 }
 
