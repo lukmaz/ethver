@@ -22,15 +22,10 @@ contract RPS {
   bool input1_set;
 
   bool finalized;
+  bool final0;
+  bool final1;
   bool withdrawn0;
   bool withdrawn1;
-
-  bool c0;
-  bool c1;
-  bool c2;
-  bool c3;
-  bool c4;
-  bool c5;
 
   function_with_value send_commit(random_uint(3) commit) {
 		if (msg.value == 1) {
@@ -46,16 +41,11 @@ contract RPS {
   }
 
 	function send_open() {
-    c0 = true;
     if (msg.sender == "A") {
-      c1 = true;
       if (committed0 && (!input0_set)) {
-        c2 = true;
         if (commit0 == random_lazy(3)) {  //special value
-          c3 = true;
           input0 = random(3);
           input0_set = true;
-          c4 = true;
         }
         if (commit0 != random_lazy(3)) {  //special value
           input0 = commit0;
@@ -75,7 +65,6 @@ contract RPS {
         }
       }
     }
-    c5 = true;
 	}
 
 	function finalize() {
@@ -92,17 +81,22 @@ contract RPS {
           "B".send(1);
         }
         finalized = true;
+        final0 = true;
+        final1 = true;
       }
     }
+  }
+
+  function withdraw() {
     if ((input0_set && !withdrawn0) && timelocksReleased) {
       "A".send(1);
       withdrawn0 = true;
-      finalized = true;
+      final0 = true;
     }
     if ((input1_set && !withdrawn1) && timelocksReleased) {
       "B".send(1);
       withdrawn1 = true;
-      finalized = true;
+      final1 = true;
     }
   }
 }

@@ -1,20 +1,10 @@
-Pmin=? [ F finalized&balance0=2 ]
+Pmin=? [ F final0&balance0=2 ]
 
-Pmin=? [ F finalized&balance0>=1 ]
+Pmin=? [ F final0&balance0>=1 ]
 
-Pmax=? [ F finalized&balance1=2 ]
+Pmax=? [ F final0&balance1=2 ]
 
-Pmax=? [ F finalized&balance1>=1 ]
+Pmax=? [ F final0&balance1>=1 ]
 
-Pmin=? [ F finalized ]
-
-Pmin=? [ F cp02 ]
-
-Pmin=? [ F cp05 ]
-
-Pmin=? [ F state0=7 & send_open_status0 = T_EXECUTED & contrstate = 1 ]
-
-Pmin=? [ F state0=7 & send_open_status0 = T_EXECUTED & contrstate = 1 & critical_section0 ]
-
-E [ F state0=7 & send_open_status0 = T_EXECUTED & contrstate = 1 & !critical_section0 ]
+Pmin=? [ F final0 ]
 
