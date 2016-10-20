@@ -181,7 +181,7 @@ unsetCS number (transName, guards, updates) =
 -- converts all commands in a module by adding critical section stuff
 addCS2 :: Module -> Module
 addCS2 mod = 
-  mod { transs = reverse $ setCS2 (number mod) ++
+  mod { transs = reverse -- $ setCS2 (number mod) ++  (... critical section )
     (foldl
       (\acc tr -> ((unsetCS (number mod) tr):acc))
       []
