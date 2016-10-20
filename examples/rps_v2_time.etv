@@ -22,10 +22,6 @@ contract RPS {
   bool input1_set;
 
   bool finalized;
-  bool final0;
-  bool final1;
-  bool withdrawn0;
-  bool withdrawn1;
 
   function_with_value send_commit(random_uint(3) commit) {
 		if (msg.value == 1) {
@@ -81,22 +77,18 @@ contract RPS {
           "B".send(1);
         }
         finalized = true;
-        final0 = true;
-        final1 = true;
       }
     }
   }
 
   function withdraw() {
-    if ((input0_set && !withdrawn0) && timelocksReleased) {
+    if ((input0_set && !finalized) && timelocksReleased) {
       "A".send(1);
-      withdrawn0 = true;
-      final0 = true;
+      finalized = true;
     }
-    if ((input1_set && !withdrawn1) && timelocksReleased) {
+    if ((input1_set && !finalized) && timelocksReleased) {
       "B".send(1);
-      withdrawn1 = true;
-      final1 = true;
+      finalized = true;
     }
   }
 }
@@ -122,12 +114,18 @@ scenario A {
     send_open.sendTransaction({from: "A", value: 0});
     cp05 = true;
     wait(input1_set);
-    cp1 = true;
-    finalize.sendTransaction({from: "A", value: 0});
+    if (input1_set) {
+      cp1 = true;
+      finalize.sendTransaction({from: "A", value: 0});
+    }
+    else {
+      cp2 = true;
+      withdraw.sendTransaction({from: "A", value: 0});
+    }
   }
   else {
     cp2 = true;
-    finalize.sendTransaction({from: "A", value: 0});
+    withdraw.sendTransaction({from: "A", value: 0});
   }
   endA = true;
 }
