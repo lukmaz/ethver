@@ -198,7 +198,9 @@ setCS2 number  =
   ),
   (
     "",
-    [EVar $ Ident $ sCriticalSection ++ (show number)],
+    [EVar $ Ident $ sCriticalSection ++ (show number),
+    -- one line quickfix:
+      EEq (EVar iContrState) (EInt 1)],
     [[(Ident $ sCriticalSection ++ (show number), EFalse)]]
   )]
 
@@ -240,7 +242,8 @@ generateAdvTranss modifyModule whichPrefix whichState withVal funName args maxes
         modifyModule
         (whichPrefix ++ funName ++ (show $ number mod))
         [   
-          ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
+          -- critical section
+          -- ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
           EEq (EVar iContrState) (EInt 1), 
           EEq (EVar iCommState) (EInt 1), 
           EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
@@ -253,7 +256,8 @@ generateAdvTranss modifyModule whichPrefix whichState withVal funName args maxes
           modifyModule
           (whichPrefix ++ funName ++ (show $ number mod))
           [
-            ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
+            -- critical section
+            -- ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
             EEq (EVar iContrState) (EInt 1),
             EEq (EVar iCommState) (EInt 1),
             EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))

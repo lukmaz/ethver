@@ -59,13 +59,17 @@ communicationPream =
 
 player0Pream :: String
 player0Pream =
-  "  " ++ sP0State ++ " : [" ++ (show nMinP0State) ++ ".." ++ sNumP0States ++ "] init " ++ (show nInitP0State) ++ 
-  ";\n" ++ "  " ++ sCriticalSection0 ++ " : bool;\n"
+  "  " ++ sP0State ++ " : [" ++ (show nMinP0State) ++ ".." ++ sNumP0States ++ "] init " ++ 
+  (show nInitP0State) ++ ";\n" 
+  -- critical section
+  -- ++ "  " ++ sCriticalSection0 ++ " : bool;\n"
 
 player1Pream :: String
 player1Pream =
   "  " ++ sP1State ++ " : [" ++ (show nMinP1State) ++ ".." ++ sNumP1States ++ "] init " ++ (show nInitP1State) ++
-  ";\n" ++ "  " ++ sCriticalSection1 ++ " : bool;\n"
+  ";\n" 
+  -- critical section
+  -- ++ "  " ++ sCriticalSection1 ++ " : bool;\n"
 
 generateConstantConstants :: String
 generateConstantConstants = 
