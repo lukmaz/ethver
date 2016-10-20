@@ -121,20 +121,20 @@ scenario A {
   random_uint(3) inputA;
   inputA = random_lazy(3);  //sets special value
   send_commit.sendTransaction(inputA, {from: "A", value: 1});
-  //wait(committed1);
+  wait(committed1);
   cp0 = true;
-  //if (committed1) {
+  if (committed1) {
     cp02 = true;
     send_open.sendTransaction({from: "A", value: 0});
     cp05 = true;
     wait(input1_set);
     cp1 = true;
     finalize.sendTransaction({from: "A", value: 0});
-  //}
-  //else {
-  //  cp2 = true;
-  //  finalize.sendTransaction({from: "A", value: 0});
-  //}
+  }
+  else {
+    cp2 = true;
+    finalize.sendTransaction({from: "A", value: 0});
+  }
   endA = true;
 }
 
