@@ -128,11 +128,11 @@ scenario B {
   random_uint(3) inputB;
   inputB = random_lazy(3);  //sets special value
   send_commit.sendTransaction(inputB, {from: "B", value: 1});
-  wait(committed1);
-  if (committed1) {
+  wait(committed0);
+  if (committed0) {
     send_open.sendTransaction({from: "B", value: 0});
-    wait(input1_set);
-    if (input1_set) {
+    wait(input0_set);
+    if (input0_set) {
       finalize.sendTransaction({from: "B", value: 0});
     }
     else {
