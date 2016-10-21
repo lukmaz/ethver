@@ -326,11 +326,30 @@ verScenario modifyModule decls stms = do
     (sReleaseTimelocks ++ (show $ number mod))
     (-1)
     (-2)
-    []
+    [ENe (EVar iContrState) (EInt 1),
+      ENe (EVar iCommState) (EInt 1)]
     [[]]
   
+  world <- get
+
   addTransNoState
     modifyBlockchain
     (sReleaseTimelocks ++ (show $ number mod))
-    [EEq (EVar $ Ident $ sTimelocksReleased) EFalse]
+    (
+      (EEq (EVar $ Ident $ sTimelocksReleased) EFalse)
+        : (Map.elems $ Map.map
+            (\fun -> ENe
+              (EVar $ Ident $ (nameOfFunction fun) ++ sStatusSufix ++ "0")
+              (EVar iTBroadcast)
+            )
+            (funs world)
+          )
+        ++ (Map.elems $ Map.map
+            (\fun -> ENe
+              (EVar $ Ident $ (nameOfFunction fun) ++ sStatusSufix ++ "1")
+              (EVar iTBroadcast)
+            )
+            (funs world)
+          )
+    )
     [[(Ident sTimelocksReleased, ETrue)]]

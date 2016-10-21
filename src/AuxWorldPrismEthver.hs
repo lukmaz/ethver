@@ -51,6 +51,11 @@ findVarType ident = do
                     Just typ -> return (Just typ)
                     Nothing -> return Nothing
 
+nameOfFunction :: Function -> String
+nameOfFunction (Fun (Ident name) _ _) = name
+nameOfFunction (FunV (Ident name) _ _) = name
+nameOfFunction (FunR (Ident name) _ _ _) = name
+
 -----------
 -- Users --
 -----------
