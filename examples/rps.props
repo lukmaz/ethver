@@ -18,15 +18,15 @@ Pmax=? [ F endA&balance1>=1 ]
 
 Pmin=? [ F finalized ]
 
-E [ F endA&balance0=0 ]
+Pmax=? [ F endA&!completed_honestly&balance0<1 ]
 
-E [ F "deadlock" ]
+Pmax=? [ F endA&timelocksReleased&completed_honestly&balance0=0 ]
 
-Pmax=? [ F endA & !completed_honestly & balance0!=1 ]
+Pmax=? [ F endA&timelocksReleased&completed_honestly&balance1=1 ]
 
-Pmax=? [ F endA & completed_honestly & balance1=0 ]
+Pmax=? [ F endA&timelocksReleased&completed_honestly&balance2=2 ]
 
-Pmax=? [ F endA & completed_honestly & balance1=1 ]
+E [ F endA&!completed_honestly&balance0<1 ]
 
-Pmax=? [ F endA & completed_honestly & balance1=2 ]
+A [ F endA ]
 

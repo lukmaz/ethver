@@ -87,14 +87,26 @@ contract RPS {
   }
 
   function withdraw() {
-    if (timelocksReleased) {
-      if (committed0 && !finalized) {
-        "A".send(1);
+    if (timelocksReleased && !finalized) {
+      if ((!input0_set) || (!input1_set)) {
+        if (input0_set) {
+          "A".send(2);
+        }
+        else {
+          if (input1_set) {
+            "B".send(2);
+          }
+          else {
+            if (committed0) {
+              "A".send(1);
+            }
+            if (committed1) {
+              "B".send(1);
+            }
+          }
+        }
+        finalized = true;
       }
-      if (committed1 && !finalized) {
-        "B".send(1);
-      }
-      finalized = true;
     }
   }
 }
