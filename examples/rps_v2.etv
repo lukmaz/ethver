@@ -22,6 +22,7 @@ contract RPS {
   bool input1_set;
 
   bool finalized;
+  bool completed_honestly;
 
   function_with_value send_commit(random_uint(3) commit) {
     if (finalized) {
@@ -80,6 +81,7 @@ contract RPS {
           "B".send(1);
         }
         finalized = true;
+        completed_honestly = true;
       }
     }
   }
