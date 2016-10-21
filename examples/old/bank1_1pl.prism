@@ -1,0 +1,159 @@
+mdp
+
+const int NUM_STATES = 19;
+
+global potA : [0..2];
+global potB : [0..2];
+global state : [1..NUM_STATES];
+
+module player
+[] (state = 1)
+ & (balance1 >= 2)
+ & (contract_balance + 2 <= MAX_CONTRACT_BALANCE)
+  ->
+   (state' = 2)
+ & (balance1' = balance1 - 2)
+ & (contract_balance' = contract_balance + 2);
+
+[] (state = 2)
+ & (1 = 1)
+  ->
+   (state' = 3);
+
+[] (state = 3)
+ & (potA + 2 >= 0)
+ & (potA + 2 <= 2)
+  ->
+   (state' = 4)
+ & (potA' = potA + 2);
+
+[] (state = 2)
+ & (1 != 1)
+  ->
+   (state' = 4);
+
+[] (state = 4)
+ & (1 = 1)
+  ->
+   (state' = 5);
+
+[] (state = 5)
+ & (potA - 1 >= 0)
+ & (potA - 1 <= 2)
+  ->
+   (state' = 6)
+ & (potA' = potA - 1);
+
+[] (state = 6)
+ & (potB + 1 >= 0)
+ & (potB + 1 <= 2)
+  ->
+   (state' = 7)
+ & (potB' = potB + 1);
+
+[] (state = 4)
+ & (1 != 1)
+  ->
+   (state' = 7);
+
+[] (state = 7)
+ & (1 = 1)
+  ->
+   (state' = 8);
+
+[] (state = 8)
+ & (contract_balance >= val)
+ & (balance1 + val <= MAX_USER_BALANCE)
+  ->
+   (state' = 9)
+ & (contract_balance' = contract_balance - val)
+ & (balance1' = balance1 + val);
+
+[] (state = 9)
+ & (potA - 1 >= 0)
+ & (potA - 1 <= 2)
+  ->
+   (state' = 10)
+ & (potA' = potA - 1);
+
+[] (state = 7)
+ & (1 != 1)
+  ->
+   (state' = 10);
+
+[] (state = 10)
+ & (1 = 2)
+  ->
+   (state' = 11);
+
+[] (state = 11)
+ & (contract_balance >= val)
+ & (balance1 + val <= MAX_USER_BALANCE)
+  ->
+   (state' = 12)
+ & (contract_balance' = contract_balance - val)
+ & (balance1' = balance1 + val);
+
+[] (state = 12)
+ & (potB - 1 >= 0)
+ & (potB - 1 <= 2)
+  ->
+   (state' = 13)
+ & (potB' = potB - 1);
+
+[] (state = 10)
+ & (1 != 2)
+  ->
+   (state' = 13);
+
+[] (state = 13)
+ & (2 = 1)
+  ->
+   (state' = 14);
+
+[] (state = 14)
+ & (contract_balance >= val)
+ & (balance2 + val <= MAX_USER_BALANCE)
+  ->
+   (state' = 15)
+ & (contract_balance' = contract_balance - val)
+ & (balance2' = balance2 + val);
+
+[] (state = 15)
+ & (potA - 1 >= 0)
+ & (potA - 1 <= 2)
+  ->
+   (state' = 16)
+ & (potA' = potA - 1);
+
+[] (state = 13)
+ & (2 != 1)
+  ->
+   (state' = 16);
+
+[] (state = 16)
+ & (2 = 2)
+  ->
+   (state' = 17);
+
+[] (state = 17)
+ & (contract_balance >= val)
+ & (balance2 + val <= MAX_USER_BALANCE)
+  ->
+   (state' = 18)
+ & (contract_balance' = contract_balance - val)
+ & (balance2' = balance2 + val);
+
+[] (state = 18)
+ & (potB - 1 >= 0)
+ & (potB - 1 <= 2)
+  ->
+   (state' = 19)
+ & (potB' = potB - 1);
+
+[] (state = 16)
+ & (2 != 2)
+  ->
+   (state' = 19);
+
+endmodule
