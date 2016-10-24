@@ -1,0 +1,1402 @@
+mdp
+
+const int ADVERSARY;
+
+const int T_NONE = 0;
+const int T_BROADCAST = 1;
+const int T_EXECUTED = 2;
+const int T_INVALIDATED = 3;
+
+const int NUM_CONTRACT_STATES = 60;
+const int NUM_COMMUNICATION_STATES = 1;
+const int NUM_PLAYER0_STATES = 19;
+const int NUM_PLAYER1_STATES = 19;
+
+const int CONTRACT_BALANCE_INIT = 0;
+const int CONTRACT_BALANCE_MAX = 2;
+const int MAX_TIME = 10;
+const int MAX_VALUE = 1;
+const int USER0_BALANCE_INIT = 1;
+const int USER1_BALANCE_INIT = 1;
+const int USER_BALANCE_MAX = 2;
+
+
+/////////////////////
+
+module blockchain
+  contr_sender : [0..1];
+  value : [0..MAX_VALUE];
+  timelocksReleased : bool init false;
+  finalize_status0 : [0..3];
+  finalize_status1 : [0..3];
+  send_commit_commit : [0..3];
+  send_commit_status0 : [0..3];
+  send_commit_status1 : [0..3];
+  send_open_status0 : [0..3];
+  send_open_status1 : [0..3];
+  withdraw_status0 : [0..3];
+  withdraw_status1 : [0..3];
+
+  [broadcast_send_commit0]
+    (contrstate = 1)
+  & (send_commit_status0 != T_BROADCAST)
+  ->
+    (send_commit_status0' = T_BROADCAST);
+
+  [broadcast_send_open0]
+    (contrstate = 1)
+  & (send_open_status0 != T_BROADCAST)
+  ->
+    (send_open_status0' = T_BROADCAST);
+
+  [broadcast_finalize0]
+    (contrstate = 1)
+  & (finalize_status0 != T_BROADCAST)
+  ->
+    (finalize_status0' = T_BROADCAST);
+
+  [broadcast_withdraw0]
+    (contrstate = 1)
+  & (withdraw_status0 != T_BROADCAST)
+  ->
+    (withdraw_status0' = T_BROADCAST);
+
+  [broadcast_send_commit]
+    (contrstate = 1)
+  & (send_commit_status0 = T_BROADCAST)
+  & (send_commit_value0 <= balance0)
+  ->
+    (contr_sender' = 0)
+  & (value' = send_commit_value0)
+  & (send_commit_status0' = T_EXECUTED)
+  & (send_commit_commit' = send_commit_commit0);
+
+  []
+    (contrstate = 1)
+  & (send_commit_status0 = T_BROADCAST)
+  & (send_commit_value0 > balance0)
+  ->
+    (send_commit_status0' = T_INVALIDATED);
+
+  [broadcast_send_open]
+    (contrstate = 1)
+  & (send_open_status0 = T_BROADCAST)
+  & (send_open_value0 <= balance0)
+  ->
+    (contr_sender' = 0)
+  & (value' = send_open_value0)
+  & (send_open_status0' = T_EXECUTED);
+
+  []
+    (contrstate = 1)
+  & (send_open_status0 = T_BROADCAST)
+  & (send_open_value0 > balance0)
+  ->
+    (send_open_status0' = T_INVALIDATED);
+
+  [broadcast_finalize]
+    (contrstate = 1)
+  & (finalize_status0 = T_BROADCAST)
+  & (finalize_value0 <= balance0)
+  ->
+    (contr_sender' = 0)
+  & (value' = finalize_value0)
+  & (finalize_status0' = T_EXECUTED);
+
+  []
+    (contrstate = 1)
+  & (finalize_status0 = T_BROADCAST)
+  & (finalize_value0 > balance0)
+  ->
+    (finalize_status0' = T_INVALIDATED);
+
+  [broadcast_withdraw]
+    (contrstate = 1)
+  & (withdraw_status0 = T_BROADCAST)
+  & (withdraw_value0 <= balance0)
+  ->
+    (contr_sender' = 0)
+  & (value' = withdraw_value0)
+  & (withdraw_status0' = T_EXECUTED);
+
+  []
+    (contrstate = 1)
+  & (withdraw_status0 = T_BROADCAST)
+  & (withdraw_value0 > balance0)
+  ->
+    (withdraw_status0' = T_INVALIDATED);
+
+  [broadcast_send_commit1]
+    (contrstate = 1)
+  & (send_commit_status1 != T_BROADCAST)
+  ->
+    (send_commit_status1' = T_BROADCAST);
+
+  [broadcast_send_open1]
+    (contrstate = 1)
+  & (send_open_status1 != T_BROADCAST)
+  ->
+    (send_open_status1' = T_BROADCAST);
+
+  [broadcast_finalize1]
+    (contrstate = 1)
+  & (finalize_status1 != T_BROADCAST)
+  ->
+    (finalize_status1' = T_BROADCAST);
+
+  [broadcast_withdraw1]
+    (contrstate = 1)
+  & (withdraw_status1 != T_BROADCAST)
+  ->
+    (withdraw_status1' = T_BROADCAST);
+
+  [broadcast_send_commit]
+    (contrstate = 1)
+  & (send_commit_status1 = T_BROADCAST)
+  & (send_commit_value1 <= balance1)
+  ->
+    (contr_sender' = 1)
+  & (value' = send_commit_value1)
+  & (send_commit_status1' = T_EXECUTED)
+  & (send_commit_commit' = send_commit_commit1);
+
+  []
+    (contrstate = 1)
+  & (send_commit_status1 = T_BROADCAST)
+  & (send_commit_value1 > balance1)
+  ->
+    (send_commit_status1' = T_INVALIDATED);
+
+  [broadcast_send_open]
+    (contrstate = 1)
+  & (send_open_status1 = T_BROADCAST)
+  & (send_open_value1 <= balance1)
+  ->
+    (contr_sender' = 1)
+  & (value' = send_open_value1)
+  & (send_open_status1' = T_EXECUTED);
+
+  []
+    (contrstate = 1)
+  & (send_open_status1 = T_BROADCAST)
+  & (send_open_value1 > balance1)
+  ->
+    (send_open_status1' = T_INVALIDATED);
+
+  [broadcast_finalize]
+    (contrstate = 1)
+  & (finalize_status1 = T_BROADCAST)
+  & (finalize_value1 <= balance1)
+  ->
+    (contr_sender' = 1)
+  & (value' = finalize_value1)
+  & (finalize_status1' = T_EXECUTED);
+
+  []
+    (contrstate = 1)
+  & (finalize_status1 = T_BROADCAST)
+  & (finalize_value1 > balance1)
+  ->
+    (finalize_status1' = T_INVALIDATED);
+
+  [broadcast_withdraw]
+    (contrstate = 1)
+  & (withdraw_status1 = T_BROADCAST)
+  & (withdraw_value1 <= balance1)
+  ->
+    (contr_sender' = 1)
+  & (value' = withdraw_value1)
+  & (withdraw_status1' = T_EXECUTED);
+
+  []
+    (contrstate = 1)
+  & (withdraw_status1 = T_BROADCAST)
+  & (withdraw_value1 > balance1)
+  ->
+    (withdraw_status1' = T_INVALIDATED);
+
+  [releaseTimelocks0]
+    (timelocksReleased = false)
+  ->
+    (timelocksReleased' = true);
+
+  [releaseTimelocks1]
+    (timelocksReleased = false)
+  ->
+    (timelocksReleased' = true);
+
+endmodule
+
+
+
+
+/////////////////////
+
+module contract
+  contrstate : [0..NUM_CONTRACT_STATES] init 1;
+  next_state : [0..NUM_CONTRACT_STATES];
+  contract_balance : [0..CONTRACT_BALANCE_MAX] init CONTRACT_BALANCE_INIT;
+  balance0 : [0..USER_BALANCE_MAX] init USER0_BALANCE_INIT;
+  balance1 : [0..USER_BALANCE_MAX] init USER1_BALANCE_INIT;
+
+  commit0 : [0..3];
+  commit1 : [0..3];
+  committed0 : bool;
+  committed1 : bool;
+  completed_honestly : bool;
+  contract_local0 : [0..2];
+  contract_local1 : [0..2];
+  finalized : bool;
+  input0 : [0..2];
+  input0_set : bool;
+  input1 : [0..2];
+  input1_set : bool;
+
+  [remove0]
+    (contrstate = 0)
+  & (contr_sender = 0)
+  & (balance0 >= value)
+  & (contract_balance + value <= CONTRACT_BALANCE_MAX)
+  ->
+    (contrstate' = next_state)
+  & (balance0' = balance0 - value)
+  & (contract_balance' = contract_balance + value);
+
+  [remove1]
+    (contrstate = 0)
+  & (contr_sender = 1)
+  & (balance1 >= value)
+  & (contract_balance + value <= CONTRACT_BALANCE_MAX)
+  ->
+    (contrstate' = next_state)
+  & (balance1' = balance1 - value)
+  & (contract_balance' = contract_balance + value);
+
+  [broadcast_send_commit]
+    (contrstate = 1)
+  ->
+    (contrstate' = 0)
+  & (next_state' = 2);
+
+  []
+    (contrstate = 2)
+  & (finalized)
+  ->
+    (contrstate' = 3);
+
+  []
+    (contrstate = 3)
+  & (contr_sender = 0)
+  ->
+    (contrstate' = 4);
+
+  [add0]
+    (contrstate = 4)
+  & (contract_balance >= value)
+  & (balance0 + value <= USER_BALANCE_MAX)
+  ->
+    (contrstate' = 5)
+  & (contract_balance' = contract_balance - value)
+  & (balance0' = balance0 + value);
+
+  []
+    (contrstate = 3)
+  & (contr_sender != 0)
+  ->
+    (contrstate' = 5);
+
+  []
+    (contrstate = 5)
+  & (contr_sender = 1)
+  ->
+    (contrstate' = 6);
+
+  [add1]
+    (contrstate = 6)
+  & (contract_balance >= value)
+  & (balance1 + value <= USER_BALANCE_MAX)
+  ->
+    (contrstate' = 7)
+  & (contract_balance' = contract_balance - value)
+  & (balance1' = balance1 + value);
+
+  []
+    (contrstate = 5)
+  & (contr_sender != 1)
+  ->
+    (contrstate' = 7);
+
+  []
+    (contrstate = 2)
+  & (!finalized)
+  ->
+    (contrstate' = 8);
+
+  []
+    (contrstate = 8)
+  & (value = 1)
+  ->
+    (contrstate' = 9);
+
+  []
+    (contrstate = 9)
+  & ((contr_sender = 0 & !committed0))
+  ->
+    (contrstate' = 10);
+
+  []
+    (contrstate = 10)
+  & (send_commit_commit >= 0)
+  & (send_commit_commit <= 3)
+  ->
+    (contrstate' = 11)
+  & (commit0' = send_commit_commit);
+
+  []
+    (contrstate = 11)
+  ->
+    (contrstate' = 12)
+  & (committed0' = true);
+
+  []
+    (contrstate = 9)
+  & (!(contr_sender = 0 & !committed0))
+  ->
+    (contrstate' = 12);
+
+  []
+    (contrstate = 12)
+  & ((contr_sender = 1 & !committed1))
+  ->
+    (contrstate' = 13);
+
+  []
+    (contrstate = 13)
+  & (send_commit_commit >= 0)
+  & (send_commit_commit <= 3)
+  ->
+    (contrstate' = 14)
+  & (commit1' = send_commit_commit);
+
+  []
+    (contrstate = 14)
+  ->
+    (contrstate' = 15)
+  & (committed1' = true);
+
+  []
+    (contrstate = 12)
+  & (!(contr_sender = 1 & !committed1))
+  ->
+    (contrstate' = 15);
+
+  []
+    (contrstate = 8)
+  & (value != 1)
+  ->
+    (contrstate' = 15);
+
+  []
+    (contrstate = 15)
+  ->
+    (contrstate' = 7);
+
+  []
+    (contrstate = 7)
+  ->
+    (contrstate' = 1);
+
+  [broadcast_send_open]
+    (contrstate = 1)
+  ->
+    (contrstate' = 0)
+  & (next_state' = 16);
+
+  []
+    (contrstate = 16)
+  & (contr_sender = 0)
+  ->
+    (contrstate' = 17);
+
+  []
+    (contrstate = 17)
+  & ((committed0 & !input0_set))
+  ->
+    (contrstate' = 18);
+
+  []
+    (contrstate = 18)
+  & (commit0 = 3)
+  ->
+    (contrstate' = 19);
+
+  []
+    (contrstate = 19)
+  ->
+    1/3: (contrstate' = 20)
+  & (contract_local0' = 0) +
+    1/3: (contrstate' = 20)
+  & (contract_local0' = 1) +
+    1/3: (contrstate' = 20)
+  & (contract_local0' = 2);
+
+  []
+    (contrstate = 20)
+  & (contract_local0 >= 0)
+  & (contract_local0 <= 2)
+  ->
+    (contrstate' = 21)
+  & (input0' = contract_local0);
+
+  []
+    (contrstate = 21)
+  ->
+    (contrstate' = 22)
+  & (input0_set' = true);
+
+  []
+    (contrstate = 18)
+  & (commit0 != 3)
+  ->
+    (contrstate' = 22);
+
+  []
+    (contrstate = 22)
+  & (commit0 != 3)
+  ->
+    (contrstate' = 23);
+
+  []
+    (contrstate = 23)
+  & (commit0 >= 0)
+  & (commit0 <= 2)
+  ->
+    (contrstate' = 24)
+  & (input0' = commit0);
+
+  []
+    (contrstate = 24)
+  ->
+    (contrstate' = 25)
+  & (input0_set' = true);
+
+  []
+    (contrstate = 22)
+  & (commit0 = 3)
+  ->
+    (contrstate' = 25);
+
+  []
+    (contrstate = 17)
+  & (!(committed0 & !input0_set))
+  ->
+    (contrstate' = 25);
+
+  []
+    (contrstate = 16)
+  & (contr_sender != 0)
+  ->
+    (contrstate' = 25);
+
+  []
+    (contrstate = 25)
+  & (contr_sender = 1)
+  ->
+    (contrstate' = 26);
+
+  []
+    (contrstate = 26)
+  & ((committed1 & !input1_set))
+  ->
+    (contrstate' = 27);
+
+  []
+    (contrstate = 27)
+  & (commit1 = 3)
+  ->
+    (contrstate' = 28);
+
+  []
+    (contrstate = 28)
+  ->
+    1/3: (contrstate' = 29)
+  & (contract_local1' = 0) +
+    1/3: (contrstate' = 29)
+  & (contract_local1' = 1) +
+    1/3: (contrstate' = 29)
+  & (contract_local1' = 2);
+
+  []
+    (contrstate = 29)
+  & (contract_local1 >= 0)
+  & (contract_local1 <= 2)
+  ->
+    (contrstate' = 30)
+  & (input1' = contract_local1);
+
+  []
+    (contrstate = 30)
+  ->
+    (contrstate' = 31)
+  & (input1_set' = true);
+
+  []
+    (contrstate = 27)
+  & (commit1 != 3)
+  ->
+    (contrstate' = 32);
+
+  []
+    (contrstate = 32)
+  & (commit1 >= 0)
+  & (commit1 <= 2)
+  ->
+    (contrstate' = 33)
+  & (input1' = commit1);
+
+  []
+    (contrstate = 33)
+  ->
+    (contrstate' = 34)
+  & (input1_set' = true);
+
+  []
+    (contrstate = 34)
+  ->
+    (contrstate' = 31);
+
+  []
+    (contrstate = 26)
+  & (!(committed1 & !input1_set))
+  ->
+    (contrstate' = 31);
+
+  []
+    (contrstate = 25)
+  & (contr_sender != 1)
+  ->
+    (contrstate' = 31);
+
+  []
+    (contrstate = 31)
+  ->
+    (contrstate' = 1);
+
+  [broadcast_finalize]
+    (contrstate = 1)
+  ->
+    (contrstate' = 0)
+  & (next_state' = 35);
+
+  []
+    (contrstate = 35)
+  & (!finalized)
+  ->
+    (contrstate' = 36);
+
+  []
+    (contrstate = 36)
+  & ((input0_set & input1_set))
+  ->
+    (contrstate' = 37);
+
+  []
+    (contrstate = 37)
+  & (mod(3 + input0 - input1, 3) = 1)
+  ->
+    (contrstate' = 38);
+
+  [win0]
+    (contrstate = 38)
+  & (contract_balance >= 2 * 1)
+  & (balance0 + 2 * 1 <= USER_BALANCE_MAX)
+  ->
+    (contrstate' = 39)
+  & (contract_balance' = contract_balance - 2 * 1)
+  & (balance0' = balance0 + 2 * 1);
+
+  []
+    (contrstate = 37)
+  & (mod(3 + input0 - input1, 3) != 1)
+  ->
+    (contrstate' = 39);
+
+  []
+    (contrstate = 39)
+  & (mod(3 + input0 - input1, 3) = 2)
+  ->
+    (contrstate' = 40);
+
+  [win1]
+    (contrstate = 40)
+  & (contract_balance >= 2 * 1)
+  & (balance1 + 2 * 1 <= USER_BALANCE_MAX)
+  ->
+    (contrstate' = 41)
+  & (contract_balance' = contract_balance - 2 * 1)
+  & (balance1' = balance1 + 2 * 1);
+
+  []
+    (contrstate = 39)
+  & (mod(3 + input0 - input1, 3) != 2)
+  ->
+    (contrstate' = 41);
+
+  []
+    (contrstate = 41)
+  & (mod(3 + input0 - input1, 3) = 0)
+  ->
+    (contrstate' = 42);
+
+  [draw0]
+    (contrstate = 42)
+  & (contract_balance >= 1)
+  & (balance0 + 1 <= USER_BALANCE_MAX)
+  ->
+    (contrstate' = 43)
+  & (contract_balance' = contract_balance - 1)
+  & (balance0' = balance0 + 1);
+
+  [draw1]
+    (contrstate = 43)
+  & (contract_balance >= 1)
+  & (balance1 + 1 <= USER_BALANCE_MAX)
+  ->
+    (contrstate' = 44)
+  & (contract_balance' = contract_balance - 1)
+  & (balance1' = balance1 + 1);
+
+  []
+    (contrstate = 41)
+  & (mod(3 + input0 - input1, 3) != 0)
+  ->
+    (contrstate' = 44);
+
+  []
+    (contrstate = 44)
+  ->
+    (contrstate' = 45)
+  & (finalized' = true);
+
+  []
+    (contrstate = 45)
+  ->
+    (contrstate' = 46)
+  & (completed_honestly' = true);
+
+  []
+    (contrstate = 36)
+  & (!(input0_set & input1_set))
+  ->
+    (contrstate' = 46);
+
+  []
+    (contrstate = 35)
+  & (!!finalized)
+  ->
+    (contrstate' = 46);
+
+  []
+    (contrstate = 46)
+  ->
+    (contrstate' = 1);
+
+  [broadcast_withdraw]
+    (contrstate = 1)
+  ->
+    (contrstate' = 0)
+  & (next_state' = 47);
+
+  []
+    (contrstate = 47)
+  & ((timelocksReleased & !finalized))
+  ->
+    (contrstate' = 48);
+
+  []
+    (contrstate = 48)
+  & ((!input0_set | !input1_set))
+  ->
+    (contrstate' = 49);
+
+  []
+    (contrstate = 49)
+  & (input0_set)
+  ->
+    (contrstate' = 50);
+
+  [win0]
+    (contrstate = 50)
+  & (contract_balance >= 2)
+  & (balance0 + 2 <= USER_BALANCE_MAX)
+  ->
+    (contrstate' = 51)
+  & (contract_balance' = contract_balance - 2)
+  & (balance0' = balance0 + 2);
+
+  []
+    (contrstate = 49)
+  & (!input0_set)
+  ->
+    (contrstate' = 52);
+
+  []
+    (contrstate = 52)
+  & (input1_set)
+  ->
+    (contrstate' = 53);
+
+  [win1]
+    (contrstate = 53)
+  & (contract_balance >= 2)
+  & (balance1 + 2 <= USER_BALANCE_MAX)
+  ->
+    (contrstate' = 54)
+  & (contract_balance' = contract_balance - 2)
+  & (balance1' = balance1 + 2);
+
+  []
+    (contrstate = 52)
+  & (!input1_set)
+  ->
+    (contrstate' = 55);
+
+  []
+    (contrstate = 55)
+  & (committed0)
+  ->
+    (contrstate' = 56);
+
+  [draw0]
+    (contrstate = 56)
+  & (contract_balance >= 1)
+  & (balance0 + 1 <= USER_BALANCE_MAX)
+  ->
+    (contrstate' = 57)
+  & (contract_balance' = contract_balance - 1)
+  & (balance0' = balance0 + 1);
+
+  []
+    (contrstate = 55)
+  & (!committed0)
+  ->
+    (contrstate' = 57);
+
+  []
+    (contrstate = 57)
+  & (committed1)
+  ->
+    (contrstate' = 58);
+
+  [draw1]
+    (contrstate = 58)
+  & (contract_balance >= 1)
+  & (balance1 + 1 <= USER_BALANCE_MAX)
+  ->
+    (contrstate' = 59)
+  & (contract_balance' = contract_balance - 1)
+  & (balance1' = balance1 + 1);
+
+  []
+    (contrstate = 57)
+  & (!committed1)
+  ->
+    (contrstate' = 59);
+
+  []
+    (contrstate = 59)
+  ->
+    (contrstate' = 54);
+
+  []
+    (contrstate = 54)
+  ->
+    (contrstate' = 51);
+
+  []
+    (contrstate = 51)
+  ->
+    (contrstate' = 60)
+  & (finalized' = true);
+
+  []
+    (contrstate = 48)
+  & (!(!input0_set | !input1_set))
+  ->
+    (contrstate' = 60);
+
+  []
+    (contrstate = 47)
+  & (!(timelocksReleased & !finalized))
+  ->
+    (contrstate' = 60);
+
+  []
+    (contrstate = 60)
+  ->
+    (contrstate' = 1);
+
+endmodule
+
+
+
+
+/////////////////////
+
+module communication
+  comm_sender : [0..1];
+  commstate : [0..NUM_COMMUNICATION_STATES] init 1;
+
+
+endmodule
+
+
+
+
+/////////////////////
+
+module player0
+  state0 : [-2..NUM_PLAYER0_STATES] init 0;
+
+  endA : bool;
+  finalize_value0 : [0..1];
+  inputA : [0..3];
+  send_commit_commit0 : [0..3];
+  send_commit_value0 : [0..1];
+  send_open_value0 : [0..1];
+  withdraw_value0 : [0..1];
+
+  []
+    (state0 = 0)
+  & (ADVERSARY != 0)
+  ->
+    (state0' = 1);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 1)
+  & (3 >= 0)
+  & (3 <= 3)
+  ->
+    (state0' = 2)
+  & (inputA' = 3);
+
+  [broadcast_send_commit0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 2)
+  ->
+    (state0' = 3)
+  & (send_commit_value0' = 1)
+  & (send_commit_commit0' = inputA);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 3)
+  & (send_commit_status0 = T_EXECUTED)
+  ->
+    (state0' = 4);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 4)
+  & ((committed1 | timelocksReleased))
+  ->
+    (state0' = 5);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 5)
+  & (committed1)
+  ->
+    (state0' = 6);
+
+  [broadcast_send_open0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 6)
+  ->
+    (state0' = 7)
+  & (send_open_value0' = 0);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 7)
+  & (send_open_status0 = T_EXECUTED)
+  ->
+    (state0' = 8);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 8)
+  & ((input1_set | timelocksReleased))
+  ->
+    (state0' = 9);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 9)
+  & (input1_set)
+  ->
+    (state0' = 10);
+
+  [broadcast_finalize0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 10)
+  ->
+    (state0' = 11)
+  & (finalize_value0' = 0);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 11)
+  & (finalize_status0 = T_EXECUTED)
+  ->
+    (state0' = 12);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 9)
+  & (!input1_set)
+  ->
+    (state0' = 13);
+
+  [broadcast_withdraw0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 13)
+  ->
+    (state0' = 14)
+  & (withdraw_value0' = 0);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 14)
+  & (withdraw_status0 = T_EXECUTED)
+  ->
+    (state0' = 15);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 15)
+  ->
+    (state0' = 12);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 5)
+  & (!committed1)
+  ->
+    (state0' = 16);
+
+  [broadcast_withdraw0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 16)
+  ->
+    (state0' = 17)
+  & (withdraw_value0' = 0);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 17)
+  & (withdraw_status0 = T_EXECUTED)
+  ->
+    (state0' = 18);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 18)
+  ->
+    (state0' = 12);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 12)
+  ->
+    (state0' = 19)
+  & (endA' = true);
+
+  []
+    (state0 = 0)
+  & (ADVERSARY = 0)
+  ->
+    (state0' = -1);
+
+  [releaseTimelocks0]
+    (state0 = -1)
+  ->
+    (state0' = -2);
+
+  [broadcast_send_commit0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    (send_commit_value0' = 0)
+  & (send_commit_commit0' = 0);
+
+  [broadcast_send_commit0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    (send_commit_value0' = 0)
+  & (send_commit_commit0' = 1);
+
+  [broadcast_send_commit0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    (send_commit_value0' = 0)
+  & (send_commit_commit0' = 2);
+
+  [broadcast_send_commit0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    (send_commit_value0' = 1)
+  & (send_commit_commit0' = 0);
+
+  [broadcast_send_commit0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    (send_commit_value0' = 1)
+  & (send_commit_commit0' = 1);
+
+  [broadcast_send_commit0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    (send_commit_value0' = 1)
+  & (send_commit_commit0' = 2);
+
+  [broadcast_send_open0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    true;
+
+  [broadcast_finalize0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    true;
+
+  [broadcast_withdraw0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    true;
+
+endmodule
+
+
+
+
+/////////////////////
+
+module player1
+  state1 : [-2..NUM_PLAYER1_STATES] init 0;
+
+  endB : bool;
+  finalize_value1 : [0..1];
+  inputB : [0..3];
+  send_commit_commit1 : [0..3];
+  send_commit_value1 : [0..1];
+  send_open_value1 : [0..1];
+  withdraw_value1 : [0..1];
+
+  []
+    (state1 = 0)
+  & (ADVERSARY != 1)
+  ->
+    (state1' = 1);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 1)
+  & (3 >= 0)
+  & (3 <= 3)
+  ->
+    (state1' = 2)
+  & (inputB' = 3);
+
+  [broadcast_send_commit1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 2)
+  ->
+    (state1' = 3)
+  & (send_commit_value1' = 1)
+  & (send_commit_commit1' = inputB);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 3)
+  & (send_commit_status1 = T_EXECUTED)
+  ->
+    (state1' = 4);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 4)
+  & ((committed0 | timelocksReleased))
+  ->
+    (state1' = 5);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 5)
+  & (committed0)
+  ->
+    (state1' = 6);
+
+  [broadcast_send_open1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 6)
+  ->
+    (state1' = 7)
+  & (send_open_value1' = 0);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 7)
+  & (send_open_status1 = T_EXECUTED)
+  ->
+    (state1' = 8);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 8)
+  & ((input0_set | timelocksReleased))
+  ->
+    (state1' = 9);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 9)
+  & (input0_set)
+  ->
+    (state1' = 10);
+
+  [broadcast_finalize1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 10)
+  ->
+    (state1' = 11)
+  & (finalize_value1' = 0);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 11)
+  & (finalize_status1 = T_EXECUTED)
+  ->
+    (state1' = 12);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 9)
+  & (!input0_set)
+  ->
+    (state1' = 13);
+
+  [broadcast_withdraw1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 13)
+  ->
+    (state1' = 14)
+  & (withdraw_value1' = 0);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 14)
+  & (withdraw_status1 = T_EXECUTED)
+  ->
+    (state1' = 15);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 15)
+  ->
+    (state1' = 12);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 5)
+  & (!committed0)
+  ->
+    (state1' = 16);
+
+  [broadcast_withdraw1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 16)
+  ->
+    (state1' = 17)
+  & (withdraw_value1' = 0);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 17)
+  & (withdraw_status1 = T_EXECUTED)
+  ->
+    (state1' = 18);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 18)
+  ->
+    (state1' = 12);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 12)
+  ->
+    (state1' = 19)
+  & (endB' = true);
+
+  []
+    (state1 = 0)
+  & (ADVERSARY = 1)
+  ->
+    (state1' = -1);
+
+  [releaseTimelocks1]
+    (state1 = -1)
+  ->
+    (state1' = -2);
+
+  [broadcast_send_commit1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    (send_commit_value1' = 0)
+  & (send_commit_commit1' = 0);
+
+  [broadcast_send_commit1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    (send_commit_value1' = 0)
+  & (send_commit_commit1' = 1);
+
+  [broadcast_send_commit1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    (send_commit_value1' = 0)
+  & (send_commit_commit1' = 2);
+
+  [broadcast_send_commit1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    (send_commit_value1' = 1)
+  & (send_commit_commit1' = 0);
+
+  [broadcast_send_commit1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    (send_commit_value1' = 1)
+  & (send_commit_commit1' = 1);
+
+  [broadcast_send_commit1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    (send_commit_value1' = 1)
+  & (send_commit_commit1' = 2);
+
+  [broadcast_send_open1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    true;
+
+  [broadcast_finalize1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    true;
+
+  [broadcast_withdraw1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    true;
+
+endmodule
+
+rewards "income0"
+    [win0] true : 2;
+    [draw0] true : 1;
+    [add0] true : value;
+endrewards
+
+rewards "expense0"
+    [remove0] true : value;
+endrewards
+
+rewards "income1"
+    [win1] true : 2;
+    [draw1] true : 1;
+    [add1] true : value;
+endrewards
+
+rewards "expense1"
+    [remove1] true : value;
+endrewards
+
