@@ -326,8 +326,8 @@ verScenario modifyModule decls stms = do
     (sReleaseTimelocks ++ (show $ number mod))
     (-1)
     (-2)
-    [ENe (EVar iContrState) (EInt 1),
-      ENe (EVar iCommState) (EInt 1)]
+    [EEq (EVar iContrState) (EInt 1),
+      EEq (EVar iCommState) (EInt 1)]
     [[]]
   
   world <- get
