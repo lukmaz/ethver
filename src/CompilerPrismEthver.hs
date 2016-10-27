@@ -198,6 +198,7 @@ verFunContract (FunV name args stms) =
 
 verFunContract (Fun name args stms) = do
   addFun (Fun name args stms)
+  addContractFun (Fun name args stms)
   addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStatusSufix ++ "0" 
   addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStatusSufix ++ "1"
 
@@ -342,14 +343,14 @@ verScenario modifyModule decls stms = do
               (EVar $ Ident $ (nameOfFunction fun) ++ sStatusSufix ++ "0")
               (EVar iTBroadcast)
             )
-            (funs world)
+            (contractFuns world)
           )
         ++ (Map.elems $ Map.map
             (\fun -> ENe
               (EVar $ Ident $ (nameOfFunction fun) ++ sStatusSufix ++ "1")
               (EVar iTBroadcast)
             )
-            (funs world)
+            (contractFuns world)
           )
     )
     [[(Ident sTimelocksReleased, ETrue)]]

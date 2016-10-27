@@ -15,6 +15,7 @@ type ModifyModuleType = (Module -> Module) -> VerRes Module
 data VerWorld = VerWorld {
   props :: String,
   funs :: Map.Map Ident Function,
+  contractFuns :: Map.Map Ident Function,
   constants :: Map.Map Ident Integer,
   argMap :: Map.Map Ident Ident,
   playerNumbers :: Map.Map String Integer,
@@ -46,6 +47,7 @@ emptyVerWorld :: VerWorld
 emptyVerWorld = VerWorld {
   props = "", 
   funs = Map.empty,
+  contractFuns = Map.empty,
   constants = Map.empty,
   argMap = Map.empty,
   playerNumbers = Map.empty, 
@@ -78,6 +80,15 @@ addFun (Fun name args stms) = do
 addFun (FunR name args typ stms) = do
   world <- get
   put $ world {funs = Map.insert name (FunR name args typ stms) $ funs world}
+
+addContractFun :: Function -> VerRes ()
+addContractFun (Fun name args stms) = do
+  world <- get
+  put $ world {contractFuns = Map.insert name (Fun name args stms) $ contractFuns world}
+  
+addContractFun (FunR name args typ stms) = do
+  world <- get
+  put $ world {contractFuns = Map.insert name (FunR name args typ stms) $ contractFuns world}
 
 addConstant :: ConstantDecl -> VerRes ()
 addConstant (Const ident value) = do
