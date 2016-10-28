@@ -36,7 +36,8 @@ data Module = Module {
   currState :: Integer,
   numStates :: Integer,
   transs :: [Trans],
-  whichSender :: Ident
+  whichSender :: Ident,
+  sender :: Integer
   }
   
 
@@ -61,7 +62,8 @@ emptyVerWorld = VerWorld {
 
 emptyModule :: Module
 emptyModule = Module {number = nUndefModuleNumber, stateVar = sEmptyState, moduleName = sEmptyModule, 
-  vars = Map.empty, numLocals = 0, currState = 1, numStates = 1, transs = [], whichSender = Ident sEmptySender}
+  vars = Map.empty, numLocals = 0, currState = 1, numStates = 1, transs = [], whichSender = Ident sEmptySender,
+  sender = -1}
 
 ------------------------
 -- WORLD MODIFICATION --
