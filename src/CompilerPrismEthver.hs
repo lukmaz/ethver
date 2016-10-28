@@ -269,7 +269,7 @@ verFunCommunication (Fun funName args stms) = do
   addCustomTrans
     modifyCommunication
     ""
-    (numStates mod)
+    (currState mod)
     1
     []
     [[]]
