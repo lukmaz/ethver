@@ -91,15 +91,20 @@ ethStm (SExp exp) = do
   ethExp exp
   addContr ";\n"
 
-ethStm (SAss ident exp) = do
-  ethIdent ident
-  addContr " = "
-  ethExp exp
+ethStm (SAsses asses) = do
+  mapM_ ethAss asses
 
 ethStm (SReturn exp) = do
   addContr "return "
   ethExp exp
   addContr ";\n"
+
+-- Ass
+
+ethAss (AAss ident exp) = do
+  ethIdent ident
+  addContr " = "
+  ethExp exp
 
 
 -- Exp
@@ -124,7 +129,12 @@ ethScStm (SExp exp) = do
   ethScExp exp
   addScen "\n"
 
-ethScStm (SAss ident exp) = do
+ethScStm (SAsses asses) = do
+  mapM_ ethScAss asses
+
+-- Ass 
+
+ethScAss (AAss ident exp) = do
   ethScIdent ident
   addScen " = "
   ethScExp exp

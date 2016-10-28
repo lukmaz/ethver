@@ -18,65 +18,29 @@ verStm :: ModifyModuleType -> Stm -> VerRes ()
 verStm modifyModule (SExp exp) = do
   _ <- verExp modifyModule exp 
   return ()
-  
-verStm modifyModule (SAss ident exp) = do
-  evalExp <- verExp modifyModule exp
-  typ <- findVarType ident
-  minV <- minValue ident
-  maxV <- maxTypeValue ident
-  let guards = case typ of Just TBool -> []
-                           Just _ -> [EGe evalExp (EInt minV), ELe evalExp (EInt maxV)]
-      
+
+verStm modifyModule (SAsses [AAss ident exp]) = 
+  verFullAss modifyModule (AAss ident exp)
+
+verStm modifyModule (SAsses [AArrAss ident index exp]) =
+  verFullAss modifyModule (AArrAss ident index exp)
+
+verStm modifyModule (SAsses asses) = do
+  assignments <- mapM (generateSimpleAss modifyModule) asses
+  let (unzippedGuards, unzippedUpdates) = unzip assignments
+  let (guards, updates) = (concat unzippedGuards, concat unzippedUpdates)
+
   addTransToNewState
     modifyModule
     ""
     guards
-    [[(ident, evalExp)]]
-  return ()
-
-verStm modifyModule (SArrAss (Ident ident) index exp) = do
-  case index of
-    ESender -> do
-      mod <- modifyModule id
-      let actualSender = whichSender mod
-      verStm 
-        modifyModule 
-        (SIf 
-          (EEq (EVar actualSender) (EInt 0))
-          (SAss (Ident $ ident ++ "_0") exp)
-        )
-      verStm
-        modifyModule
-        (SIf
-          (EEq (EVar actualSender) (EInt 1))
-          (SAss (Ident $ ident ++ "_1") exp)
-        )
-    EVar v -> do
-      var <- verExp modifyModule (EVar v)
-      verStm 
-        modifyModule 
-        (SIf 
-          (EEq var (EInt 0))
-          (SAss (Ident $ ident ++ "_0") exp)
-        )
-      verStm
-        modifyModule
-        (SIf
-          (EEq var (EInt 1))
-          (SAss (Ident $ ident ++ "_1") exp)
-        )
-    EStr indexAddress -> do
-      indexNumber <- getPlayerNumber indexAddress
-      let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
-      verStm modifyModule $ SAss indexVar exp
-    EInt indexNumber -> do
-      let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
-      verStm modifyModule $ SAss indexVar exp
+    [updates]
+  
 
 verStm modifyModule (SReturn exp) = do
   evalExp <- verExp modifyModule exp 
   world <- get 
-  verStm modifyModule (SAss (head $ returnVar world) evalExp)
+  verStm modifyModule (SAsses [AAss (head $ returnVar world) evalExp])
 
 -- TODO: zrobić, żeby return wychodziło z wykonania bieżącej funkcji
 verStm modifyModule (SIf cond ifBlock) = do
@@ -135,6 +99,84 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
 
 verStm modifyModule (SBlock stms) = do
   mapM_ (verStm modifyModule) stms
+
+---------
+-- Ass --
+---------
+
+verFullAss :: ModifyModuleType -> Ass -> VerRes ()
+
+verFullAss modifyModule (AAss ident exp) = do
+  (guards, updates) <- generateSimpleAss modifyModule (AAss ident exp)
+      
+  addTransToNewState
+    modifyModule
+    ""
+    guards
+    [updates]
+
+verFullAss modifyModule (AArrAss (Ident ident) index exp) = do
+  case index of
+    ESender -> do
+      mod <- modifyModule id
+      let actualSender = whichSender mod
+      verStm 
+        modifyModule 
+        (SIf 
+          (EEq (EVar actualSender) (EInt 0))
+          (SAsses [AAss (Ident $ ident ++ "_0") exp])
+        )
+      verStm
+        modifyModule
+        (SIf
+          (EEq (EVar actualSender) (EInt 1))
+          (SAsses [AAss (Ident $ ident ++ "_1") exp])
+        )
+    EVar v -> do
+      var <- verExp modifyModule (EVar v)
+      verStm 
+        modifyModule 
+        (SIf 
+          (EEq var (EInt 0))
+          (SAsses [AAss (Ident $ ident ++ "_0") exp])
+        )
+      verStm
+        modifyModule
+        (SIf
+          (EEq var (EInt 1))
+          (SAsses [AAss (Ident $ ident ++ "_1") exp])
+        )
+    EStr indexAddress -> do
+      indexNumber <- getPlayerNumber indexAddress
+      let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
+      verStm modifyModule $ SAsses [AAss indexVar exp]
+    EInt indexNumber -> do
+      let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
+      verStm modifyModule $ SAsses [AAss indexVar exp]
+
+-- generateSimpleAss
+
+-- returns simple updates [], not [[]]
+generateSimpleAss :: ModifyModuleType -> Ass -> VerRes ([Exp], [(Ident, Exp)])
+generateSimpleAss modifyModule (AAss ident exp) = do
+  evalExp <- verExp modifyModule exp 
+  typ <- findVarType ident
+  minV <- minValue ident
+  maxV <- maxTypeValue ident
+  let guards = case typ of Just TBool -> []
+                           Just _ -> [EGe evalExp (EInt minV), ELe evalExp (EInt maxV)]
+  return (guards, [(ident, evalExp)])
+
+generateSimpleAss modifyModule (AArrAss (Ident ident) index exp) = do
+  case index of
+    -- TODO: ESender (zmienić też verFullAss)
+    EStr indexAddress -> do
+      indexNumber <- getPlayerNumber indexAddress
+      let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
+      generateSimpleAss modifyModule $ AAss indexVar exp 
+    EInt indexNumber -> do
+      let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
+      generateSimpleAss modifyModule $ AAss indexVar exp 
 
 
 ---------
@@ -283,13 +325,13 @@ verValExp modifyModule (EArray (Ident ident) index) = do
             modifyModule 
             (SIf 
               (EEq (EVar actualSender) (EInt 0))
-              (SAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_0"))
+              (SAsses [AAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_0")])
             )
           verStm
             modifyModule
             (SIf
               (EEq (EVar actualSender) (EInt 1))
-              (SAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_1"))
+              (SAsses [AAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_1")])
             )
           return $ EVar $ Ident localVarName
     EVar v -> do
@@ -301,13 +343,13 @@ verValExp modifyModule (EArray (Ident ident) index) = do
             modifyModule 
             (SIf 
               (EEq var (EInt 0))
-              (SAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_0"))
+              (SAsses [AAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_0")])
             )
           verStm
             modifyModule
             (SIf
               (EEq var (EInt 1))
-              (SAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_1"))
+              (SAsses [AAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_1")])
             )
           return $ EVar $ Ident localVarName
     EStr indexAddress -> do
