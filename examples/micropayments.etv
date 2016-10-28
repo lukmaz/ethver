@@ -66,7 +66,7 @@ communication {
   }
 
   function send_ticket(uint(2) merchant, uint(3) r) {
-    if (((msg.sender == "U") && (is_committed[merchant])) && ((!is_opened[merchant]) && (!is_signed[merchant]))) {
+    if (((msg.sender == "U") && (is_committed[merchant])) && (!is_opened[merchant] && !is_signed[merchant])) {
       randU[merchant] = r;
       is_signed[merchant] = true;
     }

@@ -91,6 +91,11 @@ ethStm (SExp exp) = do
   ethExp exp
   addContr ";\n"
 
+ethStm (SAss ident exp) = do
+  ethIdent ident
+  addContr " = "
+  ethExp exp
+
 ethStm (SReturn exp) = do
   addContr "return "
   ethExp exp
@@ -100,11 +105,6 @@ ethStm (SReturn exp) = do
 -- Exp
 
 ethExp :: Exp -> EthRes ()
-ethExp (EAss ident exp) = do
-  ethIdent ident
-  addContr " = "
-  ethExp exp
-
 ethExp (EVar ident) = do
   ethIdent ident
 
@@ -124,6 +124,12 @@ ethScStm (SExp exp) = do
   ethScExp exp
   addScen "\n"
 
+ethScStm (SAss ident exp) = do
+  ethScIdent ident
+  addScen " = "
+  ethScExp exp
+  addScen "\n"
+
 
 -- Exp
 
@@ -138,12 +144,6 @@ ethScExp (EInt x) = do
 
 ethScExp (EVar ident) = do
   ethScIdent ident
-
-ethScExp (EAss ident exp) = do
-  ethScIdent ident
-  addScen " = "
-  ethScExp exp
-  addScen "\n"
 
 ethScExp (ECall idents args) = do
   ethScIdents idents
