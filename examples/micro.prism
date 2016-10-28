@@ -1,0 +1,946 @@
+mdp
+
+const int ADVERSARY;
+
+const int T_NONE = 0;
+const int T_BROADCAST = 1;
+const int T_EXECUTED = 2;
+const int T_INVALIDATED = 3;
+
+const int NUM_CONTRACT_STATES = 6;
+const int NUM_COMMUNICATION_STATES = 51;
+const int NUM_PLAYER0_STATES = 10;
+const int NUM_PLAYER1_STATES = 16;
+
+const int CONTRACT_BALANCE_INIT = 2;
+const int CONTRACT_BALANCE_MAX = 4;
+const int MAX_VALUE = 5;
+const int USER0_BALANCE_INIT = 0;
+const int USER1_BALANCE_INIT = 0;
+const int USER_BALANCE_MAX = 4;
+
+
+/////////////////////
+
+module blockchain
+  contr_sender : [0..1];
+  value : [0..MAX_VALUE];
+  timelocksReleased : bool init false;
+  get_payment_status0 : [0..3];
+  get_payment_status1 : [0..3];
+
+  [broadcast_get_payment0]
+    (contrstate = 1)
+  & (get_payment_status0 != T_BROADCAST)
+  ->
+    (get_payment_status0' = T_BROADCAST);
+
+  [broadcast_get_payment]
+    (contrstate = 1)
+  & (get_payment_status0 = T_BROADCAST)
+  & (get_payment_value0 <= balance0)
+  ->
+    (contr_sender' = 0)
+  & (value' = get_payment_value0)
+  & (get_payment_status0' = T_EXECUTED);
+
+  []
+    (contrstate = 1)
+  & (get_payment_status0 = T_BROADCAST)
+  & (get_payment_value0 > balance0)
+  ->
+    (get_payment_status0' = T_INVALIDATED);
+
+  [broadcast_get_payment1]
+    (contrstate = 1)
+  & (get_payment_status1 != T_BROADCAST)
+  ->
+    (get_payment_status1' = T_BROADCAST);
+
+  [broadcast_get_payment]
+    (contrstate = 1)
+  & (get_payment_status1 = T_BROADCAST)
+  & (get_payment_value1 <= balance1)
+  ->
+    (contr_sender' = 1)
+  & (value' = get_payment_value1)
+  & (get_payment_status1' = T_EXECUTED);
+
+  []
+    (contrstate = 1)
+  & (get_payment_status1 = T_BROADCAST)
+  & (get_payment_value1 > balance1)
+  ->
+    (get_payment_status1' = T_INVALIDATED);
+
+  [releaseTimelocks0]
+    (timelocksReleased = false)
+  & (get_payment_status0 != T_BROADCAST)
+  & (get_payment_status1 != T_BROADCAST)
+  ->
+    (timelocksReleased' = true);
+
+  [releaseTimelocks1]
+    (timelocksReleased = false)
+  & (get_payment_status0 != T_BROADCAST)
+  & (get_payment_status1 != T_BROADCAST)
+  ->
+    (timelocksReleased' = true);
+
+endmodule
+
+
+
+
+/////////////////////
+
+module contract
+  contrstate : [0..NUM_CONTRACT_STATES] init 1;
+  next_state : [0..NUM_CONTRACT_STATES];
+  contract_balance : [0..CONTRACT_BALANCE_MAX] init CONTRACT_BALANCE_INIT;
+  balance0 : [0..USER_BALANCE_MAX] init USER0_BALANCE_INIT;
+  balance1 : [0..USER_BALANCE_MAX] init USER1_BALANCE_INIT;
+
+
+  []
+    (contrstate = 0)
+  & (contr_sender = 0)
+  & (balance0 >= value)
+  & (contract_balance + value <= CONTRACT_BALANCE_MAX)
+  ->
+    (contrstate' = next_state)
+  & (balance0' = balance0 - value)
+  & (contract_balance' = contract_balance + value);
+
+  []
+    (contrstate = 0)
+  & (contr_sender = 1)
+  & (balance1 >= value)
+  & (contract_balance + value <= CONTRACT_BALANCE_MAX)
+  ->
+    (contrstate' = next_state)
+  & (balance1' = balance1 - value)
+  & (contract_balance' = contract_balance + value);
+
+  [broadcast_get_payment]
+    (contrstate = 1)
+  ->
+    (contrstate' = 0)
+  & (next_state' = 2);
+
+  []
+    (contrstate = 2)
+  & (((((contract_balance > 0 & contr_sender = 0) & is_signed_0) & is_opened_0) & randM_0 = randU_0))
+  ->
+    (contrstate' = 3);
+
+  []
+    (contrstate = 3)
+  & (contract_balance >= 1)
+  & (balance0 + 1 <= USER_BALANCE_MAX)
+  ->
+    (contrstate' = 4)
+  & (contract_balance' = contract_balance - 1)
+  & (balance0' = balance0 + 1);
+
+  []
+    (contrstate = 2)
+  & (!((((contract_balance > 0 & contr_sender = 0) & is_signed_0) & is_opened_0) & randM_0 = randU_0))
+  ->
+    (contrstate' = 4);
+
+  []
+    (contrstate = 4)
+  & (((((contract_balance > 0 & contr_sender = 1) & is_signed_1) & is_opened_1) & randM_1 = randU_1))
+  ->
+    (contrstate' = 5);
+
+  []
+    (contrstate = 5)
+  & (contract_balance >= 1)
+  & (balance1 + 1 <= USER_BALANCE_MAX)
+  ->
+    (contrstate' = 1)
+  & (contract_balance' = contract_balance - 1)
+  & (balance1' = balance1 + 1);
+
+  []
+    (contrstate = 4)
+  & (!((((contract_balance > 0 & contr_sender = 1) & is_signed_1) & is_opened_1) & randM_1 = randU_1))
+  ->
+    (contrstate' = 1);
+
+
+endmodule
+
+
+
+
+/////////////////////
+
+module communication
+  comm_sender : [0..1];
+  commstate : [0..NUM_COMMUNICATION_STATES] init 1;
+
+  ask_payment_commit : [0..3];
+  commit_0 : [0..3];
+  commit_1 : [0..3];
+  communication_local0 : bool;
+  communication_local1 : bool;
+  communication_local2 : bool;
+  communication_local3 : [0..2];
+  communication_local4 : [0..2];
+  is_committed_0 : bool;
+  is_committed_1 : bool;
+  is_opened_0 : bool;
+  is_opened_1 : bool;
+  is_signed_0 : bool;
+  is_signed_1 : bool;
+  product_asked : bool;
+  products_sent : [0..9];
+  randM_0 : [0..2];
+  randM_1 : [0..2];
+  randU_0 : [0..2];
+  randU_1 : [0..2];
+  send_ticket_merchant : [0..1];
+  send_ticket_r : [0..2];
+
+  [communicate_ask_product0]
+    (commstate = 1)
+  ->
+   (product_asked' = true);
+
+  [communicate_ask_product1]
+    (commstate = 1)
+  -> true;
+
+  [communicate_ask_payment0]
+    (commstate = 1)
+  & (!is_committed_0)
+  & (ask_payment_commit0 >= 0)
+  & (ask_payment_commit0 <= 3)
+  ->
+    (commit_0' = ask_payment_commit)
+  & (is_committed_0' = true)
+  & (is_opened_0' = false)
+  & (is_signed_0' = false);
+
+  [communicate_ask_payment0]
+    (commstate = 1)
+  & (is_committed_0)
+  -> true;
+
+  [communicate_ask_payment1]
+    (commstate = 1)
+  & (!is_committed_1)
+  & (ask_payment_commit1 >= 0)
+  & (ask_payment_commit1 <= 3)
+  & (products_sent + 1 >= 0)
+  & (products_sent + 1 <= 9)
+  ->
+    (commit_1' = ask_payment_commit)
+  & (is_committed_1' = true)
+  & (is_opened_1' = false)
+  & (is_signed_1' = false)
+  & (products_sent' = products_sent + 1);
+
+  [communicate_ask_payment1]
+    (commstate = 1)
+  & (is_committed_1)
+  -> true;
+
+  [communicate_send_ticket1]
+    (commstate = 1)
+  -> true;
+
+  [communicate_send_ticket0]
+    (commstate = 1)
+  & (send_ticket_merchant0 = 0)
+  & (is_committed_0)
+  & (!is_opened_0)
+  & (!is_signed_0)
+  & (send_ticket_r0 >= 0)
+  & (send_ticket_r0 <= 2)
+  ->
+    (is_signed_0' = true)
+  & (randU_0' = send_ticket_r0);
+
+  [communicate_send_ticket0]
+    (commstate = 1)
+  & (send_ticket_merchant0 = 0)
+  & (!is_committed_0 | is_opened_0 | is_signed_0)
+  -> true;
+
+  [communicate_send_ticket0]
+    (commstate = 1)
+  & (send_ticket_merchant0 = 1)
+  & (is_committed_1)
+  & (!is_opened_1)
+  & (!is_signed_1)
+  & (send_ticket_r0 >= 0)
+  & (send_ticket_r0 <= 2)
+  ->
+    (is_signed_1' = true)
+  & (randU_1' = send_ticket_r0);
+
+  [communicate_send_ticket0]
+    (commstate = 1)
+  & (send_ticket_merchant0 = 1)
+  & (!is_committed_1 | is_opened_1 | is_signed_1)
+  -> true;
+
+  [communicate_open0]
+    (commstate = 1)
+  ->
+    (commstate' = 32)
+  & (comm_sender' = 0);
+
+  [communicate_open1]
+    (commstate = 1)
+  ->
+    (commstate' = 32)
+  & (comm_sender' = 1);
+
+  []
+    (commstate = 32)
+  & ((comm_sender = 0 & (is_signed_0 & !is_opened_0)))
+  ->
+    (commstate' = 33);
+
+  []
+    (commstate = 33)
+  & (commit_0 = 3)
+  ->
+    (commstate' = 34);
+
+  []
+    (commstate = 34)
+  ->
+    1/3: (commstate' = 35)
+  & (communication_local3' = 0) +
+    1/3: (commstate' = 35)
+  & (communication_local3' = 1) +
+    1/3: (commstate' = 35)
+  & (communication_local3' = 2);
+
+  []
+    (commstate = 35)
+  & (communication_local3 >= 0)
+  & (communication_local3 <= 2)
+  ->
+    (commstate' = 36)
+  & (randM_0' = communication_local3);
+
+  []
+    (commstate = 36)
+  ->
+    (commstate' = 37)
+  & (is_opened_0' = true);
+
+  []
+    (commstate = 33)
+  & (commit_0 != 3)
+  ->
+    (commstate' = 38);
+
+  []
+    (commstate = 38)
+  & (commit_0 >= 0)
+  & (commit_0 <= 2)
+  ->
+    (commstate' = 37)
+  & (randM_0' = commit_0)
+  & (is_opened_0' = true);
+
+  []
+    (commstate = 32)
+  & (!(comm_sender = 0 & (is_signed_0 & !is_opened_0)))
+  ->
+    (commstate' = 37);
+
+  []
+    (commstate = 37)
+  & ((comm_sender = 1 & (is_signed_1 & !is_opened_1)))
+  ->
+    (commstate' = 40);
+
+  []
+    (commstate = 40)
+  & (commit_1 = 3)
+  ->
+    (commstate' = 41);
+
+  []
+    (commstate = 41)
+  ->
+    1/3: (commstate' = 42)
+  & (communication_local4' = 0) +
+    1/3: (commstate' = 42)
+  & (communication_local4' = 1) +
+    1/3: (commstate' = 42)
+  & (communication_local4' = 2);
+
+  []
+    (commstate = 42)
+  & (communication_local4 >= 0)
+  & (communication_local4 <= 2)
+  ->
+    (commstate' = 43)
+  & (randM_1' = communication_local4);
+
+  []
+    (commstate = 43)
+  ->
+    (commstate' = 1)
+  & (is_opened_1' = true);
+
+  []
+    (commstate = 40)
+  & (commit_1 != 3)
+  ->
+    (commstate' = 45);
+
+  []
+    (commstate = 45)
+  & (commit_1 >= 0)
+  & (commit_1 <= 2)
+  ->
+    (commstate' = 1)
+  & (randM_1' = commit_1)
+  & (is_opened_1' = true);
+
+  []
+    (commstate = 37)
+  & (!(comm_sender = 1 & (is_signed_1 & !is_opened_1)))
+  ->
+    (commstate' = 1);
+
+  [communicate_reset0]
+    (commstate = 1)
+  & ((is_signed_0 & is_opened_0))
+  ->
+    (commit_0' = 0)
+  & (randU_0' = 0)
+  & (randM_0' = 0)
+  & (is_committed_0' = false)
+  & (is_opened_0' = false)
+  & (is_signed_0' = false)
+  & (product_asked' = false);
+
+  [communicate_reset0]
+    (commstate = 1)
+  & (!((is_signed_0 & is_opened_0)))
+  -> true;
+
+  [communicate_reset1]
+    (commstate = 1)
+  & (is_signed_1 & is_opened_1)
+  ->
+    (commit_1' = 0)
+  & (randU_1' = 0)
+  & (randM_1' = 0)
+  & (is_committed_1' = false)
+  & (is_opened_1' = false)
+  & (is_signed_1' = false)
+  & (product_asked' = false);
+
+  [communicate_reset1]
+    (commstate = 1)
+  & (!(is_signed_1 & is_opened_1))
+  -> true;
+
+endmodule
+
+
+
+
+/////////////////////
+
+module player0
+  state0 : [-2..NUM_PLAYER0_STATES] init 0;
+
+  ask_payment_commit0 : [0..3];
+  endU : bool;
+  get_payment_value0 : [0..5];
+  player0_local0 : [0..2];
+  r0 : [0..2];
+  send_ticket_merchant0 : [0..1];
+  send_ticket_r0 : [0..2];
+
+  []
+    (state0 = 0)
+  & (ADVERSARY != 0)
+  ->
+    (state0' = 1);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 1)
+  ->
+    (state0' = 2);
+
+  [communicate_ask_product0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 2)
+  ->
+    (state0' = 3);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 3)
+  & ((is_committed_1 | timelocksReleased))
+  ->
+    (state0' = 4);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 4)
+  & (is_committed_1)
+  ->
+    (state0' = 5);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 5)
+  ->
+    1/3: (state0' = 6)
+  & (player0_local0' = 0) +
+    1/3: (state0' = 6)
+  & (player0_local0' = 1) +
+    1/3: (state0' = 6)
+  & (player0_local0' = 2);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 6)
+  & (player0_local0 >= 0)
+  & (player0_local0 <= 2)
+  ->
+    (state0' = 7)
+  & (r0' = player0_local0);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 7)
+  ->
+    (state0' = 8)
+  & (send_ticket_merchant0' = 1)
+  & (send_ticket_r0' = r0);
+
+  [communicate_send_ticket0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 8)
+  ->
+    (state0' = 9);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 4)
+  & (!is_committed_1)
+  ->
+    (state0' = 9);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = 9)
+  ->
+    (state0' = 9)
+  & (endU' = true);
+
+  []
+    (state0 = 0)
+  & (ADVERSARY = 0)
+  ->
+    (state0' = -1);
+
+  [releaseTimelocks0]
+    (state0 = -1)
+  & (contrstate = 1)
+  & (commstate = 1)
+  ->
+    (state0' = -2);
+
+  [broadcast_get_payment0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    true;
+
+  [communicate_ask_product0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    true;
+
+  [communicate_ask_payment0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    (ask_payment_commit0' = 0);
+
+  [communicate_ask_payment0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    (ask_payment_commit0' = 1);
+
+  [communicate_ask_payment0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    (ask_payment_commit0' = 2);
+
+  [communicate_send_ticket0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    (send_ticket_merchant0' = 0)
+  & (send_ticket_r0' = 0);
+
+  [communicate_send_ticket0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    (send_ticket_merchant0' = 0)
+  & (send_ticket_r0' = 1);
+
+  [communicate_send_ticket0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    (send_ticket_merchant0' = 0)
+  & (send_ticket_r0' = 2);
+
+  [communicate_send_ticket0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    (send_ticket_merchant0' = 1)
+  & (send_ticket_r0' = 0);
+
+  [communicate_send_ticket0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    (send_ticket_merchant0' = 1)
+  & (send_ticket_r0' = 1);
+
+  [communicate_send_ticket0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    (send_ticket_merchant0' = 1)
+  & (send_ticket_r0' = 2);
+
+  [communicate_open0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    true;
+
+  [communicate_reset0]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state0 = -1)
+  ->
+    true;
+
+endmodule
+
+
+
+
+/////////////////////
+
+module player1
+  state1 : [-2..NUM_PLAYER1_STATES] init 0;
+
+  ask_payment_commit1 : [0..3];
+  endM : bool;
+  get_payment_value1 : [0..5];
+  r1 : [0..3];
+  send_ticket_merchant1 : [0..1];
+  send_ticket_r1 : [0..2];
+
+  []
+    (state1 = 0)
+  & (ADVERSARY != 1)
+  ->
+    (state1' = 1);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 1)
+  & (3 >= 0)
+  & (3 <= 3)
+  ->
+    (state1' = 2)
+  & (r1' = 3);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 2)
+  & ((product_asked | timelocksReleased))
+  ->
+    (state1' = 3);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 3)
+  & ((product_asked & contract_balance > 0))
+  ->
+    (state1' = 4);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 4)
+  ->
+    (state1' = 5)
+  & (ask_payment_commit1' = r1);
+
+  [communicate_ask_payment1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 5)
+  ->
+    (state1' = 6);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 6)
+  & ((is_signed_1 | timelocksReleased))
+  ->
+    (state1' = 7);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 7)
+  & (is_signed_1)
+  ->
+    (state1' = 8);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 8)
+  ->
+    (state1' = 9);
+
+  [communicate_open1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 9)
+  ->
+    (state1' = 10);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 10)
+  & (randU_1 = randM_1)
+  ->
+    (state1' = 11);
+
+  [broadcast_get_payment1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 11)
+  ->
+    (state1' = 12)
+  & (get_payment_value1' = 0);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 12)
+  & (get_payment_status1 = T_EXECUTED)
+  ->
+    (state1' = 13);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 10)
+  & (randU_1 != randM_1)
+  ->
+    (state1' = 13);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 13)
+  ->
+    (state1' = 14);
+
+  [communicate_reset1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 14)
+  ->
+    (state1' = 15);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 7)
+  & (!is_signed_1)
+  ->
+    (state1' = 15);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 3)
+  & (!(product_asked & contract_balance > 0))
+  ->
+    (state1' = 15);
+
+  []
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = 15)
+  ->
+    (state1' = 15)
+  & (endM' = true);
+
+  []
+    (state1 = 0)
+  & (ADVERSARY = 1)
+  ->
+    (state1' = -1);
+
+  [releaseTimelocks1]
+    (state1 = -1)
+  & (contrstate = 1)
+  & (commstate = 1)
+  ->
+    (state1' = -2);
+
+  [broadcast_get_payment1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    true;
+
+  [communicate_ask_product1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    true;
+
+  [communicate_ask_payment1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    (ask_payment_commit1' = 0);
+
+  [communicate_ask_payment1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    (ask_payment_commit1' = 1);
+
+  [communicate_ask_payment1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    (ask_payment_commit1' = 2);
+
+  [communicate_send_ticket1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    (send_ticket_merchant1' = 0)
+  & (send_ticket_r1' = 0);
+
+  [communicate_send_ticket1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    (send_ticket_merchant1' = 0)
+  & (send_ticket_r1' = 1);
+
+  [communicate_send_ticket1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    (send_ticket_merchant1' = 0)
+  & (send_ticket_r1' = 2);
+
+  [communicate_send_ticket1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    (send_ticket_merchant1' = 1)
+  & (send_ticket_r1' = 0);
+
+  [communicate_send_ticket1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    (send_ticket_merchant1' = 1)
+  & (send_ticket_r1' = 1);
+
+  [communicate_send_ticket1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    (send_ticket_merchant1' = 1)
+  & (send_ticket_r1' = 2);
+
+  [communicate_open1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    true;
+
+  [communicate_reset1]
+    (contrstate = 1)
+  & (commstate = 1)
+  & (state1 = -1)
+  ->
+    true;
+
+endmodule
+
+

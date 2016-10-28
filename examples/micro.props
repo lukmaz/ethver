@@ -6,3 +6,9 @@ Pmin=? [ F endM ]
 
 Pmax=? [ F endM ]
 
+E [ F "deadlock" ]
+
+Pmax=? [ F endM&products_sent=1&balance1=0 ]
+
+Pmax=? [ F endM&products_sent=2&balance1=0 ]
+
