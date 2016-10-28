@@ -10,17 +10,19 @@ MAX_VALUE = 5;
 
 contract RPS {
   function get_payment() {
-    if (msg.sender == 0) {
-      if (is_signed[0] && is_opened[0]) {
-        if (randM[0] == randU[0]) {
-          0.send(1);
+    if (contract_balance > 0) {
+      if (msg.sender == 0) {
+        if (is_signed[0] && is_opened[0]) {
+          if (randM[0] == randU[0]) {
+            0.send(1);
+          }
         }
       }
-    }
-    else {
-      if (is_signed[1] && is_opened[1]) {
-        if (randM[1] == randU[1]) {
-          1.send(1);
+      else {
+        if (is_signed[1] && is_opened[1]) {
+          if (randM[1] == randU[1]) {
+            1.send(1);
+          }
         }
       }
     }
