@@ -9,6 +9,7 @@ USER1_BALANCE_INIT = 0;
 MAX_VALUE = 5;
 
 contract RPS {
+  /*
   function get_payment() {
     if (msg.sender == 0) {
       if (is_signed[0] && is_opened[0]) {
@@ -22,6 +23,15 @@ contract RPS {
         if (randM[1] == randU[1]) {
           1.send(1);
         }
+      }
+    }
+  }
+  */
+  
+  function get_payment() {
+    if (is_signed[msg.sender] && is_opened[msg.sender]) {
+      if (randM[msg.sender] == randU[msg.sender]) {
+        msg.sender.send(1);
       }
     }
   }
