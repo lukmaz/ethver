@@ -15,6 +15,7 @@ import WorldPrismEthver
 ---------
 
 verStm :: ModifyModuleType -> Stm -> VerRes ()
+-- TODO: czy SExp jest w ogóle używane?
 verStm modifyModule (SExp exp) = do
   _ <- verExp modifyModule exp 
   return ()
@@ -210,6 +211,7 @@ verExp modifyModule (EStr s) = verValExp modifyModule (EStr s)
 verExp modifyModule ETrue = verValExp modifyModule ETrue
 verExp modifyModule EFalse = verValExp modifyModule EFalse
 
+-- TODO: poniższe 3 chyba do przeniesienia do Stm
 verExp modifyModule (ECall idents exps) = verCallExp modifyModule (ECall idents exps)
 verExp modifyModule (ESend receiver args) = verCallExp modifyModule (ESend receiver args)
 verExp modifyModule (EWait cond) = verCallExp modifyModule (EWait cond)

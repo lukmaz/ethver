@@ -9,6 +9,7 @@ import AuxWorldPrismEthver
 import CodePrismEthver
 import ConstantsEthver
 import ExpPrismEthver
+import SmartFunPrismEthver
 import WorldPrismEthver
 
 
@@ -63,7 +64,11 @@ verContract (Contr name decls funs) = do
   verExecTransaction modifyPlayer1
 
   -- adds to contract module  all commands generated from a particular function definition
+  
+  -- OLD:
   mapM_ verFunContract funs
+  -- NEW: (~one command for each valuation of variables)
+  -- mapM_ verSmartFunContract funs
 
 -------------------
 -- COMMUNICATION --
@@ -72,7 +77,11 @@ verContract (Contr name decls funs) = do
 verCommunication :: Communication -> VerRes ()
 verCommunication (Comm decls funs) = do
   -- adds to communication module all commands generated from a particular function definition
+  
+  -- OLD:
   mapM_ verFunCommunication funs
+  -- NEW: (~one command for each valuation of variables)
+  --mapM_ verSmartFunCommunication funs
 
 ----------
 -- Decl --
@@ -244,11 +253,12 @@ verFunContract (Fun name args stms) = do
 -------------------------
 -- verFunCommunication --
 -------------------------
-verFunCommunication :: Function -> VerRes ()
--- TODO: sprawdzać, że nikt nie wykonuje FunV
-verFunCommunication (Fun funName args stms) = do
+
+-- common part of verFunCommunication and verSmartFunCommunication
+commonVerFunCommunication :: Function -> VerRes ()
+commonVerFunCommunication (Fun funName args stms) = do
   addFun (Fun funName args stms)
-  
+
   -- adds also to argMap (?) - co to jest argmap?
   mapM_ (addCommArgument funName) args
 
@@ -260,6 +270,15 @@ verFunCommunication (Fun funName args stms) = do
   let newState = numStates mod + 1
   _ <- modifyCommunication (setCurrState newState)
   _ <- modifyCommunication (setNumStates newState)
+
+  return ()
+
+
+-- OLD:
+verFunCommunication :: Function -> VerRes ()
+-- TODO: sprawdzać, że nikt nie wykonuje FunV
+verFunCommunication (Fun funName args stms) = do
+  commonVerFunCommunication (Fun funName args stms)
 
   -- veryfing all statements
   mapM_ (verStm modifyCommunication) stms
@@ -276,6 +295,18 @@ verFunCommunication (Fun funName args stms) = do
   
   clearArgMap
 
+-- NEW: (~ one command for each valuation)
+verSmartFunCommunication :: Function -> VerRes ()
+verSmartFunCommunication (Fun funName args stms) = do
+  commonVerFunCommunication (Fun funName args stms)
+
+  mapM_ collectCondVars stms
+ 
+  createSmartTranss modifyCommunication (Fun funName args stms)
+
+  clearCondVars
+  -- czy argMap jest potrzebne w smartFun?
+  clearArgMap
 
 
 --------------

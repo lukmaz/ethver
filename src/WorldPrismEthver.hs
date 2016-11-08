@@ -2,6 +2,7 @@ module WorldPrismEthver where
 
 import Control.Monad.State
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 import AbsEthver
 import ConstantsEthver
@@ -24,7 +25,10 @@ data VerWorld = VerWorld {
   contract :: Module,
   communication :: Module,
   player0 :: Module,
-  player1 :: Module
+  player1 :: Module,
+  condVars :: Set.Set Ident,
+  -- set of indexes which are read in condition checks
+  condArrays :: Map.Map Ident (Set.Set Exp)
   }
 
 data Module = Module {
@@ -56,7 +60,9 @@ emptyVerWorld = VerWorld {
   contract = emptyModule {stateVar = sContrState, moduleName = sContrModule, whichSender = iContrSender}, 
   communication = emptyModule {stateVar = sCommState, moduleName = sCommModule, whichSender = iCommSender},
   player0 = emptyModule {number = 0, stateVar = sP0State, moduleName = sP0Module}, 
-  player1 = emptyModule {number = 1, stateVar = sP1State, moduleName = sP1Module}
+  player1 = emptyModule {number = 1, stateVar = sP1State, moduleName = sP1Module},
+  condVars = Set.empty,
+  condArrays = Map.empty
   } 
 
 emptyModule :: Module
@@ -108,6 +114,11 @@ addVar :: ModifyModuleType -> Type -> Ident -> VerRes ()
 addVar modifyModule typ ident = do
   _ <- modifyModule (addVarToModule typ ident)
   return ()
+
+addCondVar :: Ident -> VerRes ()
+addCondVar ident = do
+  world <- get
+  put (world {condVars = Set.insert ident (condVars world)})
 
 addNoPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
 addNoPlayerArg modifyModule (Ident funName) (Ar typ (Ident varName)) = do

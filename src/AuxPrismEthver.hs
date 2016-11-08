@@ -30,6 +30,8 @@ negateExp exp = ENot exp
 unident :: Ident -> String
 unident (Ident ident) = ident
 
+-- TODO: Only support types with minimal value 0
+
 generateValsList :: Exp -> [Arg] -> [[Exp]]
 generateValsList maxValVal args =
   let maxVals = maxValVal:(map (\(Ar typ _) -> maxRealValueOfType typ) args) in
@@ -82,3 +84,22 @@ getArgNames :: Function -> [Arg]
 getArgNames (Fun _ args _) = args
 getArgNames (FunR _ args _ _) = args
 
+expFromBool :: Bool -> Exp
+expFromBool True = ETrue
+expFromBool False = EFalse
+
+expFromInt :: Integer -> Exp
+expFromInt x = EInt x
+
+intFromExp :: Exp -> Maybe Integer
+intFromExp (EInt x) = Just x
+intFromExp _ = Nothing
+
+isBool :: Exp -> Bool
+isBool ETrue = True
+isBool EFalse = True
+isBool _ = False
+
+isInt :: Exp -> Bool
+isInt (EInt _) = True
+isInt _ = False
