@@ -95,11 +95,3 @@ intFromExp :: Exp -> Maybe Integer
 intFromExp (EInt x) = Just x
 intFromExp _ = Nothing
 
-isBool :: Exp -> Bool
-isBool ETrue = True
-isBool EFalse = True
-isBool _ = False
-
-isInt :: Exp -> Bool
-isInt (EInt _) = True
-isInt _ = False

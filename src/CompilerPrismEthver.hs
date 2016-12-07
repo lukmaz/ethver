@@ -46,8 +46,9 @@ verCommunicationDecl (Comm decls _) = do
 -- CONTRACT --
 --------------
 
+-- declarations already done before with verContractDecl
 verContract :: Contract -> VerRes ()
-verContract (Contr name decls funs) = do
+verContract (Contr name _ funs) = do
   -- adds a command to blockchain module, that a function has just been broadcast by a particular player
   mapM_ (verFunBroadcast modifyPlayer0) funs
   -- adds two commands to blockchain module, that a transaction has been executed or not by a particular player
@@ -74,14 +75,15 @@ verContract (Contr name decls funs) = do
 -- COMMUNICATION --
 -------------------
 
+-- declarations already done before with verCommunicationDecl
 verCommunication :: Communication -> VerRes ()
-verCommunication (Comm decls funs) = do
+verCommunication (Comm _ funs) = do
   -- adds to communication module all commands generated from a particular function definition
   
   -- OLD:
-  mapM_ verFunCommunication funs
+  --mapM_ verFunCommunication funs
   -- NEW: (~one command for each valuation of variables)
-  --mapM_ verSmartFunCommunication funs
+  mapM_ verSmartFunCommunication funs
 
 ----------
 -- Decl --
@@ -91,11 +93,14 @@ verDecl :: ModifyModuleType -> Decl -> VerRes ()
 
 verDecl modifyModule (Dec typ ident) = do
   addVar modifyModule typ ident
+  assignVarValue ident $ defaultValueOfType typ
 
 -- TODO: size inne niż 2
 verDecl modifyModule (ArrDec typ (Ident ident) size) = do
   addVar modifyModule typ $ Ident $ ident ++ "_0"
+  assignVarValue (Ident (ident ++ "_0")) $ defaultValueOfType typ
   addVar modifyModule typ $ Ident $ ident ++ "_1"
+  assignVarValue (Ident (ident ++ "_1")) $ defaultValueOfType typ
 
 ------------------
 -- verFunBroadcast

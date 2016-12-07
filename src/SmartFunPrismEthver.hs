@@ -21,7 +21,7 @@ createSmartTranss modifyModule fun = do
       res <- findVarType var
       case res of
         Just typ -> return typ
-        Nothing -> error "Error in findVarType: var not found."
+        Nothing -> error $ "Error in findVarType: var " ++ (show var) ++ " not found."
     )
    condVarsList
   let maxVals = map maxRealValueOfType types
@@ -39,6 +39,8 @@ createSmartTrans modifyModule (Fun funName args stms) condVarsList vals = do
         -- TODO: arrays
         (zip condVarsList vals)
   
+  addMultipleVarsValues condVarsList vals
+
   updates <- foldM
     (\acc stm -> do
       newUpdates <- verSmartStm modifyModule stm
@@ -47,11 +49,13 @@ createSmartTrans modifyModule (Fun funName args stms) condVarsList vals = do
     )
     [[]]
     stms
-  
+ 
+  mod <- modifyModule id
+
   addCustomTrans
     modifyModule
     ""
-    1
+    (currState mod)
     1
     guards
     updates
@@ -145,14 +149,53 @@ clearCondVars = do
   world <- get
   put (world {condVars = Set.empty, condArrays = Map.empty})
 
+
 -----------------
 -- verSmartStm --
 -----------------
 
+-- updatesFromAss ass
+updatesFromAss :: Ass -> VerRes [[(Ident, Exp)]]
+updatesFromAss (AAss ident exp) = do
+  val <- evaluateExp exp
+  return [[(ident, val)]]
+
+-- updatesFromAss (AArrAss ident index exp) = do TODO
+
 verSmartStm :: ModifyModuleType -> Stm -> VerRes [[(Ident, Exp)]]
 
--- TODO: SExp
---verSmartStm modifyModule (SExp exp) = do
+-- TODO: SExp - czy to na pewno jest niepotrzebne?
+verSmartStm modifyModule (SExp exp) = do
+  return [[]]
+
+verSmartStm modifyModule (SBlock stms) = do
+  -- TODO: inteligentne powiększanie updateów w przypadku probabilistycznych przejsc
+  foldM
+    (\acc stm -> do
+      newUpdates <- verSmartStm modifyModule stm
+      -- TODO: assumption that newUpdates is a signleton (no probability)
+      return $ [(head acc) ++ (head newUpdates)]
+    )
+    [[]]
+    stms
+
+verSmartStm modifyModule (SAsses asses) = do
+  -- TODO: inteligentne powiększanie updateów przy probabilistycznych przejsciach
+  mapM_
+    (\(AAss ident exp) -> do
+      val <- evaluateExp exp
+      assignVarValue ident val
+    )
+    asses
+  
+  foldM
+    (\acc ass -> do
+      newUpdates <- updatesFromAss ass
+      -- TODO: assumption that newUpdates is a singleton (no probability)
+      return $ [(head acc) ++ (head newUpdates)]
+    )
+    [[]]
+    asses
 
 verSmartStm modifyModule (SIf cond stm) = do
   result <- evaluateExp cond
@@ -160,6 +203,16 @@ verSmartStm modifyModule (SIf cond stm) = do
     ETrue -> verSmartStm modifyModule stm
     EFalse -> return [[]]
     _ -> error $ "Error in verSmartStm(SIf): condition not evaluated to bool: " ++ (show result)
+
+verSmartStm modifyModule (SIfElse cond stm1 stm2) = do
+  result <- evaluateExp cond
+  case result of
+    ETrue -> verSmartStm modifyModule stm1
+    EFalse -> verSmartStm modifyModule stm2
+    _ -> error $ "Error in verSmartStm(SIf): condition not evaluated to bool: " ++ (show result)
+
+verSmartStm modifyModule (SReturn exp) = do
+  error $ "SReturn usage not supported"
 
 ------------------
 -- evaluateExp --
@@ -204,11 +257,12 @@ evaluateEq :: Exp -> Exp -> VerRes Exp
 evaluateEq e1 e2 = do
   v1 <- evaluateExp e1
   v2 <- evaluateExp e2
-  if (isBool v1, isBool v2) == (True, True)
-    then return $ expFromBool $ v1 == v2
-    else case (v1, v2) of
-      (EInt x1, EInt x2) -> return $ expFromBool $ x1 == x2
-      _ -> error $ "Error in evaluateBoolIntBinOp: not matching types: " ++ (show v1) ++ " and " ++ (show v2)
+  t1 <- findType v1
+  t2 <- findType v2
+  case (t1, t2) of 
+    (Just TBool, Just TBool) -> return $ expFromBool $ v1 == v2
+    (Just (TUInt _), Just (TUInt _)) -> return $ expFromBool $ v1 == v2
+    _ -> error $ "Error in evaluateBoolIntBinOp: not matching types: " ++ (show v1) ++ " and " ++ (show v2)
 
 evaluateBoolUnOp :: (Bool -> Bool) -> Exp -> VerRes Exp
 evaluateBoolUnOp op e = do
@@ -244,3 +298,33 @@ evaluateExp (EMod e1 e2) = evaluateArithmIntBinOp mod e1 e2
 
 evaluateExp (ENeg e) = evaluateArithmIntBinOp (-) (EInt 0) e
 evaluateExp (ENot e) = evaluateBoolUnOp not e
+
+--evaluateExp (EArray ...)
+--evaluateExp (EWait ...)
+--evaluateExp (ESend ...)
+
+evaluateExp (EVar ident) = do
+  exp <- findVarValue ident
+  case exp of 
+    Just val -> return val
+    Nothing -> return $ EVar ident
+
+-- TODO: zrobić coś z value. Na pewno trzeba collectować
+evaluateExp (EValue) = do
+  return EValue
+
+-- TODO: zrobić coś z senderem. Pewnie trzeba dodać do condVars i trzymać wartość w varsValues
+evaluateExp ESender = do
+  return ESender
+
+evaluateExp (EStr _) = do
+  error $ "String constants not supported"
+
+evaluateExp (EInt x) = do
+  return (EInt x)
+
+evaluateExp ETrue = do
+  return ETrue
+
+evaluateExp EFalse = do
+  return EFalse

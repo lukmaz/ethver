@@ -32,6 +32,12 @@ maxTypeValue ident = do
   case typ of
     Just t -> return $ maxTypeValueOfType t
 
+findType :: Exp -> VerRes (Maybe Type)
+findType (EInt x) = return $ Just $ TUInt x
+findType (ETrue) = return $ Just TBool
+findType (EFalse) = return $ Just TBool
+findType (EVar ident) = findVarType ident
+
 findVarType :: Ident -> VerRes (Maybe Type)
 findVarType ident = do
   world <- get 
