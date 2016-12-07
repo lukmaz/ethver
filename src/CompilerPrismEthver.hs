@@ -67,9 +67,9 @@ verContract (Contr name _ funs) = do
   -- adds to contract module  all commands generated from a particular function definition
   
   -- OLD:
-  mapM_ verFunContract funs
+  -- mapM_ verFunContract funs
   -- NEW: (~one command for each valuation of variables)
-  -- mapM_ verSmartFunContract funs
+  mapM_ verSmartFunContract funs
 
 -------------------
 -- COMMUNICATION --
@@ -177,9 +177,10 @@ verFunExecute modifyModule (Fun name args stms) = do
       [(Ident $ unident name ++ sStatusSufix ++ (show $ number mod), EVar iTInvalidated)]
     ]
 
----------------------
--- verExecTransaction
----------------------
+------------------------
+-- verExecTransaction --
+------------------------
+
 -- adds to contract module a transaction that a particular player is executing the function
 verExecTransaction :: ModifyModuleType -> VerRes ()
 verExecTransaction modifyModule = do
@@ -201,16 +202,29 @@ verExecTransaction modifyModule = do
         EAdd (EVar iContractBalance) (EVar iValue))
     ]]
 
+---------------------------------------
+-- verSmartFunContract/Communication --
+---------------------------------------
+
+-- NEW: (~ one command for each valuation)
+verSmartFunContractOrCommunication :: ModifyModuleType -> (Function -> VerRes ()) -> Function -> VerRes ()
+verSmartFunContractOrCommunication modifyModule commonFun (Fun funName args stms) = do
+  commonFun (Fun funName args stms)
+
+  mapM_ collectCondVars stms
+ 
+  createSmartTranss modifyModule (Fun funName args stms)
+
+  clearCondVars
+  -- czy argMap jest potrzebne w smartFun?
+  clearArgMap
+
 -----------------
 -- verFunContract
 -----------------
--- adds to contract module  all commands generated from a particular function definition
-verFunContract :: Function -> VerRes ()
--- TODO: bez V nie potrzebne value
-verFunContract (FunV name args stms) = 
-  verFunContract (Fun name args stms) 
 
-verFunContract (Fun name args stms) = do
+commonVerFunContract :: Function -> VerRes ()
+commonVerFunContract (Fun name args stms) = do
   addFun (Fun name args stms)
   addContractFun (Fun name args stms)
   addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStatusSufix ++ "0" 
@@ -238,7 +252,18 @@ verFunContract (Fun name args stms) = do
     [[(iNextState, EInt $ numStates mod + 1)]]
   
   modifyContract (\mod -> mod {currState = numStates mod + 1, numStates = numStates mod + 1})
-  
+
+  return ()
+
+-- (OLD) adds to contract module  all commands generated from a particular function definition
+verFunContract :: Function -> VerRes ()
+-- TODO: bez V nie potrzebne value
+verFunContract (FunV name args stms) = 
+  verFunContract (Fun name args stms) 
+
+verFunContract (Fun name args stms) = do
+  commonVerFunContract (Fun name args stms)
+
   -- verifying all statements
   mapM_ (verStm modifyContract) stms
 
@@ -254,6 +279,9 @@ verFunContract (Fun name args stms) = do
   
   clearArgMap
 
+-- (NEW)
+verSmartFunContract :: Function -> VerRes ()
+verSmartFunContract fun = verSmartFunContractOrCommunication modifyContract commonVerFunContract fun
 
 -------------------------
 -- verFunCommunication --
@@ -300,18 +328,10 @@ verFunCommunication (Fun funName args stms) = do
   
   clearArgMap
 
--- NEW: (~ one command for each valuation)
+-- (NEW)
 verSmartFunCommunication :: Function -> VerRes ()
-verSmartFunCommunication (Fun funName args stms) = do
-  commonVerFunCommunication (Fun funName args stms)
+verSmartFunCommunication fun = verSmartFunContractOrCommunication modifyCommunication commonVerFunCommunication fun
 
-  mapM_ collectCondVars stms
- 
-  createSmartTranss modifyCommunication (Fun funName args stms)
-
-  clearCondVars
-  -- czy argMap jest potrzebne w smartFun?
-  clearArgMap
 
 
 --------------

@@ -12,7 +12,8 @@ import ConstantsEthver
 import WorldPrismEthver
 
 createSmartTranss :: ModifyModuleType -> Function -> VerRes ()
-createSmartTranss modifyModule fun = do
+createSmartTranss modifyModule (Fun funName args stms) = do
+  mapM_ (\(Ar typ ident) -> addVar modifyModule typ ident) args
   -- TODO: random condVars
   world <- get
   let condVarsList = Set.toList $ condVars world
@@ -28,7 +29,7 @@ createSmartTranss modifyModule fun = do
   let valuations = generateAllVals maxVals
   -- TODO: arrays
 
-  mapM_ (createSmartTrans modifyModule fun condVarsList) valuations
+  mapM_ (createSmartTrans modifyModule (Fun funName args stms) condVarsList) valuations
 
 createSmartTrans :: ModifyModuleType -> Function -> [Ident] -> [Exp] -> VerRes ()
 -- TODO: FunV

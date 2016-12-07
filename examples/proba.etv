@@ -14,9 +14,8 @@ contract RPS {
 communication {
   uint(2) x;
   uint(2) y;
-  uint(2) z;
 
-  function f() { //uint(2) z) {
+  function f(uint(2) z) {
     if (z == 1) {
       y = x;
     }
