@@ -74,7 +74,7 @@ collectCondVars (SBlock stms) = do
   mapM_ collectCondVars stms
 
 collectCondVars (SAsses asses) = do
-  return ()
+  mapM_ collectCondVarsFromAss asses
 
 collectCondVars (SIf cond ifBlock) = do
   collectCondVarsFromExp cond
@@ -87,6 +87,18 @@ collectCondVars (SIfElse cond ifBlock elseBlock) = do
 
 collectCondVars (SReturn _) = do
   return ()
+
+----------------------------
+-- collectCondVarsFromAss --
+----------------------------
+
+collectCondVarsFromAss :: Ass -> VerRes ()
+
+collectCondVarsFromAss (AAss ident exp) = collectCondVarsFromExp exp
+
+collectCondVarsFromAss (AArrAss ident index value) = do
+  collectCondVarsFromExp index
+  collectCondVarsFromExp value
 
 -----------------------------
 -- collectCondVarsFromExp --
