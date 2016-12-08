@@ -17,19 +17,23 @@ createSmartTranss modifyModule (Fun funName args stms) = do
   -- TODO: random condVars
   world <- get
   let condVarsList = Set.toList $ condVars world
-  types <- mapM 
-    (\var -> do
-      res <- findVarType var
-      case res of
-        Just typ -> return typ
-        Nothing -> error $ "Error in findVarType: var " ++ (show var) ++ " not found."
-    )
-   condVarsList
-  let maxVals = map maxRealValueOfType types
-  let valuations = generateAllVals maxVals
-  -- TODO: arrays
+  case condVarsList of
+    [] -> do
+      createSmartTrans modifyModule (Fun funName args stms) [] []
+    _ -> do
+      types <- mapM 
+        (\var -> do
+          res <- findVarType var
+          case res of
+            Just typ -> return typ
+            Nothing -> error $ "Error in findVarType: var " ++ (show var) ++ " not found."
+        )
+       condVarsList
+      let maxVals = map maxRealValueOfType types
+      let valuations = generateAllVals maxVals
+      -- TODO: arrays
 
-  mapM_ (createSmartTrans modifyModule (Fun funName args stms) condVarsList) valuations
+      mapM_ (createSmartTrans modifyModule (Fun funName args stms) condVarsList) valuations
 
 createSmartTrans :: ModifyModuleType -> Function -> [Ident] -> [Exp] -> VerRes ()
 -- TODO: FunV
