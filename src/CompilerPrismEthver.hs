@@ -24,6 +24,8 @@ verProgram (Prog users constants contract communication scenarios) = do
   mapM_ addUser users
   mapM_ addConstant constants
 
+  addAutoVars
+
   verContractDecl contract
   verCommunicationDecl communication
 
@@ -211,7 +213,7 @@ verSmartFunContractOrCommunication :: ModifyModuleType -> (Function -> VerRes ()
 verSmartFunContractOrCommunication modifyModule commonFun (Fun funName args stms) = do
   commonFun (Fun funName args stms)
 
-  mapM_ collectCondVars stms
+  mapM_ (collectCondVars modifyModule) stms
  
   createSmartTranss modifyModule (Fun funName args stms)
 

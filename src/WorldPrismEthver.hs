@@ -39,6 +39,7 @@ data Module = Module {
   stateVar :: String,
   moduleName :: String,
   vars :: Map.Map Ident Type,
+  varsInitialValues :: Map.Map Ident Exp,
   numLocals :: Integer,
   currState :: Integer,
   numStates :: Integer,
@@ -72,7 +73,19 @@ emptyVerWorld = VerWorld {
 
 emptyModule :: Module
 emptyModule = Module {number = nUndefModuleNumber, stateVar = sEmptyState, moduleName = sEmptyModule, 
-  vars = Map.empty, numLocals = 0, currState = 1, numStates = 1, transs = [], whichSender = Ident sEmptySender}
+  vars = Map.empty, varsInitialValues = Map.empty, numLocals = 0, currState = 1, numStates = 1, 
+  transs = [], whichSender = Ident sEmptySender}
+
+
+addAutoVars :: VerRes ()
+addAutoVars = do
+  world <- get
+  -- TODO: only 2 players
+  addVar modifyBlockchain (TUInt 2) iContrSender
+  case Map.lookup iMaxValue (constants world) of
+    Nothing -> error $ sMaxValue ++ " constant definition not found in the source file.\n"
+    Just maxValue -> addVar modifyBlockchain (TUInt (maxValue + 1)) iValue
+
 
 ------------------------
 -- WORLD MODIFICATION --
@@ -118,6 +131,11 @@ addLocal modifyModule typ = do
 addVar :: ModifyModuleType -> Type -> Ident -> VerRes ()
 addVar modifyModule typ ident = do
   _ <- modifyModule (addVarToModule typ ident)
+  return ()
+
+addInitialValue :: ModifyModuleType -> Ident -> Exp -> VerRes ()
+addInitialValue modifyModule ident exp = do
+  _ <- modifyModule (addInitialValueToModule ident exp)
   return ()
 
 addCondVar :: Ident -> VerRes ()
@@ -213,6 +231,10 @@ setNumStates num mod =
 addVarToModule :: Type -> Ident -> Module -> Module
 addVarToModule typ ident mod = do
   mod {vars = Map.insert ident typ (vars mod)}
+
+addInitialValueToModule :: Ident -> Exp -> Module -> Module
+addInitialValueToModule ident exp mod = do
+  mod {varsInitialValues = Map.insert ident exp (varsInitialValues mod)}
 
 modifyBlockchain :: (Module -> Module) -> VerRes Module
 modifyBlockchain fun = do

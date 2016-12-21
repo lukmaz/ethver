@@ -80,7 +80,6 @@ sCriticalSection0 = "critical_section0"
 sCriticalSection1 = "critical_section1"
 
 sAdversaryFlag = "ADVERSARY"
---sSender = "sender"
 sContrSender = "contr_sender"
 sCommSender = "comm_sender"
 sValue = "value"
@@ -107,6 +106,7 @@ iCommState = Ident sCommState
 iMaxUserBalance = Ident sMaxUserBalance
 iMaxContractBalance = Ident sMaxContractBalance
 iNextState = Ident sNextState
+iMaxValue = Ident sMaxValue
 
 iContractBalance = Ident sContractBalance
 
@@ -114,7 +114,6 @@ iCriticalSection = Ident sCriticalSection
 iCriticalSection0 = Ident sCriticalSection0
 iCriticalSection1 = Ident sCriticalSection1
 
---iSender = Ident sSender
 iContrSender = Ident sContrSender
 iCommSender = Ident sCommSender
 iValue = Ident sValue
