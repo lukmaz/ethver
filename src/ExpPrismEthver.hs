@@ -101,6 +101,33 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
 verStm modifyModule (SBlock stms) = do
   mapM_ (verStm modifyModule) stms
 
+verStm modifyModule (SSend receiverExp arg) = do
+  val <- verExp modifyModule arg
+  mod <- modifyModule id
+  let actualSender = whichSender mod
+  case receiverExp of
+    ESender -> do
+      verStm 
+        modifyModule 
+        (SIf 
+          (EEq (EVar actualSender) (EInt 0))
+          (SSend (EInt 0) arg)
+        )
+      verStm
+        modifyModule
+        (SIf
+          (EEq (EVar actualSender) (EInt 1))
+          (SSend (EInt 1) arg)
+        )
+    EStr receiverAddress -> do
+      receiverNumber <- getPlayerNumber receiverAddress
+      let receiverBalance = Ident $ sBalancePrefix ++ (show receiverNumber) 
+      transferFromContract receiverBalance val
+    EInt receiverNumber -> do
+      let receiverBalance = Ident $ sBalancePrefix ++ (show receiverNumber)
+      transferFromContract receiverBalance val
+
+
 ---------
 -- Ass --
 ---------
@@ -211,9 +238,8 @@ verExp modifyModule (EStr s) = verValExp modifyModule (EStr s)
 verExp modifyModule ETrue = verValExp modifyModule ETrue
 verExp modifyModule EFalse = verValExp modifyModule EFalse
 
--- TODO: poniższe 3 chyba do przeniesienia do Stm
+-- TODO: poniższe 2 chyba do przeniesienia do Stm
 verExp modifyModule (ECall idents exps) = verCallExp modifyModule (ECall idents exps)
-verExp modifyModule (ESend receiver args) = verCallExp modifyModule (ESend receiver args)
 verExp modifyModule (EWait cond) = verCallExp modifyModule (EWait cond)
 
 -------------
@@ -376,6 +402,7 @@ verValExp modifyModule ESender = do
 verValExp modifyModule (EInt x) =
   return (EInt x)
 
+-- strings only used as users names
 verValExp modifyModule (EStr s) = do
   number <- getPlayerNumber s
   return (EInt number)
@@ -411,35 +438,6 @@ verCallExp modifyModule (ECall idents args) = do
       | ident == iRandomLazy -> do
         verRandomLazy modifyModule args
 
-
-verCallExp modifyModule (ESend receiverExp args) = do
-  case args of
-    [AExp arg] -> do
-      val <- verExp modifyModule arg
-      mod <- modifyModule id
-      let actualSender = whichSender mod
-      case receiverExp of
-        ESender -> do
-          verStm 
-            modifyModule 
-            (SIf 
-              (EEq (EVar actualSender) (EInt 0))
-              (SExp $ ESend (EInt 0) args)
-            )
-          verStm
-            modifyModule
-            (SIf
-              (EEq (EVar actualSender) (EInt 1))
-              (SExp $ ESend (EInt 1) args)
-            )
-        EStr receiverAddress -> do
-          receiverNumber <- getPlayerNumber receiverAddress
-          let receiverBalance = Ident $ sBalancePrefix ++ (show receiverNumber) 
-          transferFromContract receiverBalance val
-        EInt receiverNumber -> do
-          let receiverBalance = Ident $ sBalancePrefix ++ (show receiverNumber)
-          transferFromContract receiverBalance val
-  return (ESend receiverExp args)
 
 verCallExp modifyModule (EWait cond) = do
   evalCond <- verExp modifyModule cond

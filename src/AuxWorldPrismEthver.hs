@@ -37,6 +37,12 @@ findType (EInt x) = return $ Just $ TUInt x
 findType (ETrue) = return $ Just TBool
 findType (EFalse) = return $ Just TBool
 findType (EVar ident) = findVarType ident
+findType (ESender) = do
+  world <- get
+  let size = fromIntegral $ Map.size $ playerNumbers world 
+  return $ Just $ TUInt size
+-- strings only used for players names
+findType (EStr _) = findType ESender
 
 findVarType :: Ident -> VerRes (Maybe Type)
 findVarType ident = do
@@ -299,3 +305,13 @@ transferMoney from to maxTo value = do
     [EGe (EVar from) value, ELe (EAdd (EVar to) value) maxTo]
     [[(from, ESub (EVar from) value), (to, EAdd (EVar to) value)]]
 
+-- TODO: one MAX_USER_BALANCE for all users
+smartTransferFromContract :: Ident -> Exp -> VerRes [[(Ident, Exp)]]
+smartTransferFromContract to value = do
+  smartTransferMoney iContractBalance to (EVar iMaxUserBalance) value
+
+smartTransferMoney :: Ident -> Ident -> Exp -> Exp -> VerRes [[(Ident, Exp)]]
+smartTransferMoney from to maxTo value = do
+  addGuard (EGe (EVar from) value)
+  addGuard (ELe (EAdd (EVar to) value) maxTo)
+  return [[(from, ESub (EVar from) value), (to, EAdd (EVar to) value)]]

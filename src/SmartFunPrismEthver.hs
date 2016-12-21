@@ -11,6 +11,7 @@ import CodePrismEthver
 import ConstantsEthver
 import WorldPrismEthver
 
+-- for a given function creates a command for every valuation of condVars
 createSmartTranss :: ModifyModuleType -> Function -> VerRes ()
 createSmartTranss modifyModule (Fun funName args stms) = do
   mapM_ (\(Ar typ ident) -> addVar modifyModule typ ident) args
@@ -35,6 +36,7 @@ createSmartTranss modifyModule (Fun funName args stms) = do
 
       mapM_ (createSmartTrans modifyModule (Fun funName args stms) condVarsList) valuations
 
+-- creates a command for a given function and given valuation
 createSmartTrans :: ModifyModuleType -> Function -> [Ident] -> [Exp] -> VerRes ()
 -- TODO: FunV
 createSmartTrans modifyModule (Fun funName args stms) condVarsList vals = do
@@ -55,6 +57,9 @@ createSmartTrans modifyModule (Fun funName args stms) condVarsList vals = do
     [[]]
     stms
  
+  world <- get
+  let added = addedGuards world
+
   mod <- modifyModule id
 
   addCustomTrans
@@ -62,8 +67,10 @@ createSmartTrans modifyModule (Fun funName args stms) condVarsList vals = do
     ""
     (currState mod)
     1
-    guards
+    (guards ++ added)
     updates
+
+  clearAddedGuards
  
 
 ---------------------
@@ -91,6 +98,10 @@ collectCondVars (SIfElse cond ifBlock elseBlock) = do
 
 collectCondVars (SReturn _) = do
   return ()
+
+collectCondVars (SSend address value) = do
+  collectCondVarsFromExp address
+  collectCondVarsFromExp value
 
 ----------------------------
 -- collectCondVarsFromAss --
@@ -191,6 +202,7 @@ verSmartStm modifyModule (SBlock stms) = do
     (\acc stm -> do
       newUpdates <- verSmartStm modifyModule stm
       -- TODO: assumption that newUpdates is a signleton (no probability)
+      -- TODO: Czy to nie problem, że jest return w pętli? (czy sie nie przerwie po pierwszym obrocie?)
       return $ [(head acc) ++ (head newUpdates)]
     )
     [[]]
@@ -230,6 +242,33 @@ verSmartStm modifyModule (SIfElse cond stm1 stm2) = do
 
 verSmartStm modifyModule (SReturn exp) = do
   error $ "SReturn usage not supported"
+
+verSmartStm modifyModule (SSend receiverExp arg) = do
+  val <- evaluateExp arg
+  mod <- modifyModule id
+  let actualSender = whichSender mod
+  case receiverExp of
+    ESender -> do
+      verSmartStm
+        modifyModule
+        (SIf
+          (EEq (EVar actualSender) (EInt 0))
+          (SSend (EInt 0) arg)
+        )
+      verSmartStm
+        modifyModule
+        (SIf
+          (EEq (EVar actualSender) (EInt 1))
+          (SSend (EInt 1) arg)
+        )
+    EStr receiverAddress -> do
+      receiverNumber <- getPlayerNumber receiverAddress
+      let receiverBalance = Ident $ sBalancePrefix ++ (show receiverNumber)
+      smartTransferFromContract receiverBalance val
+    EInt receiverNumber -> do
+      let receiverBalance = Ident $ sBalancePrefix ++ (show receiverNumber)
+      smartTransferFromContract receiverBalance val
+
 
 ------------------
 -- evaluateExp --
@@ -318,7 +357,6 @@ evaluateExp (ENot e) = evaluateBoolUnOp not e
 
 --evaluateExp (EArray ...)
 --evaluateExp (EWait ...)
---evaluateExp (ESend ...)
 
 evaluateExp (EVar ident) = do
   exp <- findVarValue ident
@@ -334,8 +372,11 @@ evaluateExp (EValue) = do
 evaluateExp ESender = do
   return ESender
 
-evaluateExp (EStr _) = do
-  error $ "String constants not supported"
+evaluateExp (EStr name) = do
+  world <- get
+  case Map.lookup name $ playerNumbers world of
+    Nothing -> error $ "Player '" ++ name ++ "' not found. (other string constants not supported)"
+    Just number -> return (EInt number)
 
 evaluateExp (EInt x) = do
   return (EInt x)

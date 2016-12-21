@@ -29,8 +29,9 @@ data VerWorld = VerWorld {
   condVars :: Set.Set Ident,
   varsValues :: Map.Map Ident Exp,
   -- set of indexes which are read in condition checks
-  condArrays :: Map.Map Ident (Set.Set Exp)
+  condArrays :: Map.Map Ident (Set.Set Exp),
   --arraysValues
+  addedGuards :: [Exp]
   }
 
 data Module = Module {
@@ -65,7 +66,8 @@ emptyVerWorld = VerWorld {
   player1 = emptyModule {number = 1, stateVar = sP1State, moduleName = sP1Module},
   condVars = Set.empty,
   varsValues = Map.empty,
-  condArrays = Map.empty
+  condArrays = Map.empty,
+  addedGuards = []
   } 
 
 emptyModule :: Module
@@ -184,6 +186,16 @@ removeReturnVar :: VerRes ()
 removeReturnVar = do
   world <- get
   put (world {returnVar = tail $ returnVar world})
+
+addGuard :: Exp -> VerRes ()
+addGuard exp = do
+  world <- get
+  put $ world {addedGuards = (exp:(addedGuards world))}
+
+clearAddedGuards :: VerRes ()
+clearAddedGuards = do
+  world <- get
+  put $ world {addedGuards = []}
 
 
 -------------------------

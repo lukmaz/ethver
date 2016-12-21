@@ -48,6 +48,7 @@ SIf.     Stm ::= "if" "(" Exp ")" Stm ;
 SIfElse. Stm ::= "if" "(" Exp ")" Stm "else" Stm ;
 -- SWhile.  Stm ::= "while" "(" Exp ")" Stm ;
 SReturn. Stm ::= "return" Exp  ";" ;
+SSend.   Stm ::= Exp "." "send" "(" Exp ")" ";" ;
 
 terminator Stm "" ;
 separator nonempty Ass "," ;
@@ -75,7 +76,6 @@ ENot.    Exp6 ::= "!" Exp7 ;
 EArray.  Exp7 ::= Ident "[" Exp "]" ;
 EWait.   Exp7 ::= "wait" "(" Exp ")" ;
 ECall.   Exp7 ::= [Ident] "(" [CallArg] ")" ;
-ESend.   Exp7 ::= Exp "." "send" "(" [CallArg] ")" ;
 EVar.    Exp7 ::= Ident ;
 EValue.  Exp7 ::= "msg" "." "value" ;
 ESender. Exp7 ::= "msg" "." "sender" ;
