@@ -31,17 +31,17 @@ generateModule moduleFun moduleName pream world =
   "\n\n/////////////////////\n" ++
   "\nmodule " ++ moduleName ++ "\n" ++
   pream ++ "\n" ++
-  (prismVars $ vars $ moduleFun world) ++
+  (prismVars (vars $ moduleFun world) (varsInitialValues $ moduleFun world)) ++
   "\n" ++ 
   prismTranss (reverse $ transs $ moduleFun world) ++
   "endmodule\n\n\n"
 
 blockchainPream :: String
-blockchainPream =
-  "  " ++ sContrSender ++ " : [0..1];\n" ++
+blockchainPream = "";
+  --"  " ++ sContrSender ++ " : [0..1];\n" ++
   -- TODO: skąd wziąć zakres val?
-  "  " ++ sValue ++ " : [0.." ++ sMaxValue ++ "];\n" ++
-  "  " ++ sTimelocksReleased ++ " : bool init false;"
+  --"  " ++ sValue ++ " : [0.." ++ sMaxValue ++ "];\n" ++
+  --"  " ++ sTimelocksReleased ++ " : bool init false;"
 
 contractPream :: String
 contractPream =
@@ -53,7 +53,7 @@ contractPream =
 
 communicationPream :: String
 communicationPream = 
-  "  " ++ sCommSender ++ " : [0..1];\n" ++
+  -- "  " ++ sCommSender ++ " : [0..1];\n" ++
   -- TODO: state 0 not used
   "  " ++ sCommState ++ " : [0.." ++ sNumCommStates ++ "] init " ++ (show nInitCommState) ++ ";\n" 
 
@@ -101,11 +101,18 @@ generateNumStates world =
   (show $ numStates $ player1 world) ++
   ";\n\n"
 
-prismVars :: Map.Map Ident Type -> String
-prismVars vars = 
+prismVars :: Map.Map Ident Type -> Map.Map Ident Exp -> String
+prismVars vars initialValues = 
   Map.foldlWithKey
-    (\code ident typ -> code ++ "  " ++ (unident ident)
-      ++ " : " ++ (prismShowType typ) ++ ";\n")
+    (\code ident typ -> 
+      let 
+        initSufix = 
+          case Map.lookup ident initialValues of
+            Nothing -> ""
+            Just exp -> " init " ++ prismShowExp exp
+      in
+        code ++ "  " ++ (unident ident)
+          ++ " : " ++ (prismShowType typ) ++ initSufix ++ ";\n")
     "" 
     vars
 

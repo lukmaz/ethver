@@ -80,12 +80,26 @@ emptyModule = Module {number = nUndefModuleNumber, stateVar = sEmptyState, modul
 addAutoVars :: VerRes ()
 addAutoVars = do
   world <- get
+
+  -- blockchain:
+
   -- TODO: only 2 players
   addVar modifyBlockchain (TUInt 2) iContrSender
+  -- TODO: skąd wziąć zakres value?
   case Map.lookup iMaxValue (constants world) of
     Nothing -> error $ sMaxValue ++ " constant definition not found in the source file.\n"
     Just maxValue -> addVar modifyBlockchain (TUInt (maxValue + 1)) iValue
+  addVar modifyBlockchain TBool (Ident sTimelocksReleased)
+  addInitialValue modifyBlockchain (Ident sTimelocksReleased) EFalse
 
+  -- contract:
+
+  -- TODO: move rest of variables from contractPream etc. to here.
+
+  -- communication:
+  
+  -- TODO: only 2 players
+  addVar modifyCommunication (TUInt 2) iCommSender
 
 ------------------------
 -- WORLD MODIFICATION --
