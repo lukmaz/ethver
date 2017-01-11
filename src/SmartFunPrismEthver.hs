@@ -315,13 +315,15 @@ evaluateCompIntBinOp modifyModule op e1 e2 = do
 
 evaluateEq :: ModifyModuleType -> Exp -> Exp -> VerRes Exp
 evaluateEq modifyModule e1 e2 = do
+  world <- get
   v1 <- evaluateExp modifyModule e1
   v2 <- evaluateExp modifyModule e2
   t1 <- findType v1
   t2 <- findType v2
   case (t1, t2) of 
     (Just TBool, Just TBool) -> return $ expFromBool $ v1 == v2
-    (Just (TUInt _), Just (TUInt _)) -> return $ expFromBool $ v1 == v2
+    (Just (TUInt _), Just (TUInt _)) -> do
+      return $ expFromBool $ v1 == v2
     _ -> error $ "Error in evaluateBoolIntBinOp: not matching types: " ++ (show v1) ++ " and " ++ (show v2)
 
 evaluateBoolUnOp :: ModifyModuleType -> (Bool -> Bool) -> Exp -> VerRes Exp
@@ -379,7 +381,11 @@ evaluateExp modifyModule (EValue) = do
 
 -- TODO: zrobić coś z senderem. Pewnie trzeba dodać do condVars i trzymać wartość w varsValues
 evaluateExp modifyModule ESender = do
-  return ESender
+  world <- get
+  mod <- modifyModule id
+  case Map.lookup (whichSender mod) (varsValues world) of
+    Just x -> return x
+    Nothing -> error $ "Variable " ++ (show $ whichSender mod) ++ " not found in varsValues."
 
 evaluateExp modifyModule (EStr name) = do
   world <- get

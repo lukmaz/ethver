@@ -2,6 +2,7 @@ module AuxWorldPrismEthver where
 
 import Control.Monad.State
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 import AbsEthver
 import AuxPrismEthver
@@ -33,7 +34,7 @@ maxTypeValue ident = do
     Just t -> return $ maxTypeValueOfType t
 
 findType :: Exp -> VerRes (Maybe Type)
-findType (EInt x) = return $ Just $ TUInt x
+findType (EInt x) = return $ Just $ TUInt (x + 1)
 findType (ETrue) = return $ Just TBool
 findType (EFalse) = return $ Just TBool
 findType (EVar ident) = findVarType ident
@@ -315,3 +316,31 @@ smartTransferMoney from to maxTo value = do
   addGuard (EGe (EVar from) value)
   addGuard (ELe (EAdd (EVar to) value) maxTo)
   return [[(from, ESub (EVar from) value), (to, EAdd (EVar to) value)]]
+
+
+-- DEBUG
+debugMap :: (Show a, Show b) => Map.Map a b -> VerRes ()
+debugMap myMap = do
+  let eee = foldl 
+        (\acc (ident, exp) -> acc ++ "(" ++ (show ident) ++ ", " ++ (show exp) ++ ")\n" ) 
+        "\n"  
+        (Map.toList $ myMap)
+  error eee
+
+debugSet :: (Show a) => Set.Set a -> VerRes ()
+debugSet mySet = do
+  let eee = foldl 
+        (\acc x -> acc ++ (show x) ++ "\n" ) 
+        "\n"  
+        (Set.toList $ mySet)
+  error eee
+
+debugVarsValues :: VerRes ()
+debugVarsValues = do
+  world <- get
+  debugMap $ varsValues world
+
+debugCondVars :: VerRes ()
+debugCondVars = do
+  world <- get
+  debugSet $ condVars world
