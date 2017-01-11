@@ -363,7 +363,7 @@ evaluateExp modifyModule (ENot e) = evaluateBoolUnOp modifyModule not e
 
 --evaluateExp (EArray (Ident ident) index) = do
 --  mod <- modifyModule id
---  let localVarN
+--  let localVarName = (moduleName mod) ++ sLocalSuffix
 
 
 -- TODO: should be moved to SWait?
@@ -375,9 +375,8 @@ evaluateExp modifyModule (EVar ident) = do
     Just val -> return val
     Nothing -> return $ EVar ident
 
--- TODO: zrobić coś z value. Na pewno trzeba collectować
 evaluateExp modifyModule (EValue) = do
-  return EValue
+  evaluateExp modifyModule (EVar $ Ident sValue)
 
 -- TODO: zrobić coś z senderem. Pewnie trzeba dodać do condVars i trzymać wartość w varsValues
 evaluateExp modifyModule ESender = do

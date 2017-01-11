@@ -42,6 +42,8 @@ findType (ESender) = do
   world <- get
   let size = fromIntegral $ Map.size $ playerNumbers world 
   return $ Just $ TUInt size
+findType (EValue) = do
+  findVarType (Ident sValue)
 -- strings only used for players names
 findType (EStr _) = findType ESender
 
@@ -319,28 +321,39 @@ smartTransferMoney from to maxTo value = do
 
 
 -- DEBUG
-debugMap :: (Show a, Show b) => Map.Map a b -> VerRes ()
-debugMap myMap = do
+debugMapAux :: (Show a, Show b) => Map.Map a b -> String
+debugMapAux myMap =
   let eee = foldl 
         (\acc (ident, exp) -> acc ++ "(" ++ (show ident) ++ ", " ++ (show exp) ++ ")\n" ) 
         "\n"  
         (Map.toList $ myMap)
-  error eee
+  in eee ++ "\n"
 
-debugSet :: (Show a) => Set.Set a -> VerRes ()
-debugSet mySet = do
+debugSetAux :: (Show a) => Set.Set a -> String
+debugSetAux mySet =
   let eee = foldl 
         (\acc x -> acc ++ (show x) ++ "\n" ) 
         "\n"  
         (Set.toList $ mySet)
-  error eee
+  in eee ++ "\n"
 
 debugVarsValues :: VerRes ()
 debugVarsValues = do
   world <- get
-  debugMap $ varsValues world
+  error $ debugMapAux $ varsValues world
 
 debugCondVars :: VerRes ()
 debugCondVars = do
   world <- get
-  debugSet $ condVars world
+  error $ debugSetAux $ condVars world
+
+debugVars :: VerRes ()
+debugVars = do
+  world <- get
+  error $ 
+    (debugMapAux $ vars $ blockchain world)
+    ++ (debugMapAux $ vars $ contract world)
+    ++ (debugMapAux $ vars $ communication world)
+    ++ (debugMapAux $ vars $ player0 world)
+    ++ (debugMapAux $ vars $ player1 world)
+

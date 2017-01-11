@@ -6,17 +6,17 @@ CONTRACT_BALANCE_INIT = 2;
 USER_BALANCE_MAX = 4;
 USER0_BALANCE_INIT = 0;
 USER1_BALANCE_INIT = 0;
-MAX_VALUE = 5;
-
+MAX_VALUE = 1;
+// MAX_VALUE = 5;
 contract RPS {
   
   function get_payment() {
     //if (contract_balance > 0) {
-      if (msg.sender == 0) {
+      if (msg.value == 0) {
     //    if (is_signed[0] && is_opened[0]) {
-          if (randM[0] == randU[0]) {
+    //      if (randM[0] == randU[0]) {
             0.send(1);
-          }
+    //      }
     //    }
       }
     /*  else {
