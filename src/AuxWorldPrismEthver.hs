@@ -319,8 +319,10 @@ smartTransferMoney from to maxTo value = do
   addGuard (ELe (EAdd (EVar to) value) maxTo)
   return [[(from, ESub (EVar from) value), (to, EAdd (EVar to) value)]]
 
+-----------
+-- DEBUG --
+-----------
 
--- DEBUG
 debugMapAux :: (Show a, Show b) => Map.Map a b -> String
 debugMapAux myMap =
   let eee = foldl 
@@ -346,6 +348,11 @@ debugCondVars :: VerRes ()
 debugCondVars = do
   world <- get
   error $ debugSetAux $ condVars world
+
+debugCondArrays :: VerRes ()
+debugCondArrays = do
+  world <- get
+  error $ debugMapAux $ condArrays world
 
 debugVars :: VerRes ()
 debugVars = do

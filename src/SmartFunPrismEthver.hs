@@ -163,13 +163,20 @@ collect2arg modifyModule e1 e2 = do
   collectCondVarsFromExp modifyModule e1
   collectCondVarsFromExp modifyModule e2
 
+-- TODO: na razie i tak jest tylko dla tablic wielkości 2
 collectCondArray :: ModifyModuleType -> Ident -> Exp -> VerRes ()
-collectCondArray modifyModule name index = do
+collectCondArray modifyModule name indexExp = do
+  -- TODO: tablice wielkości > 2
+  collectCondArrayAux modifyModule name 0
+  collectCondArrayAux modifyModule name 1
+
+collectCondArrayAux :: ModifyModuleType -> Ident -> Integer -> VerRes ()
+collectCondArrayAux modifyModule name indexNumber = do
   world <- get
   let m = condArrays world
   case Map.lookup name m of 
-    Nothing -> put (world {condArrays = (Map.insert name (Set.singleton index) m)})
-    Just s -> put (world {condArrays = (Map.insert name (Set.insert index s) m)})
+    Nothing -> put (world {condArrays = (Map.insert name (Set.singleton $ EInt indexNumber) m)})
+    Just s -> put (world {condArrays = (Map.insert name (Set.insert (EInt indexNumber) s) m)})
 
 
 -------------------
@@ -361,13 +368,15 @@ evaluateExp modifyModule (EMod e1 e2) = evaluateArithmIntBinOp modifyModule mod 
 evaluateExp modifyModule (ENeg e) = evaluateArithmIntBinOp modifyModule (-) (EInt 0) e
 evaluateExp modifyModule (ENot e) = evaluateBoolUnOp modifyModule not e
 
---evaluateExp (EArray (Ident ident) index) = do
---  mod <- modifyModule id
---  let localVarName = (moduleName mod) ++ sLocalSuffix
-
+evaluateExp modifyModule (EArray (Ident ident) index) = do
+  mod <- modifyModule id
+  indexEvaluated <- evaluateExp modifyModule index
+  case indexEvaluated of 
+    EInt indexVal -> evaluateExp modifyModule $ EVar $ Ident $ ident ++ "_" ++ (show indexVal)
+    _ -> error $ "Index " ++ (show indexEvaluated) ++ " doesn't evaluate to EInt a)"
 
 -- TODO: should be moved to SWait?
---evaluateExp (EWait ...)
+--evaluateExp modifyModule (EWait ...)
 
 evaluateExp modifyModule (EVar ident) = do
   exp <- findVarValue ident

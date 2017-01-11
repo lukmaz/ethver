@@ -2,6 +2,7 @@ module CompilerPrismEthver where
 
 import Control.Monad.State
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 import AbsEthver
 import AuxPrismEthver
@@ -214,7 +215,16 @@ verSmartFunContractOrCommunication modifyModule commonFun (Fun funName args stms
   commonFun (Fun funName args stms)
 
   mapM_ (collectCondVars modifyModule) stms
- 
+
+  world <- get
+  mapM_ 
+    (\((Ident ident), s) -> 
+      mapM_ 
+        (\x -> addCondVar $ Ident $ ident ++ "_" ++ (show $ unEInt x))
+        (Set.toList s)
+    )
+    (Map.toList $ condArrays world)
+
   createSmartTranss modifyModule (Fun funName args stms)
 
   clearCondVars

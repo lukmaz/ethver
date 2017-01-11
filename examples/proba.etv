@@ -14,9 +14,9 @@ contract RPS {
     //if (contract_balance > 0) {
       if (msg.value == 0) {
     //    if (is_signed[0] && is_opened[0]) {
-    //      if (randM[0] == randU[0]) {
+          if (randM[0] == randU[0]) {
             0.send(1);
-    //      }
+          }
     //    }
       }
     /*  else {

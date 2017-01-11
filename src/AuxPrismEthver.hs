@@ -95,3 +95,6 @@ intFromExp :: Exp -> Maybe Integer
 intFromExp (EInt x) = Just x
 intFromExp _ = Nothing
 
+unEInt :: Exp -> Integer
+unEInt (EInt x) = x
+unEInt a = error $ "unEInt error: " ++ (show a) ++ " is not of type EInt"
