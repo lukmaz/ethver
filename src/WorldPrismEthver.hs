@@ -136,7 +136,7 @@ addConstant (Const ident value) = do
 addLocal :: ModifyModuleType -> Type -> VerRes ()
 addLocal modifyModule typ = do
   mod <- modifyModule id
-  let varName = (moduleName mod) ++ sLocalSufix ++ (show $ numLocals mod)
+  let varName = (moduleName mod) ++ sLocalSuffix ++ (show $ numLocals mod)
   addVar modifyModule typ (Ident varName)
   _ <- modifyModule (\mod -> mod {numLocals = numLocals mod + 1})
   return ()

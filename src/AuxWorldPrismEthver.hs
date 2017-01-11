@@ -245,7 +245,7 @@ addAdversarialTranss funs whichPrefix whichState = do
 addAdversarialTranssToPlayer :: ModifyModuleType -> String -> Ident -> Function -> VerRes ()
 addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunV (Ident funName) args _) = do
   mod <- modifyModule id  
-  let valName = Ident $ funName ++ sValueSufix ++ (show $ number mod)
+  let valName = Ident $ funName ++ sValueSuffix ++ (show $ number mod)
   maxValVal <- maxRealValue valName
   let maxValsList = generateValsList maxValVal args
   generateAdvTranss modifyModule whichPrefix whichState True funName args maxValsList

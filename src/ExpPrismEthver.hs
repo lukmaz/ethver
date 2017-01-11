@@ -338,7 +338,7 @@ verValExp modifyModule (EVar ident) = do
 
 verValExp modifyModule (EArray (Ident ident) index) = do
   mod <- modifyModule id
-  let localVarName = (moduleName mod) ++ sLocalSufix ++ (show $ numLocals mod)
+  let localVarName = (moduleName mod) ++ sLocalSuffix ++ (show $ numLocals mod)
   -- TODO: liczba graczy = 2
   maybeType <- findVarType $ Ident $ ident ++ "_0"
   
@@ -423,14 +423,14 @@ verCallExp :: ModifyModuleType -> Exp -> VerRes Exp
 
 verCallExp modifyModule (ECall idents args) = do
   case idents of
-    [funName, sufix] 
-      | sufix == iSendTransaction -> do 
+    [funName, suffix] 
+      | suffix == iSendTransaction -> do 
         verSendTAux modifyModule funName args
         return (ECall idents args)
-      | sufix == iSendCommunication -> do
+      | suffix == iSendCommunication -> do
         verSendCAux modifyModule funName args
         return (ECall idents args)
-      | sufix == iCall -> do
+      | suffix == iCall -> do
         verCallAux modifyModule funName args
     [ident]
       | ident == iRandom -> do
@@ -455,7 +455,7 @@ verCallExp modifyModule (EWait cond) = do
 verRandom :: ModifyModuleType -> [CallArg] -> VerRes Exp
 verRandom modifyModule [AExp (EInt range)] = do
   mod <- modifyModule id
-  let localVarName = (moduleName mod) ++ sLocalSufix ++ (show $ numLocals mod)
+  let localVarName = (moduleName mod) ++ sLocalSuffix ++ (show $ numLocals mod)
   addLocal modifyModule (TUInt range)
   addTransToNewState 
     modifyModule 
@@ -489,7 +489,7 @@ verFunCall modifyModule (FunR name args ret stms) argsVals = do
   -- TODO: stara wersja, przepisać jak sendT
   let expArgsVals = map (\(AExp exp) -> exp) argsVals
   --mapM_ (addArgMap modifyModule) $ zip args expArgsVals
-  let retVarIdent = Ident ((unident name) ++ sReturnValueSufix)
+  let retVarIdent = Ident ((unident name) ++ sReturnValueSuffix)
   addReturnVar retVarIdent
   mapM_ (verStm modifyModule) stms
   removeReturnVar
@@ -513,7 +513,7 @@ verSendTAux modifyModule funName argsVals = do
       let (value, guards1) = case (last argsVals) of (ABra _ value) -> (value, [])
        
       -- TODO: ta linijka chyba jest nie potrzebna w function_without_value
-      let updates0 = [[(Ident $ (unident funName) ++ sValueSufix ++ (show $ number mod), value)]]
+      let updates0 = [[(Ident $ (unident funName) ++ sValueSuffix ++ (show $ number mod), value)]]
       let addAssignment acc (argName, argVal) = acc ++ [createAssignment (number mod) funName argName argVal]
       let updates1 = [foldl addAssignment (head updates0) $ zip argNames expArgsVals]
       
@@ -529,7 +529,7 @@ verSendTAux modifyModule funName argsVals = do
         ""
         [ 
           EEq 
-            (EVar (Ident (unident funName ++ sStatusSufix ++ (show $ number mod)))) 
+            (EVar (Ident (unident funName ++ sStatusSuffix ++ (show $ number mod)))) 
             (EVar iTExecuted)
         ]
         [[]]
