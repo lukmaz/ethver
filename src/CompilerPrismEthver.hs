@@ -216,11 +216,16 @@ verSmartFunContractOrCommunication modifyModule commonFun (Fun funName args stms
 
   mapM_ (collectCondVars modifyModule) stms
 
+  -- Copy CondArrays with EInt indexes to CondVars:
   world <- get
   mapM_ 
     (\((Ident ident), s) -> 
       mapM_ 
-        (\x -> addCondVar $ Ident $ ident ++ "_" ++ (show $ unEInt x))
+        (\expIndex -> case expIndex of
+          EInt intIndex -> addCondVar $ Ident $ ident ++ "_" ++ (show $ intIndex)
+          ESender -> return ()
+          _ -> error $ "Array index different than (EInt a) nor ESender"
+        )
         (Set.toList s)
     )
     (Map.toList $ condArrays world)

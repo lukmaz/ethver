@@ -28,7 +28,9 @@ data VerWorld = VerWorld {
   player1 :: Module,
   condVars :: Set.Set Ident,
   varsValues :: Map.Map Ident Exp,
-  -- set of indexes which are read in condition checks
+  -- map (arrayName, index) -> value
+  arraysValues :: Map.Map (Ident, Exp) Exp,
+  -- set of indexes which are read in condition checks (ESender or EInt)
   condArrays :: Map.Map Ident (Set.Set Exp),
   --arraysValues
   addedGuards :: [Exp]
@@ -67,6 +69,7 @@ emptyVerWorld = VerWorld {
   player1 = emptyModule {number = 1, stateVar = sP1State, moduleName = sP1Module},
   condVars = Set.empty,
   varsValues = Map.empty,
+  arraysValues = Map.empty,
   condArrays = Map.empty,
   addedGuards = []
   } 
@@ -296,10 +299,20 @@ assignVarValue ident exp = do
   world <- get
   put (world {varsValues = Map.insert ident exp $ varsValues world})
 
+assignArrayValue :: Ident -> Exp -> Exp -> VerRes ()
+assignArrayValue ident index value = do
+  world <- get
+  put (world {arraysValues = Map.insert (ident, index) value $ arraysValues world})
+
 findVarValue :: Ident -> VerRes (Maybe Exp)
 findVarValue ident = do
   world <- get
   return $ Map.lookup ident $ varsValues world
+
+findArrayValue :: Ident -> Exp -> VerRes (Maybe Exp)
+findArrayValue ident index = do
+  world <- get
+  return $ Map.lookup (ident, index) $ arraysValues world
 
 defaultValueOfType :: Type -> Exp
 defaultValueOfType TBool = EFalse

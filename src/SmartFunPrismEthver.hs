@@ -163,20 +163,13 @@ collect2arg modifyModule e1 e2 = do
   collectCondVarsFromExp modifyModule e1
   collectCondVarsFromExp modifyModule e2
 
--- TODO: na razie i tak jest tylko dla tablic wielkości 2
 collectCondArray :: ModifyModuleType -> Ident -> Exp -> VerRes ()
-collectCondArray modifyModule name indexExp = do
-  -- TODO: tablice wielkości > 2
-  collectCondArrayAux modifyModule name 0
-  collectCondArrayAux modifyModule name 1
-
-collectCondArrayAux :: ModifyModuleType -> Ident -> Integer -> VerRes ()
-collectCondArrayAux modifyModule name indexNumber = do
+collectCondArray modifyModule name index = do
   world <- get
   let m = condArrays world
   case Map.lookup name m of 
-    Nothing -> put (world {condArrays = (Map.insert name (Set.singleton $ EInt indexNumber) m)})
-    Just s -> put (world {condArrays = (Map.insert name (Set.insert (EInt indexNumber) s) m)})
+    Nothing -> put (world {condArrays = (Map.insert name (Set.singleton $ index) m)})
+    Just s -> put (world {condArrays = (Map.insert name (Set.insert index s) m)})
 
 
 -------------------
@@ -189,17 +182,47 @@ clearCondVars = do
   put (world {condVars = Set.empty, condArrays = Map.empty})
 
 
------------------
--- verSmartStm --
------------------
+---------------------
+-- verSmartStm Aux --
+---------------------
 
 -- updatesFromAss ass
 updatesFromAss :: ModifyModuleType -> Ass -> VerRes [[(Ident, Exp)]]
 updatesFromAss modifyModule (AAss ident exp) = do
   val <- evaluateExp modifyModule exp
+
   return [[(ident, val)]]
 
--- updatesFromAss (AArrAss ident index exp) = do TODO
+updatesFromAss modifyModule (AArrAss (Ident ident) index exp) = do
+  indexEIntVal <- case index of
+        ESender -> do
+          world <- get
+          mod <- modifyModule id
+          return $ Map.lookup (whichSender mod) (varsValues world)
+          -- TODO: EVar, EStr
+        EInt x -> return $ Just $ EInt x
+        _ -> error $ "Array index different than ESender nor EInt a"
+  let indexVal = case indexEIntVal of
+        (Just (EInt x)) -> x
+        Nothing -> error $ "Array index: " ++ (show indexEIntVal) ++ "  different than (Just EInt a)"
+
+  updatesFromAss modifyModule $ AAss (Ident $ ident ++ "_" ++ (show indexVal)) exp
+     
+-- updateVarsFromAss
+updateVarsFromAss :: ModifyModuleType -> Ass -> VerRes ()
+
+updateVarsFromAss modifyModule (AAss ident exp) = do
+  val <- evaluateExp modifyModule exp 
+  assignVarValue ident val 
+
+updateVarsFromAss modifyModule (AArrAss ident index exp) = do
+  val <- evaluateExp modifyModule exp 
+  indexVal <- evaluateExp modifyModule index
+  assignArrayValue ident indexVal val 
+
+-----------------
+-- verSmartStm --
+-----------------
 
 verSmartStm :: ModifyModuleType -> Stm -> VerRes [[(Ident, Exp)]]
 
@@ -221,12 +244,7 @@ verSmartStm modifyModule (SBlock stms) = do
 
 verSmartStm modifyModule (SAsses asses) = do
   -- TODO: inteligentne powiększanie updateów przy probabilistycznych przejsciach
-  mapM_
-    (\(AAss ident exp) -> do
-      val <- evaluateExp modifyModule exp
-      assignVarValue ident val
-    )
-    asses
+  mapM_ (updateVarsFromAss modifyModule) asses
   
   foldM
     (\acc ass -> do
