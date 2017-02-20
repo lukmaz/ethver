@@ -247,18 +247,6 @@ updatesFromAss modifyModule (AArrAss (Ident ident) index exp) = do
 
   updatesFromAss modifyModule $ AAss (Ident $ ident ++ "_" ++ (show indexVal)) exp
      
--- updateVarsFromAss
-updateVarsFromAss :: ModifyModuleType -> Ass -> VerRes ()
-
-updateVarsFromAss modifyModule (AAss ident exp) = do
-  val <- evaluateExp modifyModule exp 
-  assignVarValue ident val 
-
-updateVarsFromAss modifyModule (AArrAss ident index exp) = do
-  val <- evaluateExp modifyModule exp 
-  indexVal <- evaluateExp modifyModule index
-  assignArrayValue ident indexVal val 
-
 -----------------
 -- verSmartStm --
 -----------------
@@ -283,11 +271,12 @@ verSmartStm modifyModule (SBlock stms) = do
 
 verSmartStm modifyModule (SAsses asses) = do
   -- TODO: inteligentne powiększanie updateów przy probabilistycznych przejsciach
-  mapM_ (updateVarsFromAss modifyModule) asses
   
   foldM
     (\acc ass -> do
       newUpdates <- updatesFromAss modifyModule ass
+      -- TODO: assumption that newUpdates is a singleton (no probability)
+      mapM_ (\(ident, val) -> assignVarValue ident val) (head newUpdates)
       -- TODO: assumption that newUpdates is a singleton (no probability)
       return $ [(head acc) ++ (head newUpdates)]
     )

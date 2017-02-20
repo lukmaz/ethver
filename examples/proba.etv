@@ -40,40 +40,29 @@ communication {
   bool product_asked;
   uint(3) randM[2];
   uint(3) randU[2];
-  uint(10) products_sent;
-/*
+  uint(2) products_sent;
+  //uint(10) products_sent;
+
   function ask_product() {
     if (msg.sender == "U") {
-      //product_asked = true;
+      product_asked = true;
     }
-  }
-*/
-  function foo() {
-    //randM[msg.sender] = 1;
-    products_sent = randU[msg.sender];
   }
 
-  /*
-  function ask_payment(random_uint(3) commit) {
-    if (msg.sender == 0) {
-      if (!is_committed[0]) {
-        commit[0] = commit;
-        is_committed[0] = true;
-        is_opened[0] = false;
-        is_signed[0] = false;
-      }
-    }
-    else {
-      if (!is_committed[1]) {
-        commit[1] = commit;
-        is_committed[1] = true;
-        is_opened[1] = false;
-        is_signed[1] = false;
+  
+  function ask_payment(random_uint(3) commit_val) {
+    if (!is_committed[msg.sender]) {
+      commit[msg.sender] = commit_val;
+      is_committed[msg.sender] = true;
+      is_opened[msg.sender] = false;
+      is_signed[msg.sender] = false;
+      // TODO: sprawdzac, czy nie przekracza zakresu
+      if (msg.sender == 1) {
         products_sent = products_sent + 1;
       }
     }
   }
-  */
+  
 
   /*
   function send_ticket(uint(2) merchant, uint(3) r) {
