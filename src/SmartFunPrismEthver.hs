@@ -18,10 +18,22 @@ createSmartTranss modifyModule (Fun funName args stms) = do
   -- TODO: random condVars
   world <- get
   let condVarsList = Set.toList $ condVars world
-  case condVarsList of
-    [] -> do
-      createSmartTrans modifyModule (Fun funName args stms) [] []
+  
+  let 
+    expandCondArray :: Ident -> Set.Set Exp -> [(Ident, Exp)]
+    expandCondArray ident set = Set.toList $ Set.map (\exp -> (ident, exp)) set
+  
+    modifiedCondArrays :: Map.Map Ident [(Ident, Exp)]
+    modifiedCondArrays = Map.mapWithKey expandCondArray (condArrays world)
+ 
+    condArraysList :: [(Ident, Exp)]
+    condArraysList = concat $ Map.elems $ modifiedCondArrays 
+
+  case (condVarsList, condArraysList) of
+    ([],[]) -> do
+      createSmartTrans modifyModule (Fun funName args stms) [] [] []
     _ -> do
+      let condArraysConverted = map (\(Ident ident, _) -> Ident $ ident ++ "_0") condArraysList
       types <- mapM 
         (\var -> do
           res <- findVarType var
@@ -29,25 +41,57 @@ createSmartTranss modifyModule (Fun funName args stms) = do
             Just typ -> return typ
             Nothing -> error $ "Error in findVarType: var " ++ (show var) ++ " not found."
         )
-       condVarsList
+       (condVarsList ++ condArraysConverted)
       let maxVals = map maxRealValueOfType types
       let valuations = generateAllVals maxVals
-      -- TODO: arrays
 
-      mapM_ (createSmartTrans modifyModule (Fun funName args stms) condVarsList) valuations
+      mapM_ (createSmartTrans modifyModule (Fun funName args stms) condVarsList condArraysList) valuations
 
 -- creates a command for a given function and given valuation
-createSmartTrans :: ModifyModuleType -> Function -> [Ident] -> [Exp] -> VerRes ()
+createSmartTrans :: ModifyModuleType -> Function -> [Ident] -> [(Ident, Exp)] -> [Exp] -> VerRes ()
 -- TODO: FunV
-createSmartTrans modifyModule (Fun funName args stms) condVarsList vals = do
+createSmartTrans modifyModule (Fun funName args stms) condVarsList condArraysList vals = do
   -- TODO: co zrobić z probabilistycznymi?
-  let guards = map
-        (\(varName, val) -> EEq (EVar varName) val)
-        -- TODO: arrays
-        (zip condVarsList vals)
-  
-  addMultipleVarsValues condVarsList vals
+  if (length condVarsList) + (length condArraysList) /= (length vals)
+  then
+    error $ "|condVarsList| (" ++ (show $ length condVarsList) ++ ") + |condArraysList| (" 
+      ++ (show $ length condArraysList) ++ ") /= |vals| (" ++ (show $ length vals) ++ "|)|"
+  else
+    return ()
 
+  let vals1 = take (length condVarsList) vals
+  let vals2 = drop (length condVarsList) vals
+  addMultipleVarsValues condVarsList vals1
+
+  world <- get
+  mod <- modifyModule id
+  let 
+    condArraysConverted = map 
+      (\(Ident arrayName, index) ->
+        case index of
+          EInt intIndex -> Ident $ arrayName ++ "_" ++ (show intIndex)
+          ESender ->
+            case Map.lookup (whichSender mod) (varsValues world) of
+              Just (EInt value) -> Ident $ arrayName ++ "_" ++ (show value)
+              Just _ -> error $ "Value of 'sender' is not of type EInt"
+              Nothing -> error $ "Array[sender] used, but 'sender' is not in condVars"
+          EVar varName ->
+            case Map.lookup varName (varsValues world) of
+              Just (EInt value) -> Ident $ arrayName ++ "_" ++ (show value)
+              Just _ -> error $ "Value of '" ++ (unident varName) ++ "' value is not of type EInt"
+              Nothing -> error $ "Array[" ++ (unident varName) ++ "] used, but '" ++ (unident varName) 
+                ++ "' is not in condVars"
+        
+      )
+      condArraysList
+  
+  addMultipleVarsValues condArraysConverted vals2
+
+  let 
+    guards = map
+      (\(varName, val) -> EEq (EVar varName) val)
+      (zip (condVarsList ++ condArraysConverted) vals)
+  
   updates <- foldM
     (\acc stm -> do
       newUpdates <- verSmartStm modifyModule stm
@@ -72,7 +116,8 @@ createSmartTrans modifyModule (Fun funName args stms) condVarsList vals = do
 
   clearAddedGuards
  
-
+  clearVarsValues
+  
 ---------------------
 -- collectCondVars --
 ---------------------
@@ -110,7 +155,8 @@ collectCondVars modifyModule (SSend address value) = do
 
 collectCondVarsFromAss :: ModifyModuleType -> Ass -> VerRes ()
 
-collectCondVarsFromAss modifyModule (AAss ident exp) = collectCondVarsFromExp modifyModule exp
+collectCondVarsFromAss modifyModule (AAss ident exp) = do
+  collectCondVarsFromExp modifyModule exp
 
 collectCondVarsFromAss modifyModule (AArrAss ident index value) = do
   collectCondVarsFromExp modifyModule index
@@ -139,7 +185,9 @@ collectCondVarsFromExp modifyModule exp = case exp of
   ENeg e -> collectCondVarsFromExp modifyModule e
   ENot e -> collectCondVarsFromExp modifyModule e
   
-  EArray name index -> collectCondArray modifyModule name index
+  EArray name index -> do
+    collectCondVarsFromExp modifyModule index
+    collectCondArray modifyModule name index
 
   -- TODO: EWait should be moved to Stm
   -- and is not used in contract functions
@@ -168,19 +216,10 @@ collectCondArray modifyModule name index = do
   world <- get
   let m = condArrays world
   case Map.lookup name m of 
-    Nothing -> put (world {condArrays = (Map.insert name (Set.singleton $ index) m)})
-    Just s -> put (world {condArrays = (Map.insert name (Set.insert index s) m)})
-
-
--------------------
--- clearCondVars --
--------------------
-
-clearCondVars :: VerRes ()
-clearCondVars = do
-  world <- get
-  put (world {condVars = Set.empty, condArrays = Map.empty})
-
+    Nothing -> do
+      put (world {condArrays = (Map.insert name (Set.singleton index) m)})
+    Just s -> do
+      put (world {condArrays = (Map.insert name (Set.insert index s) m)})
 
 ---------------------
 -- verSmartStm Aux --

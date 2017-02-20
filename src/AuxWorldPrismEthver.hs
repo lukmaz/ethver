@@ -327,7 +327,7 @@ debugMapAux :: (Show a, Show b) => Map.Map a b -> String
 debugMapAux myMap =
   let eee = foldl 
         (\acc (ident, exp) -> acc ++ "(" ++ (show ident) ++ ", " ++ (show exp) ++ ")\n" ) 
-        "\n"  
+        ""  
         (Map.toList $ myMap)
   in eee ++ "\n"
 
@@ -335,29 +335,29 @@ debugSetAux :: (Show a) => Set.Set a -> String
 debugSetAux mySet =
   let eee = foldl 
         (\acc x -> acc ++ (show x) ++ "\n" ) 
-        "\n"  
+        ""  
         (Set.toList $ mySet)
   in eee ++ "\n"
 
 debugVarsValues :: VerRes ()
 debugVarsValues = do
   world <- get
-  error $ debugMapAux $ varsValues world
+  error $ "varsValues:\n" ++ (debugMapAux $ varsValues world)
 
 debugCondVars :: VerRes ()
 debugCondVars = do
   world <- get
-  error $ debugSetAux $ condVars world
+  error $ "condVars:\n" ++ (debugSetAux $ condVars world)
 
 debugCondArrays :: VerRes ()
 debugCondArrays = do
   world <- get
-  error $ debugMapAux $ condArrays world
+  error $ "condArrays:\n" ++ (debugMapAux $ condArrays world)
 
 debugVars :: VerRes ()
 debugVars = do
   world <- get
-  error $ 
+  error $ "vars:\n" ++ 
     (debugMapAux $ vars $ blockchain world)
     ++ (debugMapAux $ vars $ contract world)
     ++ (debugMapAux $ vars $ communication world)

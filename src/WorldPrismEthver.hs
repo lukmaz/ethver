@@ -30,7 +30,7 @@ data VerWorld = VerWorld {
   varsValues :: Map.Map Ident Exp,
   -- map (arrayName, index) -> value
   arraysValues :: Map.Map (Ident, Exp) Exp,
-  -- set of indexes which are read in condition checks (ESender or EInt)
+  -- set of indexes which are read in condition checks (ESender or EInt) - AND ALSO EVar! (TODO?)
   condArrays :: Map.Map Ident (Set.Set Exp),
   --arraysValues
   addedGuards :: [Exp]
@@ -232,6 +232,46 @@ clearAddedGuards = do
   world <- get
   put $ world {addedGuards = []}
 
+clearVarsValues :: VerRes ()
+clearVarsValues = do
+  world <- get
+  put $ world {varsValues = Map.empty}
+
+clearCondVarsAndArrays :: VerRes ()
+clearCondVarsAndArrays = do
+  world <- get
+  put (world {condVars = Set.empty, condArrays = Map.empty})
+
+addMultipleVarsValues :: [Ident] -> [Exp] -> VerRes ()
+addMultipleVarsValues idents vals = do
+  mapM_
+    (\(ident, exp) -> assignVarValue ident exp)
+    (zip idents vals)
+
+assignVarValue :: Ident -> Exp -> VerRes ()
+assignVarValue ident exp = do
+  world <- get
+  put (world {varsValues = Map.insert ident exp $ varsValues world})
+
+assignArrayValue :: Ident -> Exp -> Exp -> VerRes ()
+assignArrayValue ident index value = do
+  world <- get
+  put (world {arraysValues = Map.insert (ident, index) value $ arraysValues world})
+
+findVarValue :: Ident -> VerRes (Maybe Exp)
+findVarValue ident = do
+  world <- get
+  return $ Map.lookup ident $ varsValues world
+
+findArrayValue :: Ident -> Exp -> VerRes (Maybe Exp)
+findArrayValue ident index = do
+  world <- get
+  return $ Map.lookup (ident, index) $ arraysValues world
+
+defaultValueOfType :: Type -> Exp
+defaultValueOfType TBool = EFalse
+defaultValueOfType (TRUInt _) = EInt 0
+defaultValueOfType (TUInt _) = EInt 0
 
 -------------------------
 -- Module modification --
@@ -287,35 +327,4 @@ modifyPlayer1 fun = do
   put (world {player1 = fun $ player1 world})
   world <- get
   return $ player1 world
-
-addMultipleVarsValues :: [Ident] -> [Exp] -> VerRes ()
-addMultipleVarsValues idents vals = do
-  mapM_
-    (\(ident, exp) -> assignVarValue ident exp)
-    (zip idents vals)
-
-assignVarValue :: Ident -> Exp -> VerRes ()
-assignVarValue ident exp = do
-  world <- get
-  put (world {varsValues = Map.insert ident exp $ varsValues world})
-
-assignArrayValue :: Ident -> Exp -> Exp -> VerRes ()
-assignArrayValue ident index value = do
-  world <- get
-  put (world {arraysValues = Map.insert (ident, index) value $ arraysValues world})
-
-findVarValue :: Ident -> VerRes (Maybe Exp)
-findVarValue ident = do
-  world <- get
-  return $ Map.lookup ident $ varsValues world
-
-findArrayValue :: Ident -> Exp -> VerRes (Maybe Exp)
-findArrayValue ident index = do
-  world <- get
-  return $ Map.lookup (ident, index) $ arraysValues world
-
-defaultValueOfType :: Type -> Exp
-defaultValueOfType TBool = EFalse
-defaultValueOfType (TRUInt _) = EInt 0
-defaultValueOfType (TUInt _) = EInt 0
 

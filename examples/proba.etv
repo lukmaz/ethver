@@ -41,15 +41,16 @@ communication {
   uint(3) randM[2];
   uint(3) randU[2];
   uint(10) products_sent;
-
+/*
   function ask_product() {
     if (msg.sender == "U") {
-      product_asked = true;
+      //product_asked = true;
     }
   }
-
+*/
   function foo() {
-    randM[msg.sender] = 1;
+    //randM[msg.sender] = 1;
+    products_sent = randU[msg.sender];
   }
 
   /*
