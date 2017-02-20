@@ -234,16 +234,21 @@ updatesFromAss modifyModule (AAss ident exp) = do
 
 updatesFromAss modifyModule (AArrAss (Ident ident) index exp) = do
   indexEIntVal <- case index of
-        ESender -> do
-          world <- get
-          mod <- modifyModule id
-          return $ Map.lookup (whichSender mod) (varsValues world)
-          -- TODO: EVar, EStr
-        EInt x -> return $ Just $ EInt x
-        _ -> error $ "Array index different than ESender nor EInt a"
-  let indexVal = case indexEIntVal of
-        (Just (EInt x)) -> x
-        Nothing -> error $ "Array index: " ++ (show indexEIntVal) ++ "  different than (Just EInt a)"
+    ESender -> do
+      world <- get
+      mod <- modifyModule id
+      return $ Map.lookup (whichSender mod) (varsValues world)
+    EVar varName -> do
+      world <- get
+      mod <- modifyModule id
+      return $ Map.lookup varName (varsValues world)
+    -- TODO: EStr
+    EInt x -> return $ Just $ EInt x
+    _ -> error $ "Array index different than ESender, EInt a, or EVar a"
+  let 
+    indexVal = case indexEIntVal of
+      (Just (EInt x)) -> x
+      Nothing -> error $ "Array index: " ++ (show indexEIntVal) ++ "  different than (Just EInt a)"
 
   updatesFromAss modifyModule $ AAss (Ident $ ident ++ "_" ++ (show indexVal)) exp
      

@@ -8,6 +8,9 @@ USER0_BALANCE_INIT = 0;
 USER1_BALANCE_INIT = 0;
 MAX_VALUE = 1;
 // MAX_VALUE = 5;
+
+//TODO: MAX_PRODUCTS = 2; // 10
+
 contract RPS {
   
   function get_payment() {
@@ -40,65 +43,26 @@ communication {
   bool product_asked;
   uint(3) randM[2];
   uint(3) randU[2];
+
+  // TODO: uint(MAX_PRODUCTS) products_sent;
   uint(2) products_sent;
-  //uint(10) products_sent;
 
-  function ask_product() {
-    if (msg.sender == "U") {
-      product_asked = true;
-    }
-  }
-
-  
-  function ask_payment(random_uint(3) commit_val) {
-    if (!is_committed[msg.sender]) {
-      commit[msg.sender] = commit_val;
-      is_committed[msg.sender] = true;
-      is_opened[msg.sender] = false;
-      is_signed[msg.sender] = false;
-      // TODO: sprawdzac, czy nie przekracza zakresu
-      if (msg.sender == 1) {
-        products_sent = products_sent + 1;
-      }
-    }
-  }
-  
-
-  /*
-  function send_ticket(uint(2) merchant, uint(3) r) {
-    if (((msg.sender == "U") && (is_committed[merchant])) && ((!is_opened[merchant]) && (!is_signed[merchant]))) {
-      randU[merchant] = r;
-      is_signed[merchant] = true;
-    }
-  }
-  */
-
-  /*
   function open() {
-    if (msg.sender == 0) {
-      if (is_signed[0] && !is_opened[0]) {
-        if (commit[0] == 3) {
-          randM[0] = random(3);
-        }
-        else {
-          randM[0] = commit[0];
-        }
-        is_opened[0] = true;
+    randM[0] = 1;
+    commit[msg.sender] = 2;
+
+
+  //  if (is_signed[msg.sender] && !is_opened[msg.sender]) {
+  //    if (commit[msg.sender] == 3) {
+    //    randM[msg.sender] = random(3);
+  //    }
+  /*    else {
+        randM[msg.sender] = commit[msg.sender];
       }
+      is_opened[msg.sender] = true;
     }
-    else {
-      if (is_signed[1] && !is_opened[1]) {
-        if (commit[1] == 3) {
-          randM[1] = random(3);
-        }
-        else {
-          randM[1] = commit[1];
-        }
-        is_opened[1] = true;
-      }
-    }
-  }
   */
+  }
 
   /*
   function reset() {
