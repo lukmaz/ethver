@@ -26,13 +26,19 @@ data VerWorld = VerWorld {
   communication :: Module,
   player0 :: Module,
   player1 :: Module,
+  
   condVars :: Set.Set Ident,
+  -- set of indexes which are read in condition checks (ESender or EInt) - AND ALSO EVar! (TODO?)
+  condArrays :: Map.Map Ident (Set.Set Exp),
+  
   varsValues :: Map.Map Ident Exp,
   -- map (arrayName, index) -> value
   arraysValues :: Map.Map (Ident, Exp) Exp,
+ 
+  condRandoms :: Set.Set Ident,
   -- set of indexes which are read in condition checks (ESender or EInt) - AND ALSO EVar! (TODO?)
-  condArrays :: Map.Map Ident (Set.Set Exp),
-  --arraysValues
+  condRandomArrays :: Map.Map Ident (Set.Set Exp),
+  
   addedGuards :: [Exp]
   }
 
@@ -71,6 +77,8 @@ emptyVerWorld = VerWorld {
   varsValues = Map.empty,
   arraysValues = Map.empty,
   condArrays = Map.empty,
+  condRandoms = Set.empty,
+  condRandomArrays = Map.empty,
   addedGuards = []
   } 
 
@@ -155,11 +163,45 @@ addInitialValue modifyModule ident exp = do
   _ <- modifyModule (addInitialValueToModule ident exp)
   return ()
 
+-- cond variables
 addCondVar :: Ident -> VerRes ()
 addCondVar ident = do
   world <- get
   put (world {condVars = Set.insert ident (condVars world)})
 
+addCondArrays :: Ident -> Exp -> VerRes ()
+addCondArrays varName index = do
+  world <- get
+  let arrays = condArrays world
+  case Map.lookup varName arrays of
+    Nothing -> do
+      put $ world {condArrays = Map.insert varName (Set.singleton index) arrays}
+    Just s -> do
+      put $ world {condArrays = Map.insert varName (Set.insert index s) arrays}
+     
+
+addCondRandom :: Ident -> VerRes ()
+addCondRandom varName = do
+  world <- get
+  put $ world {condRandoms = Set.insert varName $ condRandoms world}
+
+addCondRandomArray :: Ident -> Exp -> VerRes ()
+addCondRandomArray varName index = do
+  world <- get
+  let arrays = condRandomArrays world
+  case Map.lookup varName arrays of
+    Nothing -> do
+      put $ world {condRandomArrays = Map.insert varName (Set.singleton index) arrays}
+    Just s -> do
+      put $ world {condRandomArrays = Map.insert varName (Set.insert index s) arrays}
+
+clearCondVarsAndArrays :: VerRes ()
+clearCondVarsAndArrays = do
+  world <- get
+  put (world {condVars = Set.empty, condArrays = Map.empty, condRandoms = Set.empty, 
+    condRandomArrays = Map.empty})
+
+-- args (?)
 addNoPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
 addNoPlayerArg modifyModule (Ident funName) (Ar typ (Ident varName)) = do
   addVar modifyModule typ (Ident $ funName ++ "_" ++ varName)
@@ -237,11 +279,6 @@ clearVarsValues = do
   world <- get
   put $ world {varsValues = Map.empty}
 
-clearCondVarsAndArrays :: VerRes ()
-clearCondVarsAndArrays = do
-  world <- get
-  put (world {condVars = Set.empty, condArrays = Map.empty})
-
 addMultipleVarsValues :: [Ident] -> [Exp] -> VerRes ()
 addMultipleVarsValues idents vals = do
   mapM_
@@ -272,6 +309,7 @@ defaultValueOfType :: Type -> Exp
 defaultValueOfType TBool = EFalse
 defaultValueOfType (TRUInt _) = EInt 0
 defaultValueOfType (TUInt _) = EInt 0
+
 
 -------------------------
 -- Module modification --

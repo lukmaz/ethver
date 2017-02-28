@@ -17,35 +17,43 @@ createSmartTranss modifyModule (Fun funName args stms) = do
   mapM_ (\(Ar typ ident) -> addVar modifyModule typ ident) args
   -- TODO: random condVars
   world <- get
-  let condVarsList = Set.toList $ condVars world
-  
   let 
-    expandCondArray :: Ident -> Set.Set Exp -> [(Ident, Exp)]
-    expandCondArray ident set = Set.toList $ Set.map (\exp -> (ident, exp)) set
-  
-    modifiedCondArrays :: Map.Map Ident [(Ident, Exp)]
-    modifiedCondArrays = Map.mapWithKey expandCondArray (condArrays world)
- 
-    condArraysList :: [(Ident, Exp)]
-    condArraysList = concat $ Map.elems $ modifiedCondArrays 
+    condVarsList = Set.toList $ condVars world
+    condArraysList = arraysAsList $ condArrays world
 
   case (condVarsList, condArraysList) of
     ([],[]) -> do
       createSmartTrans modifyModule (Fun funName args stms) [] [] []
     _ -> do
-      let condArraysConverted = map (\(Ident ident, _) -> Ident $ ident ++ "_0") condArraysList
-      types <- mapM 
-        (\var -> do
-          res <- findVarType var
-          case res of
-            Just typ -> return typ
-            Nothing -> error $ "Error in findVarType: var " ++ (show var) ++ " not found."
-        )
-       (condVarsList ++ condArraysConverted)
-      let maxVals = map maxRealValueOfType types
-      let valuations = generateAllVals maxVals
+      types <- typesFromVarsAndArrays condVarsList condArraysList 
+      let 
+        maxVals = map maxRealValueOfType types
+        valuations = generateAllVals maxVals
 
       mapM_ (createSmartTrans modifyModule (Fun funName args stms) condVarsList condArraysList) valuations
+
+addRandomUpdates :: ModifyModuleType -> [[(Ident, Exp)]] -> VerRes [[(Ident, Exp)]]
+addRandomUpdates modifyModule oldUpdates = do
+  world <- get
+  let
+    randomVarsList = Set.toList $ condRandoms world
+    randomArraysList = arraysAsList $ condRandomArrays world
+
+  types <- typesFromVarsAndArrays randomVarsList randomArraysList
+  
+  let
+    maxVals = map maxRealValueOfType types
+    valuations = generateAllVals maxVals
+
+  randomArraysAsVars <- mapM (arrayToVar modifyModule) randomArraysList
+  
+  let 
+    newUpdates = map
+      (\vals -> (zip (randomVarsList ++ randomArraysAsVars) vals) ++ (head oldUpdates))
+      valuations
+
+  return newUpdates
+
 
 -- creates a command for a given function and given valuation
 createSmartTrans :: ModifyModuleType -> Function -> [Ident] -> [(Ident, Exp)] -> [Exp] -> VerRes ()
@@ -61,36 +69,20 @@ createSmartTrans modifyModule (Fun funName args stms) condVarsList condArraysLis
 
   let vals1 = take (length condVarsList) vals
   let vals2 = drop (length condVarsList) vals
+  
   addMultipleVarsValues condVarsList vals1
 
   world <- get
   mod <- modifyModule id
-  let 
-    condArraysConverted = map 
-      (\(Ident arrayName, index) ->
-        case index of
-          EInt intIndex -> Ident $ arrayName ++ "_" ++ (show intIndex)
-          ESender ->
-            case Map.lookup (whichSender mod) (varsValues world) of
-              Just (EInt value) -> Ident $ arrayName ++ "_" ++ (show value)
-              Just _ -> error $ "Value of 'sender' is not of type EInt"
-              Nothing -> error $ "Array[sender] used, but 'sender' is not in condVars"
-          EVar varName ->
-            case Map.lookup varName (varsValues world) of
-              Just (EInt value) -> Ident $ arrayName ++ "_" ++ (show value)
-              Just _ -> error $ "Value of '" ++ (unident varName) ++ "' value is not of type EInt"
-              Nothing -> error $ "Array[" ++ (unident varName) ++ "] used, but '" ++ (unident varName) 
-                ++ "' is not in condVars"
-        
-      )
-      condArraysList
   
-  addMultipleVarsValues condArraysConverted vals2
+  condArraysAsVars <- mapM (arrayToVar modifyModule) condArraysList
+  
+  addMultipleVarsValues condArraysAsVars vals2
 
   let 
     guards = map
       (\(varName, val) -> EEq (EVar varName) val)
-      (zip (condVarsList ++ condArraysConverted) vals)
+      (zip (condVarsList ++ condArraysAsVars) vals)
   
   updates <- foldM
     (\acc stm -> do
@@ -100,6 +92,8 @@ createSmartTrans modifyModule (Fun funName args stms) condVarsList condArraysLis
     )
     [[]]
     stms
+
+  updates <- addRandomUpdates modifyModule updates
  
   world <- get
   let added = addedGuards world
@@ -115,9 +109,11 @@ createSmartTrans modifyModule (Fun funName args stms) condVarsList condArraysLis
     updates
 
   clearAddedGuards
- 
   clearVarsValues
-  
+
+
+
+
 ---------------------
 -- collectCondVars --
 ---------------------
@@ -155,12 +151,38 @@ collectCondVars modifyModule (SSend address value) = do
 
 collectCondVarsFromAss :: ModifyModuleType -> Ass -> VerRes ()
 
-collectCondVarsFromAss modifyModule (AAss ident exp) = do
-  collectCondVarsFromExp modifyModule exp
+-- TODO: dorobić: po przypisaniu A := B wpisuje A na liste "overwritten".
+-- Potem jak cos z overwritten sie pojawia po prawej, to nie dodawac do cond.
+collectCondVarsFromAss modifyModule (AAss ident value) = do
+  case value of 
+    -- TODO: random dla Booli
+    -- TODO: range of random is ignored. Real range deducted from variable type
+    (ECall [sRandom] [AExp (EInt range)]) ->
+      collectCondVarsFromRandom modifyModule ident
+    (ECall funs args) ->
+      error $ "ECall " ++ (show funs) ++ " (" ++ (show args) ++ ") not supported."
+    _ ->
+      collectCondVarsFromExp modifyModule value
 
 collectCondVarsFromAss modifyModule (AArrAss ident index value) = do
-  collectCondVarsFromExp modifyModule index
-  collectCondVarsFromExp modifyModule value
+  case value of
+    -- TODO: range of random is ignored. Real range deducted from variable type
+    (ECall [sRandom] [AExp (EInt range)]) ->
+      collectCondArraysFromRandom modifyModule ident index
+    (ECall funs args) ->
+      error $ "ECall " ++ (show funs) ++ " (" ++ (show args) ++ ") not supported."
+    _ -> do
+      collectCondVarsFromExp modifyModule index
+      collectCondVarsFromExp modifyModule value
+
+
+collectCondVarsFromRandom :: ModifyModuleType -> Ident -> VerRes ()
+collectCondVarsFromRandom modifyModule varName = do
+  addCondRandom varName
+  
+collectCondArraysFromRandom :: ModifyModuleType -> Ident -> Exp -> VerRes ()
+collectCondArraysFromRandom modifyModule varName index = 
+  addCondRandomArray varName index
 
 -----------------------------
 -- collectCondVarsFromExp --
@@ -212,14 +234,8 @@ collect2arg modifyModule e1 e2 = do
   collectCondVarsFromExp modifyModule e2
 
 collectCondArray :: ModifyModuleType -> Ident -> Exp -> VerRes ()
-collectCondArray modifyModule name index = do
-  world <- get
-  let m = condArrays world
-  case Map.lookup name m of 
-    Nothing -> do
-      put (world {condArrays = (Map.insert name (Set.singleton index) m)})
-    Just s -> do
-      put (world {condArrays = (Map.insert name (Set.insert index s) m)})
+collectCondArray modifyModule varName index = do
+  addCondArrays varName index
 
 ---------------------
 -- verSmartStm Aux --
@@ -228,29 +244,38 @@ collectCondArray modifyModule name index = do
 -- updatesFromAss ass
 updatesFromAss :: ModifyModuleType -> Ass -> VerRes [[(Ident, Exp)]]
 updatesFromAss modifyModule (AAss ident exp) = do
-  val <- evaluateExp modifyModule exp
-
-  return [[(ident, val)]]
+  case exp of
+    -- random calls handled separately in addRandomUpdates
+    ECall [sRandom] _ -> return [[]]
+    ECall funs args -> error $ "Updates from ECall " ++ (show funs) ++ "(" ++ (show args) ++ ") not supported."
+    _ -> do
+      val <- evaluateExp modifyModule exp
+      return [[(ident, val)]]
 
 updatesFromAss modifyModule (AArrAss (Ident ident) index exp) = do
-  indexEIntVal <- case index of
-    ESender -> do
-      world <- get
-      mod <- modifyModule id
-      return $ Map.lookup (whichSender mod) (varsValues world)
-    EVar varName -> do
-      world <- get
-      mod <- modifyModule id
-      return $ Map.lookup varName (varsValues world)
-    -- TODO: EStr
-    EInt x -> return $ Just $ EInt x
-    _ -> error $ "Array index different than ESender, EInt a, or EVar a"
-  let 
-    indexVal = case indexEIntVal of
-      (Just (EInt x)) -> x
-      Nothing -> error $ "Array index: " ++ (show indexEIntVal) ++ "  different than (Just EInt a)"
+  case exp of
+    -- random calls handled separately in addRandomUpdates
+    ECall [sRandom] _ -> return [[]]
+    ECall funs args -> error $ "Updates from ECall " ++ (show funs) ++ "(" ++ (show args) ++ ") not supported."
+    _ -> do
+      indexEIntVal <- case index of
+        ESender -> do
+          world <- get
+          mod <- modifyModule id
+          return $ Map.lookup (whichSender mod) (varsValues world)
+        EVar varName -> do
+          world <- get
+          mod <- modifyModule id
+          return $ Map.lookup varName (varsValues world)
+        -- TODO: EStr
+        EInt x -> return $ Just $ EInt x
+        _ -> error $ "Array index different than ESender, EInt a, or EVar a"
+      let 
+        indexVal = case indexEIntVal of
+          (Just (EInt x)) -> x
+          Nothing -> error $ "Array index: " ++ (show indexEIntVal) ++ "  different than (Just EInt a)"
 
-  updatesFromAss modifyModule $ AAss (Ident $ ident ++ "_" ++ (show indexVal)) exp
+      updatesFromAss modifyModule $ AAss (Ident $ ident ++ "_" ++ (show indexVal)) exp
      
 -----------------
 -- verSmartStm --
