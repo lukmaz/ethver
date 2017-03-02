@@ -37,6 +37,7 @@ verProgram (Prog users constants contract communication scenarios) = do
   addAdversarialContrTranss contract
   addAdversarialCommTranss communication
 
+
 verContractDecl :: Contract -> VerRes ()
 verContractDecl (Contr _ decls _) = do
   mapM_ (verDecl modifyContract) decls

@@ -47,7 +47,7 @@ contractPream :: String
 contractPream =
   "  " ++ sContrState ++ " : [0.." ++ sNumContractStates ++ "] init " ++ (show nInitContractState) ++ ";\n" ++
   "  " ++ sNextState ++ " : [0.." ++ sNumContractStates ++ "];\n" ++
-  "  " ++ sContractBalance ++ " : [0.." ++ sMaxContractBalance ++ "] init " ++ sInitContractBalance ++ ";\n" ++
+  --  "  " ++ sContractBalance ++ " : [0.." ++ sMaxContractBalance ++ "] init " ++ sInitContractBalance ++ ";\n" ++
   "  " ++ sP0Balance ++ " : [0.." ++ sMaxUserBalance ++ "] init " ++ sInitUser0Balance ++ ";\n" ++
   "  " ++ sP1Balance ++ " : [0.." ++ sMaxUserBalance ++ "] init " ++ sInitUser1Balance ++ ";\n"
 

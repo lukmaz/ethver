@@ -97,6 +97,7 @@ addAutoVars = do
   -- TODO: only 2 players
   addVar modifyBlockchain (TUInt 2) iContrSender
   -- TODO: skąd wziąć zakres value?
+  -- ODP: Z (constants world). A tam wczytać z kodu źródłowego
   case Map.lookup iMaxValue (constants world) of
     Nothing -> error $ sMaxValue ++ " constant definition not found in the source file.\n"
     Just maxValue -> addVar modifyBlockchain (TUInt (maxValue + 1)) iValue
@@ -105,6 +106,15 @@ addAutoVars = do
 
   -- contract:
 
+  case Map.lookup (Ident sMaxContractBalance) $ constants world of
+    Just maxContractBalance -> do
+      case Map.lookup (Ident sInitContractBalance) (constants world) of
+        Just initContractBalance -> do
+          addVar modifyContract (TUInt $ maxContractBalance + 1) (Ident sContractBalance)
+          addInitialValue modifyContract (Ident sContractBalance) (EInt initContractBalance)
+        _ -> error $ sInitContractBalance ++ "not found in (constants world)"
+    _ -> error $ sMaxContractBalance ++ " not found in (constants world)"
+  
   -- TODO: move rest of variables from contractPream etc. to here.
 
   -- communication:

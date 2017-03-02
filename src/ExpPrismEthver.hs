@@ -561,6 +561,7 @@ verSendCAux modifyModule funName argsVals = do
         (sCommunicatePrefix ++ (unident funName) ++ (show $ number mod))
         []
         [[]]
+    _ -> error $ "Function " ++ (unident funName) ++ " not found in (funs world)"
 
 createAssignment :: Integer -> Ident -> Arg -> Exp -> (Ident, Exp)
 createAssignment playerNumber funName (Ar _ (Ident varName)) exp =
