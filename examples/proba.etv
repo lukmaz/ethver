@@ -14,6 +14,7 @@ MAX_VALUE = 1;
 contract RPS {
   
   function get_payment() {
+    /*
     if (contract_balance > 0) {
       if (msg.value == 0) {
         if (is_signed[msg.sender] && is_opened[msg.sender]) {
@@ -23,6 +24,7 @@ contract RPS {
         }
       }
     }
+    */
   }
   
 }
@@ -33,51 +35,37 @@ communication {
   bool is_opened[2];
   bool is_signed[2];
   bool product_asked;
-  uint(3) randM[2];
-  uint(3) randU[2];
+  random_uint(3) randM[2];
+  random_uint(3) randU[2];
+  uint(3) pom;
 
   // TODO: uint(MAX_PRODUCTS) products_sent;
   uint(2) products_sent;
 
-  function open() {
-    randM[0] = 1;
-    commit[msg.sender] = 2;
-
-
+  function open(uint(3) arg) {
+    pom = arg;
     if (is_signed[msg.sender] && !is_opened[msg.sender]) {
       if (commit[msg.sender] == 3) {
         randM[msg.sender] = random(3);
       }
+      /*
       else {
         randM[msg.sender] = commit[msg.sender];
       }
+      */
       is_opened[msg.sender] = true;
     }
-  
   }
 
   function reset() {
-    if (msg.sender == 0) {
-      if (is_signed[0] && is_opened[0]) {
-        commit[0] = 0;
-        randU[0] = 0;
-        randM[0] = 0;
-        is_committed[0] = false;
-        is_opened[0] = false;
-        is_signed[0] = false;
-        product_asked = false;
-      }
-    }
-    else {
-      if (is_signed[1] && is_opened[1]) {
-        commit[1] = 0;
-        randU[1] = 0;
-        randM[1] = 0;
-        is_committed[1] = false;
-        is_opened[1] = false;
-        is_signed[1] = false;
-        product_asked = false;
-      }
+    if (is_signed[msg.sender] && is_opened[msg.sender]) {
+      commit[msg.sender] = 0;
+      randU[msg.sender] = 0;
+      randM[msg.sender] = 0;
+      is_committed[msg.sender] = false;
+      is_opened[msg.sender] = false;
+      is_signed[msg.sender] = false;
+      product_asked = false;
     }
   }
 }

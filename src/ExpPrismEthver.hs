@@ -332,9 +332,15 @@ verValExp :: ModifyModuleType -> Exp -> VerRes Exp
 
 verValExp modifyModule (EVar ident) = do
   world <- get
+  -- TODO: tutaj jest uzywany argmap! (z lokalnych nazw zmiennych na ogolne?)
+  -- TODO: moze zrezygnowac z argmapa i wymagac, zeby wszedzie nazwy zmiennych byly unikalne?
+  
+  return (EVar ident)
+  {-
   case Map.lookup ident $ argMap world of
     Just varName -> return (EVar varName)
     Nothing -> return (EVar ident)
+  -}
 
 verValExp modifyModule (EArray (Ident ident) index) = do
   mod <- modifyModule id
@@ -344,6 +350,9 @@ verValExp modifyModule (EArray (Ident ident) index) = do
   
   case index of
     ESender -> do
+      -- TODO: not needed anymore?
+      error $ "verValExp: array[msg.sender] should not be used in scenarios (only in contract and comm)."
+      {-
       case maybeType of
         Just typ -> do 
           addLocal modifyModule typ
@@ -362,6 +371,7 @@ verValExp modifyModule (EArray (Ident ident) index) = do
               (SAsses [AAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_1")])
             )
           return $ EVar $ Ident localVarName
+      -}
     EVar v -> do
       case maybeType of
         Just typ -> do

@@ -26,19 +26,16 @@ data VerWorld = VerWorld {
   communication :: Module,
   player0 :: Module,
   player1 :: Module,
-  
   condVars :: Set.Set Ident,
   -- set of indexes which are read in condition checks (ESender or EInt) - AND ALSO EVar! (TODO?)
   condArrays :: Map.Map Ident (Set.Set Exp),
-  
   varsValues :: Map.Map Ident Exp,
   -- map (arrayName, index) -> value
   arraysValues :: Map.Map (Ident, Exp) Exp,
- 
   condRandoms :: Set.Set Ident,
   -- set of indexes which are read in condition checks (ESender or EInt) - AND ALSO EVar! (TODO?)
   condRandomArrays :: Map.Map Ident (Set.Set Exp),
-  
+  lazyRandoms :: Set.Set Ident,
   addedGuards :: [Exp]
   }
 
@@ -79,6 +76,7 @@ emptyVerWorld = VerWorld {
   condArrays = Map.empty,
   condRandoms = Set.empty,
   condRandomArrays = Map.empty,
+  lazyRandoms = Set.empty,
   addedGuards = []
   } 
 
