@@ -92,7 +92,7 @@ arraysAsList arrays =
 
 typesFromVarsAndArrays :: [Ident] -> [(Ident, Exp)] -> VerRes [Type]
 typesFromVarsAndArrays vars arrays = do
-  let firstElements = map (\(Ident ident, _) -> Ident $ ident ++ "0") arrays
+  let firstElements = map (\(Ident ident, _) -> Ident $ ident ++ "_0") arrays
   mapM
     (\var -> do
       res <- findVarType var 
@@ -113,7 +113,7 @@ arrayToVar modifyModule ((Ident arrayName), indexExp) = do
       case Map.lookup (whichSender mod) (varsValues world) of
         Just (EInt value) -> Ident $ arrayName ++ "_" ++ (show value)
         Just _ -> error $ "arrayToVar: value of 'sender' is not of type EInt"
-        Nothing -> error $ "arrayToVar: array[sender] used, but 'sender' is not in condVars"
+        Nothing -> error $ "arrayToVar: array[sender] used, but 'sender' is not in varsValues"
     EVar varName ->
       case Map.lookup varName (varsValues world) of
         Just (EInt value) -> Ident $ arrayName ++ "_" ++ (show value)

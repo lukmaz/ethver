@@ -1,1 +1,1 @@
-./MakeEthver examples/random.etv
+./MakeEthver examples/proba.etv

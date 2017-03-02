@@ -39,27 +39,29 @@ addRandomUpdates modifyModule oldUpdates = do
     randomVarsList = Set.toList $ condRandoms world
     randomArraysList = arraysAsList $ condRandomArrays world
 
-  types <- typesFromVarsAndArrays randomVarsList randomArraysList
-  
-  let
-    maxVals = map maxRealValueOfType types
-    valuations = generateAllVals maxVals
+  case (randomVarsList, randomArraysList) of
+    ([], []) -> return oldUpdates
+    _ -> do
+      types <- typesFromVarsAndArrays randomVarsList randomArraysList
+      
+      let
+        maxVals = map maxRealValueOfType types
+        valuations = generateAllVals maxVals
 
-  randomArraysAsVars <- mapM (arrayToVar modifyModule) randomArraysList
-  
-  let 
-    newUpdates = map
-      (\vals -> (zip (randomVarsList ++ randomArraysAsVars) vals) ++ (head oldUpdates))
-      valuations
+      randomArraysAsVars <- mapM (arrayToVar modifyModule) randomArraysList
+      
+      let 
+        newUpdates = map
+          (\vals -> (zip (randomVarsList ++ randomArraysAsVars) vals) ++ (head oldUpdates))
+          valuations
 
-  return newUpdates
+      return newUpdates
 
 
 -- creates a command for a given function and given valuation
 createSmartTrans :: ModifyModuleType -> Function -> [Ident] -> [(Ident, Exp)] -> [Exp] -> VerRes ()
 -- TODO: FunV
 createSmartTrans modifyModule (Fun funName args stms) condVarsList condArraysList vals = do
-  -- TODO: co zrobić z probabilistycznymi?
   if (length condVarsList) + (length condArraysList) /= (length vals)
   then
     error $ "|condVarsList| (" ++ (show $ length condVarsList) ++ ") + |condArraysList| (" 
@@ -87,7 +89,6 @@ createSmartTrans modifyModule (Fun funName args stms) condVarsList condArraysLis
   updates <- foldM
     (\acc stm -> do
       newUpdates <- verSmartStm modifyModule stm
-      -- TODO: assumption that newUpdates is a signleton (no probability)
       return $ [(head acc) ++ (head newUpdates)]
     )
     [[]]
@@ -167,7 +168,8 @@ collectCondVarsFromAss modifyModule (AAss ident value) = do
 collectCondVarsFromAss modifyModule (AArrAss ident index value) = do
   case value of
     -- TODO: range of random is ignored. Real range deducted from variable type
-    (ECall [sRandom] [AExp (EInt range)]) ->
+    (ECall [sRandom] [AExp (EInt range)]) -> do
+      collectCondVarsFromExp modifyModule index
       collectCondArraysFromRandom modifyModule ident index
     (ECall funs args) ->
       error $ "ECall " ++ (show funs) ++ " (" ++ (show args) ++ ") not supported."

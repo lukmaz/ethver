@@ -52,16 +52,16 @@ communication {
     commit[msg.sender] = 2;
 
 
-  //  if (is_signed[msg.sender] && !is_opened[msg.sender]) {
-  //    if (commit[msg.sender] == 3) {
-    //    randM[msg.sender] = random(3);
-  //    }
-  /*    else {
+    if (is_signed[msg.sender] && !is_opened[msg.sender]) {
+      if (commit[msg.sender] == 3) {
+        randM[msg.sender] = random(3);
+      }
+      else {
         randM[msg.sender] = commit[msg.sender];
       }
       is_opened[msg.sender] = true;
     }
-  */
+  
   }
 
   /*
