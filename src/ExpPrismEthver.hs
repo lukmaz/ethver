@@ -331,16 +331,7 @@ verMathExp modifyModule (EMod exp1 exp2) = do
 verValExp :: ModifyModuleType -> Exp -> VerRes Exp
 
 verValExp modifyModule (EVar ident) = do
-  world <- get
-  -- TODO: tutaj jest uzywany argmap! (z lokalnych nazw zmiennych na ogolne?)
-  -- TODO: moze zrezygnowac z argmapa i wymagac, zeby wszedzie nazwy zmiennych byly unikalne?
-  
   return (EVar ident)
-  {-
-  case Map.lookup ident $ argMap world of
-    Just varName -> return (EVar varName)
-    Nothing -> return (EVar ident)
-  -}
 
 verValExp modifyModule (EArray (Ident ident) index) = do
   mod <- modifyModule id

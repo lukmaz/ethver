@@ -220,8 +220,6 @@ verSmartFunContractOrCommunication modifyModule commonFun (Fun funName args stms
   createSmartTranss modifyModule (Fun funName args stms)
 
   clearCondVarsAndArrays
-  -- czy argMap jest potrzebne w smartFun?
-  clearArgMap
 
 -----------------
 -- verFunContract
@@ -280,8 +278,6 @@ verFunContract (Fun name args stms) = do
     1
     []
     [[]]
-  
-  clearArgMap
 
 -- (NEW)
 verSmartFunContract :: Function -> VerRes ()
@@ -329,8 +325,6 @@ verFunCommunication (Fun funName args stms) = do
     1
     []
     [[]]
-  
-  clearArgMap
 
 -- (NEW)
 verSmartFunCommunication :: Function -> VerRes ()

@@ -18,7 +18,6 @@ data VerWorld = VerWorld {
   funs :: Map.Map Ident Function,
   contractFuns :: Map.Map Ident Function,
   constants :: Map.Map Ident Integer,
-  argMap :: Map.Map Ident Ident,
   playerNumbers :: Map.Map String Integer,
   returnVar :: [Ident],
   blockchain :: Module,
@@ -62,7 +61,6 @@ emptyVerWorld = VerWorld {
   funs = Map.empty,
   contractFuns = Map.empty,
   constants = Map.empty,
-  argMap = Map.empty,
   playerNumbers = Map.empty, 
   returnVar = [], 
   blockchain = emptyModule {stateVar = sBCState, moduleName = sBCModule, whichSender = iContrSender}, 
@@ -219,30 +217,17 @@ addPlayerArg modifyModule (Ident funName) (Ar typ (Ident varName)) = do
   mod <- modifyModule id
   addVar modifyModule typ (Ident $ funName ++ "_" ++ varName ++ (show $ number mod))
 
--- TODO: co to jest ten argmap?
-addArgToMap :: Ident -> Arg -> VerRes ()
-addArgToMap (Ident funName) (Ar _ (Ident varName)) = do
-  world <- get
-  put (world {argMap = Map.insert (Ident varName) (Ident $ funName ++ "_" ++ varName) $ argMap world})
-  
-clearArgMap :: VerRes ()
-clearArgMap = do
-  world <- get
-  put (world {argMap = Map.empty})
-
 addContrArgument :: Ident -> Arg -> VerRes ()
 addContrArgument funName arg = do
   addNoPlayerArg modifyBlockchain funName arg
   addPlayerArg modifyPlayer0 funName arg
   addPlayerArg modifyPlayer1 funName arg
-  addArgToMap funName arg
 
 addCommArgument :: Ident -> Arg -> VerRes ()
 addCommArgument funName arg = do
   addNoPlayerArg modifyCommunication funName arg
   addPlayerArg modifyPlayer0 funName arg
   addPlayerArg modifyPlayer1 funName arg
-  addArgToMap funName arg
 
 -- Players
 
