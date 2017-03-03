@@ -27,6 +27,8 @@ verStm modifyModule (SAsses [AAss ident exp]) =
 verStm modifyModule (SAsses [AArrAss ident index exp]) =
   verFullAss modifyModule (AArrAss ident index exp)
 
+-- DEPRECATED
+{-
 verStm modifyModule (SAsses asses) = do
   assignments <- mapM (generateSimpleAss modifyModule) asses
   let (unzippedGuards, unzippedUpdates) = unzip assignments
@@ -37,7 +39,7 @@ verStm modifyModule (SAsses asses) = do
     ""
     guards
     [updates]
-  
+-}
 
 verStm modifyModule (SReturn exp) = do
   evalExp <- verExp modifyModule exp 
@@ -136,8 +138,14 @@ verStm modifyModule (SSend receiverExp arg) = do
 verFullAss :: ModifyModuleType -> Ass -> VerRes ()
 
 verFullAss modifyModule (AAss ident exp) = do
+  case exp of
+    ECall [Ident sRandomLazy] [AExp (EInt _)] ->
+      addLazyRandom ident
+    _ -> 
+      return ()
+
   (guards, updates) <- generateSimpleAss modifyModule (AAss ident exp)
-      
+  
   addTransToNewState
     modifyModule
     ""
