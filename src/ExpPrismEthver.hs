@@ -2,6 +2,7 @@ module ExpPrismEthver where
 
 import Control.Monad.State
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 import AbsEthver
 import AuxPrismEthver
@@ -331,7 +332,18 @@ verMathExp modifyModule (EMod exp1 exp2) = do
 verValExp :: ModifyModuleType -> Exp -> VerRes Exp
 
 verValExp modifyModule (EVar ident) = do
-  return (EVar ident)
+  world <- get
+  typ <- findVarType ident
+  case typ of
+    Just (TRUInt range) -> do
+      if Set.member ident (lazyRandoms world)
+        then do
+          removeLazyRandom ident
+          verRandom modifyModule [AExp $ EInt range]
+        else do
+          return (EVar ident)
+    _ ->
+      return (EVar ident)
 
 verValExp modifyModule (EArray (Ident ident) index) = do
   mod <- modifyModule id
