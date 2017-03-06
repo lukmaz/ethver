@@ -20,6 +20,7 @@ minValue ident = do
     Just (TUInt x) -> return 0
     Just (TRUInt x) -> return 0
     Just TBool -> return 0
+    Nothing -> error $ "Type of '" ++ (show ident) ++ "' not found"
 
 maxRealValue :: Ident -> VerRes Exp
 maxRealValue ident = do
