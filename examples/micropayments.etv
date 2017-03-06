@@ -39,7 +39,7 @@ communication {
       is_opened[msg.sender] = false;
       is_signed[msg.sender] = false;
     }
-    if (msg.sender == 1) {
+    if (msg.sender == 1 && products_sent + 1 < 10) {
       products_sent = products_sent + 1;
     }
   }
