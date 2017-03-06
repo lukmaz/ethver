@@ -12,19 +12,17 @@ MAX_VALUE = 1;
 //TODO: MAX_PRODUCTS = 2; // 10
 
 contract RPS {
-  /* 
   function get_payment() {
     if (contract_balance > 0) {
       if (msg.value == 0) {
-       // if (is_signed[msg.sender] && is_opened[msg.sender]) {
+        if (is_signed[msg.sender] && is_opened[msg.sender]) {
           if (randM[msg.sender] == randU[msg.sender]) {
             msg.sender.send(1);
           }
         }
-      //}
+      }
     }
   }
-  */
 }
 
 communication {
