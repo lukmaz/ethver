@@ -204,8 +204,12 @@ addCondRandomArray varName index = do
 clearCondVarsAndArrays :: VerRes ()
 clearCondVarsAndArrays = do
   world <- get
-  put (world {condVars = Set.empty, condArrays = Map.empty, condRandoms = Set.empty, 
-    condRandomArrays = Map.empty})
+  put (world {condVars = Set.empty, condArrays = Map.empty})
+
+clearCondRandoms :: VerRes ()
+clearCondRandoms = do
+  world <- get
+  put (world {condRandoms = Set.empty, condRandomArrays = Map.empty, lazyRandoms = Set.empty})
 
 -- args (?)
 addNoPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()

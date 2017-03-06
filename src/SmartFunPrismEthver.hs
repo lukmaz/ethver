@@ -15,7 +15,6 @@ import WorldPrismEthver
 createSmartTranss :: ModifyModuleType -> Function -> VerRes ()
 createSmartTranss modifyModule (Fun funName args stms) = do
   mapM_ (\(Ar typ ident) -> addVar modifyModule typ ident) args
-  -- TODO: random condVars
   world <- get
   let 
     condVarsList = Set.toList $ condVars world
@@ -23,14 +22,14 @@ createSmartTranss modifyModule (Fun funName args stms) = do
 
   case (condVarsList, condArraysList) of
     ([],[]) -> do
-      createSmartTrans modifyModule (Fun funName args stms) [] [] []
+      createSmartOneTrans modifyModule (Fun funName args stms) [] [] []
     _ -> do
       types <- typesFromVarsAndArrays condVarsList condArraysList 
       let 
-        maxVals = map maxRealValueOfType types
+        maxVals = map maxTypeExpOfType types
         valuations = generateAllVals maxVals
 
-      mapM_ (createSmartTrans modifyModule (Fun funName args stms) condVarsList condArraysList) valuations
+      mapM_ (createSmartOneTrans modifyModule (Fun funName args stms) condVarsList condArraysList) valuations
 
 addRandomUpdates :: ModifyModuleType -> [[(Ident, Exp)]] -> VerRes [[(Ident, Exp)]]
 addRandomUpdates modifyModule oldUpdates = do
@@ -59,9 +58,9 @@ addRandomUpdates modifyModule oldUpdates = do
 
 
 -- creates a command for a given function and given valuation
-createSmartTrans :: ModifyModuleType -> Function -> [Ident] -> [(Ident, Exp)] -> [Exp] -> VerRes ()
+createSmartOneTrans :: ModifyModuleType -> Function -> [Ident] -> [(Ident, Exp)] -> [Exp] -> VerRes ()
 -- TODO: FunV
-createSmartTrans modifyModule (Fun funName args stms) condVarsList condArraysList vals = do
+createSmartOneTrans modifyModule (Fun funName args stms) condVarsList condArraysList vals = do
   if (length condVarsList) + (length condArraysList) /= (length vals)
   then
     error $ "|condVarsList| (" ++ (show $ length condVarsList) ++ ") + |condArraysList| (" 
@@ -111,7 +110,7 @@ createSmartTrans modifyModule (Fun funName args stms) condVarsList condArraysLis
 
   clearAddedGuards
   clearVarsValues
-
+  clearCondRandoms
 
 
 
@@ -159,7 +158,7 @@ collectCondVarsFromAss modifyModule (AAss ident value) = do
     -- TODO: random dla Booli
     -- TODO: range of random is ignored. Real range deducted from variable type
     (ECall [sRandom] [AExp (EInt range)]) ->
-      collectCondVarsFromRandom modifyModule ident
+      return ()
     (ECall funs args) ->
       error $ "ECall " ++ (show funs) ++ " (" ++ (show args) ++ ") not supported."
     _ ->
@@ -170,14 +169,14 @@ collectCondVarsFromAss modifyModule (AArrAss ident index value) = do
     -- TODO: range of random is ignored. Real range deducted from variable type
     (ECall [sRandom] [AExp (EInt range)]) -> do
       collectCondVarsFromExp modifyModule index
-      collectCondArraysFromRandom modifyModule ident index
     (ECall funs args) ->
       error $ "ECall " ++ (show funs) ++ " (" ++ (show args) ++ ") not supported."
     _ -> do
       collectCondVarsFromExp modifyModule index
       collectCondVarsFromExp modifyModule value
 
-
+-- TODO: do wywalenia
+{-
 collectCondVarsFromRandom :: ModifyModuleType -> Ident -> VerRes ()
 collectCondVarsFromRandom modifyModule varName = do
   addCondRandom varName
@@ -185,6 +184,7 @@ collectCondVarsFromRandom modifyModule varName = do
 collectCondArraysFromRandom :: ModifyModuleType -> Ident -> Exp -> VerRes ()
 collectCondArraysFromRandom modifyModule varName index = 
   addCondRandomArray varName index
+-}
 
 -----------------------------
 -- collectCondVarsFromExp --
@@ -247,8 +247,9 @@ collectCondArray modifyModule varName index = do
 updatesFromAss :: ModifyModuleType -> Ass -> VerRes [[(Ident, Exp)]]
 updatesFromAss modifyModule (AAss ident exp) = do
   case exp of
-    -- random calls handled separately in addRandomUpdates
-    ECall [sRandom] _ -> return [[]]
+    ECall [sRandom] _ -> do
+      addCondRandom ident
+      return [[]]
     ECall funs args -> error $ "Updates from ECall " ++ (show funs) ++ "(" ++ (show args) ++ ") not supported."
     _ -> do
       val <- evaluateExp modifyModule exp
@@ -257,7 +258,9 @@ updatesFromAss modifyModule (AAss ident exp) = do
 updatesFromAss modifyModule (AArrAss (Ident ident) index exp) = do
   case exp of
     -- random calls handled separately in addRandomUpdates
-    ECall [sRandom] _ -> return [[]]
+    ECall [sRandom] _ -> do
+      addCondRandomArray (Ident ident) index
+      return [[]]
     ECall funs args -> error $ "Updates from ECall " ++ (show funs) ++ "(" ++ (show args) ++ ") not supported."
     _ -> do
       indexEIntVal <- case index of
