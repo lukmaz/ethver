@@ -193,9 +193,9 @@ addCommunicateOnePlayer funName args playerNumber = do
   let newState = numStates mod + 1 
 
   let updates0 = [[(iCommSender, EInt playerNumber)]]
-  let addAssignment acc (Ar _ (Ident varName)) = acc ++
-        [(Ident $ unident funName ++ "_" ++ varName, 
-          EVar $ Ident $ unident funName ++ "_" ++ varName ++ (show playerNumber))]
+  let addAssignment acc (Ar _ varName) = acc ++
+        [(createCoArgumentName funName varName, 
+          EVar $ createScenarioArgumentName funName varName playerNumber)]
   let updates = [foldl addAssignment (head updates0) args]
 
   addCustomTrans
@@ -283,6 +283,16 @@ setCS2 number  =
 -- Adversarial transactions --
 ------------------------------
 
+advUpdates :: Bool -> Integer -> Ident -> [Arg] -> [Exp] -> [[(Ident, Exp)]]
+advUpdates withVal number funName args valList =
+  let prefix = if withVal then (sValue:) else id in
+    let varNames = prefix (map (\(Ar _ (Ident ident)) -> ident) args) in
+      [   
+        map 
+          (\(varName, v) -> (createScenarioArgumentName funName (Ident varName) number, v)) 
+          (zip varNames valList)
+      ]   
+
 addAdversarialContrTranss :: Contract -> VerRes ()
 addAdversarialContrTranss (Contr _ _ funs) =
   addAdversarialTranss funs sBroadcastPrefix iContrState
@@ -337,7 +347,7 @@ generateAdvTranss modifyModule whichPrefix whichState withVal funName args maxes
             EEq (EVar iCommState) (EInt 1),
             EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
           ]
-          (advUpdates withVal (number mod) funName args vals)
+          (advUpdates withVal (number mod) (Ident funName) args vals)
         )
 
 

@@ -14,7 +14,9 @@ import WorldPrismEthver
 -- for a given function creates a command for every valuation of condVars
 createSmartTranss :: ModifyModuleType -> Function -> VerRes ()
 createSmartTranss modifyModule (Fun funName args stms) = do
-  mapM_ (\(Ar typ ident) -> addVar modifyModule typ ident) args
+  -- Not needed? vars being added somewhere in higher level
+  --mapM_ (\(Ar typ ident) -> addVar modifyModule typ ident) args
+
   world <- get
   let 
     condVarsList = Set.toList $ condVars world

@@ -211,15 +211,27 @@ clearCondRandoms = do
   world <- get
   put (world {condRandoms = Set.empty, condRandomArrays = Map.empty, lazyRandoms = Set.empty})
 
--- args (?)
-addNoPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
-addNoPlayerArg modifyModule (Ident funName) (Ar typ (Ident varName)) = do
-  addVar modifyModule typ (Ident $ funName ++ "_" ++ varName)
+-- TODO: adds function name as a prefix of a variable name
+createScenarioArgumentName :: Ident -> Ident -> Integer -> Ident
+createScenarioArgumentName (Ident funName) (Ident varName) playerName = 
+    --Ident $ funName ++ "_" ++ varName ++ (show playerName)
+    Ident $ varName ++ (show playerName)
 
+-- TODO: does not add function name as a prefix
+createCoArgumentName :: Ident -> Ident -> Ident
+createCoArgumentName (Ident funName) (Ident varName) = 
+    Ident $ varName
+
+-- TODO: with prefix or not? Now: funName ignored
+addNoPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
+addNoPlayerArg modifyModule (Ident funName) (Ar typ varName) = do
+  addVar modifyModule typ varName
+
+-- TODO: with prefix of not?
 addPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
-addPlayerArg modifyModule (Ident funName) (Ar typ (Ident varName)) = do
+addPlayerArg modifyModule funName (Ar typ varName) = do
   mod <- modifyModule id
-  addVar modifyModule typ (Ident $ funName ++ "_" ++ varName ++ (show $ number mod))
+  addVar modifyModule typ $ createScenarioArgumentName funName varName (number mod)
 
 addContrArgument :: Ident -> Arg -> VerRes ()
 addContrArgument funName arg = do

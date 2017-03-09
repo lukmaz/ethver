@@ -75,17 +75,6 @@ generateAllVals ((EInt h):t) =
       []
       (reverse [0..h])
 
-
-advUpdates :: Bool -> Integer -> String -> [Arg] -> [Exp] -> [[(Ident, Exp)]]
-advUpdates withVal number funName args valList =
-  let prefix = if withVal then (sValue:) else id in
-    let varNames = prefix (map (\(Ar _ (Ident ident)) -> ident) args) in
-      [
-        map
-          (\(varName, v) -> (Ident $ funName ++ "_" ++ varName ++ (show number), v))
-          (zip varNames valList)
-      ]
-
 getArgNames :: Function -> [Arg]
 getArgNames (Fun _ args _) = args
 getArgNames (FunR _ args _ _) = args

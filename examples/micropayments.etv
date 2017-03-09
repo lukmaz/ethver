@@ -44,9 +44,9 @@ communication {
     }
   }
 
-  function send_ticket(uint(2) merchant, uint(3) r) {
+  function send_ticket(uint(2) merchant, uint(3) rr) {
     if (((msg.sender == "U") && (is_committed[merchant])) && ((!is_opened[merchant]) && (!is_signed[merchant]))) {
-      randU[merchant] = r;
+      randU[merchant] = rr;
       is_signed[merchant] = true;
     }
   }
@@ -78,26 +78,26 @@ communication {
 }
 
 scenario U {
-  uint(3) r0;
+  uint(3) rand0; // TODO: powinno byc random_uint - albo i nie
   bool endU;
   
   ask_product.sendCommunication();
   wait(is_committed["M"]);
   if (is_committed["M"]) {
-    r0 = random(3);
-    send_ticket.sendCommunication(1, r0);
+    rand0 = random(3);
+    send_ticket.sendCommunication(1, rand0);
   }
   endU = true;
 }
 
 scenario M {
-  random_uint(3) r1;
+  random_uint(3) rand1;
   bool endM;
 
-  r1 = random_lazy(3);
+  rand1 = random_lazy(3);
   wait(product_asked);
   if (product_asked && contract_balance > 0) {
-    ask_payment.sendCommunication(r1);
+    ask_payment.sendCommunication(rand1);
     wait(is_signed["M"]);
     if (is_signed["M"]) {
       open.sendCommunication();

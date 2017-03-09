@@ -584,6 +584,7 @@ verSendCAux modifyModule funName argsVals = do
         [[]]
     _ -> error $ "Function " ++ (unident funName) ++ " not found in (funs world)"
 
+-- TODO: adds function name in prefix of a variable name
 createAssignment :: Integer -> Ident -> Arg -> Exp -> (Ident, Exp)
-createAssignment playerNumber funName (Ar _ (Ident varName)) exp =
-  (Ident $ unident funName ++ "_" ++ varName ++ (show playerNumber), exp)
+createAssignment playerNumber funName (Ar _ varName) exp =
+  (createScenarioArgumentName funName varName playerNumber, exp)

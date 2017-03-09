@@ -146,9 +146,8 @@ verFunExecute modifyModule (Fun name args stms) = do
         (iValue, EVar $ Ident $ unident name ++ sValueSuffix 
           ++ (show $ number mod)), (Ident $ unident name ++ sStatusSuffix 
           ++ (show $ number mod), EVar (Ident sTExecuted))]]
-  let addAssignment acc (Ar _ (Ident varName)) = acc ++ 
-        [(Ident $ unident name ++ "_" ++ varName, EVar $ Ident $ unident name ++ "_" 
-          ++ varName ++ (show $ number mod))]
+  let addAssignment acc (Ar _ varName) = acc ++ 
+        [(createCoArgumentName name varName, EVar $ createScenarioArgumentName name varName $ number mod)]
   let updates = [foldl addAssignment (head updates0) args]
 
   addTransNoState
@@ -232,7 +231,6 @@ commonVerFunContract (Fun name args stms) = do
   addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStatusSuffix ++ "0" 
   addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStatusSuffix ++ "1"
 
-  -- adds also to argMap
   mapM_ (addContrArgument name) args
 
   -- TODO: skąd wziąć zakres val - rozwiązane na razie jednym MAX_VALUE
