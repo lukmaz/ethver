@@ -44,9 +44,9 @@ communication {
     }
   }
 
-  function send_ticket(uint(2) merchant, uint(3) rr) {
+  function send_ticket(uint(2) merchant, uint(3) r) {
     if (((msg.sender == "U") && (is_committed[merchant])) && ((!is_opened[merchant]) && (!is_signed[merchant]))) {
-      randU[merchant] = rr;
+      randU[merchant] = r;
       is_signed[merchant] = true;
     }
   }
@@ -78,14 +78,20 @@ communication {
 }
 
 scenario U {
-  uint(3) rand0; // TODO: powinno byc random_uint - albo i nie
+  uint(3) rand0;
   bool endU;
+  uint(3) i0;
   
-  ask_product.sendCommunication();
-  wait(is_committed["M"]);
-  if (is_committed["M"]) {
-    rand0 = random(3);
-    send_ticket.sendCommunication(1, rand0);
+  for (i0 = 0; i0 < 3; ++i0) {
+    ask_product.sendCommunication();
+    wait(is_committed["M"]);
+    if (is_committed["M"]) {
+      rand0 = random(3);
+      send_ticket.sendCommunication(1, rand0);
+    }
+    else {
+      break;
+    }
   }
   endU = true;
 }
@@ -93,18 +99,27 @@ scenario U {
 scenario M {
   random_uint(3) rand1;
   bool endM;
+  uint(3) i1;
 
-  rand1 = random_lazy(3);
-  wait(product_asked);
-  if (product_asked && contract_balance > 0) {
-    ask_payment.sendCommunication(rand1);
-    wait(is_signed["M"]);
-    if (is_signed["M"]) {
-      open.sendCommunication();
-      if (randU["M"] == randM["M"]) {
-        get_payment.sendTransaction({from: "M", value: 0});
+  for (i1 = 0; i1 < 3; ++i1) {
+    rand1 = random_lazy(3);
+    wait(product_asked);
+    if (product_asked && contract_balance > 0) {
+      ask_payment.sendCommunication(rand1);
+      wait(is_signed["M"]);
+      if (is_signed["M"]) {
+        open.sendCommunication();
+        if (randU["M"] == randM["M"]) {
+          get_payment.sendTransaction({from: "M", value: 0});
+        }
+        reset.sendCommunication();
       }
-      reset.sendCommunication();
+      else {
+        break;
+      }
+    }
+    else {
+      break;
     }
   }
   endM = true;
