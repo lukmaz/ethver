@@ -9,6 +9,7 @@ import AuxPrismEthver
 import AuxWorldPrismEthver
 import CodePrismEthver
 import ConstantsEthver
+import DFSPrismEthver
 import ExpPrismEthver
 import SmartFunPrismEthver
 import WorldPrismEthver
@@ -73,8 +74,9 @@ verContract (Contr name _ funs) = do
   -- OLD:
   -- mapM_ verFunContract funs
   -- SMART: (~one command for each valuation of variables)
-  mapM_ verSmartFunContract funs
-
+  --mapM_ verSmartFunContract funs
+  -- DFS:
+  mapM_ verDFSFunContract funs
 -------------------
 -- COMMUNICATION --
 -------------------
@@ -87,7 +89,9 @@ verCommunication (Comm _ funs) = do
   -- OLD:
   --mapM_ verFunCommunication funs
   -- SMART: (~one command for each valuation of variables)
-  mapM_ verSmartFunCommunication funs
+  -- mapM_ verSmartFunCommunication funs
+  -- DFS:
+  mapM_ verDFSFunCommunication funs
 
 ----------
 -- Decl --
@@ -220,10 +224,21 @@ verSmartFunContractOrCommunication modifyModule commonFun (Fun funName args stms
 
   clearCondVarsAndArrays
 
+-------------------------------------
+-- verDFSContract/Communication --
+-------------------------------------
+
+-- DFS
+verDFSFunContractOrCommunication :: ModifyModuleType -> (Function -> VerRes ()) -> Function -> VerRes ()
+verDFSFunContractOrCommunication modifyModule commonFun fun = do
+  commonFun fun
+  verDFSFun modifyModule fun
+
 -----------------
 -- verFunContract
 -----------------
 
+-- common for OLD, SMART and DFS
 commonVerFunContract :: Function -> VerRes ()
 commonVerFunContract (Fun name args stms) = do
   addFun (Fun name args stms)
@@ -277,15 +292,19 @@ verFunContract (Fun name args stms) = do
     []
     [[]]
 
--- (NEW)
+-- SMART
 verSmartFunContract :: Function -> VerRes ()
 verSmartFunContract fun = verSmartFunContractOrCommunication modifyContract commonVerFunContract fun
+
+-- DFS
+verDFSFunContract :: Function -> VerRes ()
+verDFSFunContract fun = verDFSFunContractOrCommunication modifyContract commonVerFunContract fun
 
 -------------------------
 -- verFunCommunication --
 -------------------------
 
--- common part of verFunCommunication and verSmartFunCommunication
+-- common for OLD, SMART and DFS
 commonVerFunCommunication :: Function -> VerRes ()
 commonVerFunCommunication (Fun funName args stms) = do
   addFun (Fun funName args stms)
@@ -323,11 +342,13 @@ verFunCommunication (Fun funName args stms) = do
     []
     [[]]
 
--- (SMART)
+-- SMART
 verSmartFunCommunication :: Function -> VerRes ()
 verSmartFunCommunication fun = verSmartFunContractOrCommunication modifyCommunication commonVerFunCommunication fun
 
-
+-- DFS
+verDFSFunCommunication :: Function -> VerRes ()
+verDFSFunCommunication fun = verDFSFunContractOrCommunication modifyCommunication commonVerFunCommunication fun
 
 --------------
 -- SCENARIO --
