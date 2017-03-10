@@ -81,17 +81,21 @@ scenario U {
   uint(3) rand0;
   bool endU;
   uint(3) i0;
-  
-  for (i0 = 0; i0 < 3; ++i0) {
+  i0 = 0;
+
+  while (i0 < 2) {
     ask_product.sendCommunication();
     wait(is_committed["M"]);
     if (is_committed["M"]) {
       rand0 = random(3);
       send_ticket.sendCommunication(1, rand0);
     }
+    /*
     else {
       break;
     }
+    */
+    i0 = i0 + 1;
   }
   endU = true;
 }
@@ -100,8 +104,9 @@ scenario M {
   random_uint(3) rand1;
   bool endM;
   uint(3) i1;
+  i1 = 0;
 
-  for (i1 = 0; i1 < 3; ++i1) {
+  while (i1 < 2) {
     rand1 = random_lazy(3);
     wait(product_asked);
     if (product_asked && contract_balance > 0) {
@@ -118,9 +123,12 @@ scenario M {
         break;
       }
     }
+    /*
     else {
       break;
     }
+    */
+    i1 = i1 + 1;
   }
   endM = true;
 }

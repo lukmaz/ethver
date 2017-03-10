@@ -46,7 +46,7 @@ SBlock.  Stm ::= "{" [Stm] "}" ;
 SAsses.  Stm ::= [Ass] ";" ;
 SIf.     Stm ::= "if" "(" Exp ")" Stm ;
 SIfElse. Stm ::= "if" "(" Exp ")" Stm "else" Stm ;
--- SWhile.  Stm ::= "while" "(" Exp ")" Stm ;
+SWhile.  Stm ::= "while" "(" Exp ")" Stm ;
 SReturn. Stm ::= "return" Exp  ";" ;
 SSend.   Stm ::= Exp "." "send" "(" Exp ")" ";" ;
 
@@ -56,8 +56,6 @@ separator nonempty Ass "," ;
 AAss.    Ass ::= Ident "=" Exp ;
 AArrAss. Ass ::= Ident "[" Exp "]" "=" Exp ;
 
--- EAss.    Exp  ::= Ident "=" Exp ;
--- EArrAss. Exp  ::= Ident "[" Exp "]" "=" Exp ;
 EOr.     Exp ::= Exp "||" Exp1 ;
 EAnd.    Exp1 ::= Exp1 "&&" Exp2 ;
 EEq.     Exp2 ::= Exp2 "==" Exp3 ;

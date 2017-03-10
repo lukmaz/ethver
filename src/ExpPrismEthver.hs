@@ -101,6 +101,45 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
   _ <- modifyModule (setCurrState endIfState)
   return ()
 
+verStm modifyModule (SWhile cond whileBlock) = do
+  evalCond <- verExp modifyModule cond
+  mod <- modifyModule id
+  let whileState = currState mod 
+  addTransToNewState
+    modifyModule
+    ""  
+    [evalCond]
+    [[]]
+  verStm modifyModule whileBlock
+  mod <- modifyModule id
+
+  -- go to begin of a loop
+  addCustomTrans
+    modifyModule
+    ""
+    (currState mod)
+    whileState
+    []
+    [[]]
+
+  mod <- modifyModule id
+
+  -- end of a loop
+  addCustomTrans
+    modifyModule
+    ""  
+    whileState
+    (numStates mod + 1)
+    [negateExp evalCond]
+    [[]]
+
+  mod <- modifyModule id
+  let newState = numStates mod + 1
+  modifyModule (setCurrState newState)
+  modifyModule (setNumStates newState)
+
+  return ()
+
 verStm modifyModule (SBlock stms) = do
   mapM_ (verStm modifyModule) stms
 
