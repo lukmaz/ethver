@@ -72,7 +72,7 @@ verContract (Contr name _ funs) = do
   
   -- OLD:
   -- mapM_ verFunContract funs
-  -- NEW: (~one command for each valuation of variables)
+  -- SMART: (~one command for each valuation of variables)
   mapM_ verSmartFunContract funs
 
 -------------------
@@ -86,7 +86,7 @@ verCommunication (Comm _ funs) = do
   
   -- OLD:
   --mapM_ verFunCommunication funs
-  -- NEW: (~one command for each valuation of variables)
+  -- SMART: (~one command for each valuation of variables)
   mapM_ verSmartFunCommunication funs
 
 ----------
@@ -209,7 +209,7 @@ verExecTransaction modifyModule = do
 -- verSmartFunContract/Communication --
 ---------------------------------------
 
--- NEW: (~ one command for each valuation)
+-- SMART: (~ one command for each valuation)
 verSmartFunContractOrCommunication :: ModifyModuleType -> (Function -> VerRes ()) -> Function -> VerRes ()
 verSmartFunContractOrCommunication modifyModule commonFun (Fun funName args stms) = do
   commonFun (Fun funName args stms)
@@ -290,7 +290,6 @@ commonVerFunCommunication :: Function -> VerRes ()
 commonVerFunCommunication (Fun funName args stms) = do
   addFun (Fun funName args stms)
 
-  -- adds also to argMap (?) - co to jest argmap?
   mapM_ (addCommArgument funName) args
 
   -- adds to Communication module  a command that the transaction is being communicated by a particular player
@@ -324,7 +323,7 @@ verFunCommunication (Fun funName args stms) = do
     []
     [[]]
 
--- (NEW)
+-- (SMART)
 verSmartFunCommunication :: Function -> VerRes ()
 verSmartFunCommunication fun = verSmartFunContractOrCommunication modifyCommunication commonVerFunCommunication fun
 
