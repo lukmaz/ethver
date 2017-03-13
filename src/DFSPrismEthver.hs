@@ -65,12 +65,28 @@ addDFSStm modifyModule tr (SAsses (assH:assT)) = do
   newTrs <- addAssToTr tr assH
   verDFSStm modifyModule newTrs (SAsses assT)
 
+addDFSStm modifyModule (trName, guards, updates) (SIf cond ifBlock) = do
+  posTranss <- addDFSStm modifyModule (trName, cond:guards, updates) ifBlock
+  let negTranss = [(trName, (negateExp cond):guards, updates)]
+  return $ posTranss ++ negTranss
+
+
+---------
+-- Aux --
+---------
 
 -- TODO: only simple assignments for a moment
 -- Aux: adds an assignment to a transition
 addAssToTr :: Trans -> Ass -> VerRes [Trans]
 addAssToTr (trName, guards, updates) (AAss ident exp) = do
-  let newUpdates = map ((ident, exp):) updates
+  let 
+    deleteOld :: [(Ident, Exp)] -> [(Ident, Exp)]
+    deleteOld list = filter
+      (\(i, _) -> i /= ident)
+      list
+    newUpdates = map 
+      (((ident, exp):) . deleteOld)
+      updates
   return [(trName, guards, newUpdates)]
 
   

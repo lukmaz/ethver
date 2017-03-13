@@ -13,10 +13,18 @@ contract RPS {
 }
 
 communication {
-  uint(2) x;
+  uint(3) a;
+  uint(3) x;
 
-  function set() {
-    x = 1;
+  function set(uint(3) y) {
+    if (a == 1)
+    {
+      x = 1;
+    }
+    if (y == 1)
+    {
+      x = 2;
+    }
   }
 }
 
