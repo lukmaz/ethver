@@ -25,6 +25,9 @@ communication {
     {
       x = 2;
     }
+    else {
+      a = 2;
+    }
   }
 }
 

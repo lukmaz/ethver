@@ -70,6 +70,10 @@ addDFSStm modifyModule (trName, guards, updates) (SIf cond ifBlock) = do
   let negTranss = [(trName, (negateExp cond):guards, updates)]
   return $ posTranss ++ negTranss
 
+addDFSStm modifyModule (trName, guards, updates) (SIfElse cond ifBlock elseBlock) = do
+  posTranss <- addDFSStm modifyModule (trName, cond:guards, updates) ifBlock
+  negTranss <- addDFSStm modifyModule (trName, (negateExp cond):guards, updates) elseBlock
+  return $ posTranss ++ negTranss
 
 ---------
 -- Aux --
