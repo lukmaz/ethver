@@ -280,7 +280,7 @@ updatesFromAss modifyModule (AArrAss (Ident ident) index exp) = do
       let 
         indexVal = case indexEIntVal of
           (Just (EInt x)) -> x
-          Nothing -> error $ "Array index: " ++ (show indexEIntVal) ++ "  different than (Just EInt a)"
+          Nothing -> error $ "Array index: " ++ (show indexEIntVal) ++ " different than (Just EInt a)"
 
       updatesFromAss modifyModule $ AAss (Ident $ ident ++ "_" ++ (show indexVal)) exp
      

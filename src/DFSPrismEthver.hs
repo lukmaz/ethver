@@ -75,25 +75,149 @@ addDFSStm modifyModule (trName, guards, updates) (SIfElse cond ifBlock elseBlock
   negTranss <- addDFSStm modifyModule (trName, (negateExp cond):guards, updates) elseBlock
   return $ posTranss ++ negTranss
 
+addDFSStm modifyModule _ (SWhile _ _) = do
+  error $ "while loop not supported in verDFS"
+
+
 ---------
 -- Aux --
 ---------
 
--- TODO: only simple assignments for a moment
--- Aux: adds an assignment to a transition
+-- special case for AAss. Generates single trans
+addVarAssToTr :: Trans -> Ass -> VerRes Trans
+
+addVarAssToTr (trName, guards, updates) (AAss varName exp) = do
+  newUpdates <- foldM
+    (\acc branch -> do
+      partialUpdates <- addAssToUpdatesBranch guards (AAss varName exp) branch
+      return $ partialUpdates ++ acc
+    )
+    []
+    updates
+  return $ (trName, guards, newUpdates)
+
+addVarAssToTr _ (AArrAss arrName index exp) = do
+  error $ "addVarAssToTr should not be called with AArrAss argument (" ++ (show (AArrAss arrName index exp))
+
+-- adds an assignment to a single transition
+-- can possibly create longer list of updates in case the array index is not known
 addAssToTr :: Trans -> Ass -> VerRes [Trans]
-addAssToTr (trName, guards, updates) (AAss ident exp) = do
+
+addAssToTr tr (AAss varName exp) = do
+  newTr <- addVarAssToTr tr (AAss varName exp)
+  return [newTr]
+
+addAssToTr (trName, guards, updates) (AArrAss (Ident arrName) index exp) = do
+  case index of
+    {-
+    ESender -> do -- TODO: np. trzeba dodać sendera do varsValues
+      world <- get
+      mod <- modifyModule id
+      return $ Map.lookup (whichSender mod) (varsValues world)
+    -}
+    EInt x -> do
+      addAssToTr (trName, guards, updates) $ AAss (Ident $ arrName ++ "_" ++ (show x)) exp
+    EVar varName -> do 
+      case deduceVarValueFromGuards guards varName of
+        (Just (EInt x)) -> do
+          addAssToTr (trName, guards, updates) $ AAss (Ident $ arrName ++ "_" ++ (show x)) exp
+        Nothing -> do
+          varType <- findVarType varName 
+          case varType of
+            Just typ -> do
+              let 
+                maxVal = maxTypeValueOfType typ
+                vals = map (EInt) [0..maxVal]
+              mapM
+                (\val -> 
+                  addVarAssToTr 
+                    (trName, (EEq (EVar varName) val):guards, updates) 
+                    (AAss (Ident $ arrName ++ "_" ++ (show val)) exp)
+                )
+                vals
+            Nothing -> 
+              error $ "Var " ++ (unident varName) ++ " not found by findVarType"
+    _ -> do
+      error $ "Array index different than ESender, EInt a, or EVar a"
+
+
+
+
+
+
+-- modifyModule niepotrzebne?
+-- TODO: only simple assignments for a moment
+-- TODO: random
+-- Aux: adds an assignment to an updates branch
+-- can possibly create longer list of updates for randomized assignment
+addAssToUpdatesBranch :: [Exp] -> Ass -> [(Ident, Exp)] -> VerRes [[(Ident, Exp)]]
+
+addAssToUpdatesBranch guards (AAss ident exp) updatesBranch = do
+  -- TODO random (może przepisać case exp z updatesFromAss z SmartFunPrismEthver.hs?
   let 
     deleteOld :: [(Ident, Exp)] -> [(Ident, Exp)]
     deleteOld list = filter
       (\(i, _) -> i /= ident)
       list
-    newUpdates = map 
+    newUpdates =  
       (((ident, exp):) . deleteOld)
-      updates
-  return [(trName, guards, newUpdates)]
+      updatesBranch
+  return [newUpdates]
 
+addAssToUpdatesBranch _  (AArrAss arrName index exp) _ = do
+  error $ "addAssToUpdateBranch should not be called with AArrAss (" ++ (show $ AArrAss arrName index exp)
   
+
+deduceVarValueFromGuards :: [Exp] -> Ident -> Maybe Exp
+deduceVarValueFromGuards guards varName = 
+  let
+    filteredGuards =
+      filter
+      (\x -> case x of
+        Just _ -> True
+        _ -> False
+      )
+      (map (valueFromCond varName) guards)
+  in
+    case filteredGuards of
+      (h:t) -> h
+      _ -> Nothing
+
+valueFromCond :: Ident -> Exp -> Maybe Exp
+valueFromCond varName cond = 
+  case cond of
+    (EEq (EVar varName) val) -> Just val
+    (EAnd c1 c2) ->
+      case ((valueFromCond varName c1), (valueFromCond varName c2)) of
+        (Just val, _) -> Just val
+        (_, Just val) -> Just val
+        _ -> Nothing
+    _ -> Nothing
+
+-- TODO: Czy musi być deduceVarValueFromUpdate?
+
+-- Aux: deduces value of a var from guards and updates
+{-
+deduceVarValue :: [Exp] -> [(Ident, Exp)] -> Ident -> Maybe Exp
+deduceVarValue guards updatesBranch varName =
+  -- TODO: nested guards
+  let
+    filteredGuards = 
+      filter
+      (\x -> case x of
+        Just _ -> True
+        _ -> False
+      )
+      (map (valueFromCond varName) guards)
+    filteredUpdates = filter (\(i, e) -> i == varName) updatesBranch
+  in
+    case filteredUpdates of
+      (h:t) -> Just h
+      _ -> case filteredGuards of
+        (h:t) -> Just h
+        _ -> Nothing
+-}
+
 --  (createSmartOneTrans modifyModule (Fun funName args stms) condVarsList condArraysList) valuations
 
 {-
@@ -123,90 +247,11 @@ addRandomUpdates modifyModule oldUpdates = do
       return newUpdates
 -}
 
-{-
--- creates a command for a given function and given valuation
-createSmartOneTrans :: ModifyModuleType -> Function -> [Ident] -> [(Ident, Exp)] -> [Exp] -> VerRes ()
--- TODO: FunV
-createSmartOneTrans modifyModule (Fun funName args stms) condVarsList condArraysList vals = do
-  if (length condVarsList) + (length condArraysList) /= (length vals)
-  then
-    error $ "|condVarsList| (" ++ (show $ length condVarsList) ++ ") + |condArraysList| (" 
-      ++ (show $ length condArraysList) ++ ") /= |vals| (" ++ (show $ length vals) ++ "|)|"
-  else
-    return ()
-
-  let vals1 = take (length condVarsList) vals
-  let vals2 = drop (length condVarsList) vals
-  
-  addMultipleVarsValues condVarsList vals1
-
-  world <- get
-  mod <- modifyModule id
-  
-  condArraysAsVars <- mapM (arrayToVar modifyModule) condArraysList
-  
-  addMultipleVarsValues condArraysAsVars vals2
-
-  let 
-    guards = map
-      (\(varName, val) -> EEq (EVar varName) val)
-      (zip (condVarsList ++ condArraysAsVars) vals)
-  
-  updates <- foldM
-    (\acc stm -> do
-      newUpdates <- verSmartStm modifyModule stm
-      return $ [(head acc) ++ (head newUpdates)]
-    )
-    [[]]
-    stms
-
-  updates <- addRandomUpdates modifyModule updates
- 
-  world <- get
-  let added = addedGuards world
-
-  mod <- modifyModule id
-
-  addCustomTrans
-    modifyModule
-    ""
-    (currState mod)
-    1
-    (guards ++ added)
-    updates
-
-  clearAddedGuards
-  clearVarsValues
-  clearCondRandoms
--}
-
-
 ---------------------
 -- collectCondVars --
 ---------------------
 {-
 collectCondVars :: ModifyModuleType -> Stm -> VerRes ()
-
--- TODO: czy używamy SExp?
-
-collectCondVars modifyModule (SBlock stms) = do
-  mapM_ (collectCondVars modifyModule) stms
-
-collectCondVars modifyModule (SAsses asses) = do
-  mapM_ (collectCondVarsFromAss modifyModule) asses
-
-collectCondVars modifyModule (SIf cond ifBlock) = do
-  collectCondVarsFromExp modifyModule cond
-  collectCondVars modifyModule ifBlock
-
-collectCondVars modifyModule (SIfElse cond ifBlock elseBlock) = do
-  collectCondVarsFromExp modifyModule cond
-  collectCondVars modifyModule ifBlock
-  collectCondVars modifyModule elseBlock
-
--- TODO: Do I really use Return at all?
-collectCondVars modifyModule (SReturn _) = do
-  return ()
 
 collectCondVars modifyModule (SSend address value) = do
   collectCondVarsFromExp modifyModule address
