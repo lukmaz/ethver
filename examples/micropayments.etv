@@ -114,6 +114,10 @@ scenario M {
         open.sendCommunication();
         if (randU["M"] == randM["M"]) {
           get_payment.sendTransaction({from: "M", value: 0});
+          wait(contract_balance == 0);
+          if (balance1 == 0) {
+            break;
+          }
         }
         reset.sendCommunication();
       }
