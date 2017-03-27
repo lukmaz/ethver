@@ -100,12 +100,30 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
 verStm modifyModule (SWhile cond whileBlock) = do
   evalCond <- verExp modifyModule cond
   mod <- modifyModule id
-  let whileState = currState mod 
+
+  let
+    breakState = (currState mod) + 1
+    whileState = (currState mod) + 2
+
+  addCustomTrans 
+    modifyModule
+    ""
+    (currState mod)
+    whileState
+    []
+    [[]]
+
+  modifyModule (setCurrState whileState)
+  modifyModule (setNumStates whileState)
+
+  modifyModule $ addBreakState breakState
+
   addTransToNewState
     modifyModule
     ""  
     [evalCond]
     [[]]
+
   verStm modifyModule whileBlock
   mod <- modifyModule id
 
@@ -129,11 +147,38 @@ verStm modifyModule (SWhile cond whileBlock) = do
     [negateExp evalCond]
     [[]]
 
+  -- escape from breakState
+  addCustomTrans
+    modifyModule
+    ""
+    breakState
+    (numStates mod + 1)
+    []
+    [[]]
+
   mod <- modifyModule id
   let newState = numStates mod + 1
   modifyModule (setCurrState newState)
   modifyModule (setNumStates newState)
 
+  modifyModule removeBreakState
+
+  return ()
+
+verStm modifyModule (SBreak) = do
+  mod <- modifyModule id
+  addCustomTrans
+    modifyModule
+    ""
+    (currState mod)
+    (head $ breakStates mod)
+    []
+    [[]]
+
+  mod <- modifyModule id
+  let newState = numStates mod + 1
+  modifyModule (setCurrState newState)
+  modifyModule (setNumStates newState)
   return ()
 
 verStm modifyModule (SBlock stms) = do

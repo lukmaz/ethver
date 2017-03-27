@@ -47,6 +47,7 @@ data Module = Module {
   numLocals :: Integer,
   currState :: Integer,
   numStates :: Integer,
+  breakStates :: [Integer],
   transs :: [Trans],
   whichSender :: Ident
   }
@@ -80,7 +81,8 @@ emptyVerWorld = VerWorld {
 
 emptyModule :: Module
 emptyModule = Module {number = nUndefModuleNumber, stateVar = sEmptyState, moduleName = sEmptyModule, 
-  vars = Map.empty, varsInitialValues = Map.empty, numLocals = 0, currState = 1, numStates = 1, 
+  vars = Map.empty, varsInitialValues = Map.empty, numLocals = 0, currState = 1, numStates = 1,
+  breakStates = [],
   transs = [], whichSender = Ident sEmptySender}
 
 
@@ -342,6 +344,14 @@ setCurrState curr mod =
 setNumStates :: Integer -> Module -> Module
 setNumStates num mod =
   mod {numStates = num}
+
+addBreakState :: Integer -> Module -> Module
+addBreakState state mod = 
+  mod {breakStates = state:(breakStates mod)}
+
+removeBreakState :: Module -> Module
+removeBreakState mod = do
+  mod {breakStates = tail $ breakStates mod}
 
 addVarToModule :: Type -> Ident -> Module -> Module
 addVarToModule typ ident mod = do

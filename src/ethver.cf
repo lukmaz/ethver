@@ -52,6 +52,7 @@ SSend.   Stm ::= Exp "." "send" "(" Exp ")" ";" ;
 SSendT.  Stm ::= Ident "." "sendTransaction" "(" [CallArg] ")" ";" ;
 SSendC.  Stm ::= Ident "." "sendCommunication" "(" [Exp] ")" ";" ;
 SWait.   Stm ::= "wait" "(" Exp ")" ";" ;
+SBreak.  Stm ::= "break" ";" ;
 
 terminator Stm "" ;
 separator nonempty Ass "," ;
