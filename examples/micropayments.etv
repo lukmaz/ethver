@@ -90,11 +90,9 @@ scenario U {
       rand0 = random(3);
       send_ticket.sendCommunication(1, rand0);
     }
-    /*
     else {
       break;
     }
-    */
     i0 = i0 + 1;
   }
   endU = true;
