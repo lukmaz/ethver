@@ -249,9 +249,16 @@ prismShowExp ETrue =
 prismShowExp EFalse = 
   "false"
 
+-- TODO SExp, do skopiowania do sendT, sendC, wait, rand, rand_lazy itp. (?)
+{-
 prismShowExp (ECall (h:t) args) =
   foldl
     (\acc ident -> acc ++ "." ++ (unident ident))
     (unident h)
     t
-  
+-}
+
+-- TODO: czy to jest w ogóle używane? Robi coś dziwnego
+prismShowExp (ECall ident args) =
+  unident ident
+

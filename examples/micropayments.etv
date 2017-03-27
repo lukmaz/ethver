@@ -91,7 +91,7 @@ scenario U {
       send_ticket.sendCommunication(1, rand0);
     }
     else {
-      break;
+      //break;
     }
     i0 = i0 + 1;
   }
@@ -118,7 +118,7 @@ scenario M {
         reset.sendCommunication();
       }
       else {
-        break;
+        //break;
       }
     }
     /*

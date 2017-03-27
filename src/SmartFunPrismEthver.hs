@@ -159,7 +159,7 @@ collectCondVarsFromAss modifyModule (AAss ident value) = do
   case value of 
     -- TODO: random dla Booli
     -- TODO: range of random is ignored. Real range deducted from variable type
-    (ECall [sRandom] [AExp (EInt range)]) ->
+    (ERand (EInt range)) ->
       return ()
     (ECall funs args) ->
       error $ "ECall " ++ (show funs) ++ " (" ++ (show args) ++ ") not supported."
@@ -169,7 +169,7 @@ collectCondVarsFromAss modifyModule (AAss ident value) = do
 collectCondVarsFromAss modifyModule (AArrAss ident index value) = do
   case value of
     -- TODO: range of random is ignored. Real range deducted from variable type
-    (ECall [sRandom] [AExp (EInt range)]) -> do
+    (ERand (EInt range)) -> do
       collectCondVarsFromExp modifyModule index
     (ECall funs args) ->
       error $ "ECall " ++ (show funs) ++ " (" ++ (show args) ++ ") not supported."
@@ -215,11 +215,6 @@ collectCondVarsFromExp modifyModule exp = case exp of
     collectCondVarsFromExp modifyModule index
     collectCondArray modifyModule name index
 
-  -- TODO: EWait should be moved to Stm
-  -- and is not used in contract functions
-  -- ECall -> should be moved to Stm
-  -- ESend -> should be moved to Stm? (maybe not for checking ret value)
-  
   EVar ident -> addCondVar ident
 
   EValue -> collectCondVarsFromExp modifyModule $ EVar iValue
@@ -249,7 +244,7 @@ collectCondArray modifyModule varName index = do
 updatesFromAss :: ModifyModuleType -> Ass -> VerRes [[(Ident, Exp)]]
 updatesFromAss modifyModule (AAss ident exp) = do
   case exp of
-    ECall [sRandom] _ -> do
+    ERand _ -> do
       addCondRandom ident
       return [[]]
     ECall funs args -> error $ "Updates from ECall " ++ (show funs) ++ "(" ++ (show args) ++ ") not supported."
@@ -260,7 +255,7 @@ updatesFromAss modifyModule (AAss ident exp) = do
 updatesFromAss modifyModule (AArrAss (Ident ident) index exp) = do
   case exp of
     -- random calls handled separately in addRandomUpdates
-    ECall [sRandom] _ -> do
+    ERand  _ -> do
       addCondRandomArray (Ident ident) index
       return [[]]
     ECall funs args -> error $ "Updates from ECall " ++ (show funs) ++ "(" ++ (show args) ++ ") not supported."
@@ -290,9 +285,11 @@ updatesFromAss modifyModule (AArrAss (Ident ident) index exp) = do
 
 verSmartStm :: ModifyModuleType -> Stm -> VerRes [[(Ident, Exp)]]
 
--- TODO: SExp - czy to na pewno jest niepotrzebne?
-verSmartStm modifyModule (SExp exp) = do
+
+-- TODO: Do wywalenia
+{-verSmartStm modifyModule (SExp exp) = do
   return [[]]
+-}
 
 verSmartStm modifyModule (SBlock stms) = do
   -- TODO: inteligentne powiększanie updateów w przypadku probabilistycznych przejsc
@@ -457,9 +454,6 @@ evaluateExp modifyModule (EArray (Ident ident) index) = do
   case indexEvaluated of 
     EInt indexVal -> evaluateExp modifyModule $ EVar $ Ident $ ident ++ "_" ++ (show indexVal)
     _ -> error $ "Index " ++ (show indexEvaluated) ++ " doesn't evaluate to EInt a)"
-
--- TODO: should be moved to SWait?
---evaluateExp modifyModule (EWait ...)
 
 evaluateExp modifyModule (EVar ident) = do
   exp <- findVarValue ident
