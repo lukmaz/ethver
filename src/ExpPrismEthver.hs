@@ -16,10 +16,6 @@ import WorldPrismEthver
 ---------
 
 verStm :: ModifyModuleType -> Stm -> VerRes ()
--- TODO: czy SExp jest w ogóle używane?
-verStm modifyModule (SExp exp) = do
-  _ <- verExp modifyModule exp 
-  return ()
 
 verStm modifyModule (SAsses [AAss ident exp]) = 
   verFullAss modifyModule (AAss ident exp)
@@ -104,12 +100,30 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
 verStm modifyModule (SWhile cond whileBlock) = do
   evalCond <- verExp modifyModule cond
   mod <- modifyModule id
-  let whileState = currState mod 
+
+  let
+    breakState = (currState mod) + 1
+    whileState = (currState mod) + 2
+
+  addCustomTrans 
+    modifyModule
+    ""
+    (currState mod)
+    whileState
+    []
+    [[]]
+
+  modifyModule (setCurrState whileState)
+  modifyModule (setNumStates whileState)
+
+  modifyModule $ addBreakState breakState
+
   addTransToNewState
     modifyModule
     ""  
     [evalCond]
     [[]]
+
   verStm modifyModule whileBlock
   mod <- modifyModule id
 
@@ -133,11 +147,38 @@ verStm modifyModule (SWhile cond whileBlock) = do
     [negateExp evalCond]
     [[]]
 
+  -- escape from breakState
+  addCustomTrans
+    modifyModule
+    ""
+    breakState
+    (numStates mod + 1)
+    []
+    [[]]
+
   mod <- modifyModule id
   let newState = numStates mod + 1
   modifyModule (setCurrState newState)
   modifyModule (setNumStates newState)
 
+  modifyModule removeBreakState
+
+  return ()
+
+verStm modifyModule (SBreak) = do
+  mod <- modifyModule id
+  addCustomTrans
+    modifyModule
+    ""
+    (currState mod)
+    (head $ breakStates mod)
+    []
+    [[]]
+
+  mod <- modifyModule id
+  let newState = numStates mod + 1
+  modifyModule (setCurrState newState)
+  modifyModule (setNumStates newState)
   return ()
 
 verStm modifyModule (SBlock stms) = do
@@ -169,6 +210,20 @@ verStm modifyModule (SSend receiverExp arg) = do
       let receiverBalance = Ident $ sBalancePrefix ++ (show receiverNumber)
       transferFromContract receiverBalance val
 
+verStm modifyModule (SSendT funIdent args) = do
+  verSendTAux modifyModule funIdent args
+
+verStm modifyModule (SSendC funIdent args) = do
+  verSendCAux modifyModule funIdent args
+
+verStm modifyModule (SWait cond) = do
+  evalCond <- verExp modifyModule cond
+  addTransToNewState
+    modifyModule
+    ""
+    [EOr evalCond $ EVar $ Ident sTimelocksReleased]
+    [[]]
+
 
 ---------
 -- Ass --
@@ -178,7 +233,7 @@ verFullAss :: ModifyModuleType -> Ass -> VerRes ()
 
 verFullAss modifyModule (AAss ident exp) = do
   case exp of
-    ECall [Ident sRandomLazy] [AExp (EInt _)] ->
+    ERandL (EInt _) ->
       addLazyRandom ident
     _ -> 
       return ()
@@ -286,9 +341,8 @@ verExp modifyModule (EStr s) = verValExp modifyModule (EStr s)
 verExp modifyModule ETrue = verValExp modifyModule ETrue
 verExp modifyModule EFalse = verValExp modifyModule EFalse
 
--- TODO: poniższe 2 chyba do przeniesienia do Stm
-verExp modifyModule (ECall idents exps) = verCallExp modifyModule (ECall idents exps)
-verExp modifyModule (EWait cond) = verCallExp modifyModule (EWait cond)
+verExp modifyModule (ERand exp) = verRandom modifyModule exp
+verExp modifyModule (ERandL exp) = verRandomLazy modifyModule exp
 
 -------------
 -- MathExp --
@@ -386,7 +440,7 @@ verValExp modifyModule (EVar ident) = do
       if Set.member ident (lazyRandoms world)
         then do
           removeLazyRandom ident
-          verRandom modifyModule [AExp $ EInt range]
+          verRandom modifyModule $ EInt range
         else do
           return (EVar ident)
     _ ->
@@ -474,46 +528,11 @@ verValExp _ EFalse =
   return EFalse
 
 
-----------------
--- CallExp --
-----------------
-
--- TODO: na razie możemy mieć tylko jeden kontrakt
-verCallExp :: ModifyModuleType -> Exp -> VerRes Exp
-
-verCallExp modifyModule (ECall idents args) = do
-  case idents of
-    [funName, suffix] 
-      | suffix == iSendTransaction -> do 
-        verSendTAux modifyModule funName args
-        return (ECall idents args)
-      | suffix == iSendCommunication -> do
-        verSendCAux modifyModule funName args
-        return (ECall idents args)
-      | suffix == iCall -> do
-        verCallAux modifyModule funName args
-    [ident]
-      | ident == iRandom -> do
-        verRandom modifyModule args
-      | ident == iRandomLazy -> do
-        verRandomLazy modifyModule args
-
-
-verCallExp modifyModule (EWait cond) = do
-  evalCond <- verExp modifyModule cond
-  addTransToNewState
-    modifyModule
-    ""
-    [EOr evalCond $ EVar $ Ident sTimelocksReleased]
-    [[]]
-  return (EWait evalCond)
-
 ------------
 -- Random --
 ------------
-
-verRandom :: ModifyModuleType -> [CallArg] -> VerRes Exp
-verRandom modifyModule [AExp (EInt range)] = do
+verRandom :: ModifyModuleType -> Exp -> VerRes Exp
+verRandom modifyModule (EInt range) = do
   mod <- modifyModule id
   let localVarName = (moduleName mod) ++ sLocalSuffix ++ (show $ numLocals mod)
   addLocal modifyModule (TUInt range)
@@ -528,8 +547,8 @@ verRandom modifyModule [AExp (EInt range)] = do
     )
   return (EVar $ Ident localVarName)
 
-verRandomLazy :: ModifyModuleType -> [CallArg] -> VerRes Exp
-verRandomLazy modifyModule [AExp (EInt range)] = do
+verRandomLazy :: ModifyModuleType -> Exp -> VerRes Exp
+verRandomLazy modifyModule (EInt range) = do
   return $ EInt range
 
 -----------------------------
@@ -598,15 +617,13 @@ verSendTAux modifyModule funName argsVals = do
 -- SendC --
 -----------
 
-verSendCAux :: ModifyModuleType -> Ident -> [CallArg] -> VerRes ()
-verSendCAux modifyModule funName argsVals = do
+verSendCAux :: ModifyModuleType -> Ident -> [Exp] -> VerRes ()
+verSendCAux modifyModule funName expArgsVals = do
   world <- get
   mod <- modifyModule id
   case Map.lookup funName (funs world) of
     Just fun -> do
       let argNames = getArgNames fun
-      let expArgsVals = map (\(AExp exp) -> exp) argsVals
-      -- TODO: olewamy "from", bo sender jest wiadomy ze scenariusza
       let addAssignment acc (argName, argVal) = acc ++ [createAssignment (number mod) funName argName argVal]
       let updates1 = [foldl addAssignment [] $ zip argNames expArgsVals]
       

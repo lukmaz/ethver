@@ -87,9 +87,6 @@ ethFun (FunR ident args ret stms) = do
 -- Stm
 
 ethStm :: Stm -> EthRes ()
-ethStm (SExp exp) = do
-  ethExp exp
-  addContr ";\n"
 
 ethStm (SAsses asses) = do
   mapM_ ethAss asses
@@ -125,9 +122,6 @@ ethScenario (Scen userName decls stms) = do
 -- Stm
 
 ethScStm :: Stm -> EthRes ()
-ethScStm (SExp exp) = do
-  ethScExp exp
-  addScen "\n"
 
 ethScStm (SAsses asses) = do
   mapM_ ethScAss asses
@@ -155,10 +149,10 @@ ethScExp (EInt x) = do
 ethScExp (EVar ident) = do
   ethScIdent ident
 
-ethScExp (ECall idents args) = do
-  ethScIdents idents
+ethScExp (ECall ident args) = do
+  ethScIdent ident
   addScen "("
-  commaList ethScCallArg addScen args
+  commaList ethScExp addScen args
   addScen ")"
 
 

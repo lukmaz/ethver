@@ -90,11 +90,9 @@ scenario U {
       rand0 = random(3);
       send_ticket.sendCommunication(1, rand0);
     }
-    /*
     else {
       break;
     }
-    */
     i0 = i0 + 1;
   }
   endU = true;
@@ -116,6 +114,10 @@ scenario M {
         open.sendCommunication();
         if (randU["M"] == randM["M"]) {
           get_payment.sendTransaction({from: "M", value: 0});
+          wait(contract_balance == 0);
+          if (balance1 == 0) {
+            break;
+          }
         }
         reset.sendCommunication();
       }
@@ -123,11 +125,9 @@ scenario M {
         break;
       }
     }
-    /*
     else {
       break;
     }
-    */
     i1 = i1 + 1;
   }
   endM = true;

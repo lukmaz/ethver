@@ -41,7 +41,7 @@ Ar.   Arg  ::= Type Ident ;
 
 separator  Arg "," ;
 
-SExp.    Stm ::= Exp ";" ;
+-- SExp.    Stm ::= Exp ";" ;
 SBlock.  Stm ::= "{" [Stm] "}" ;
 SAsses.  Stm ::= [Ass] ";" ;
 SIf.     Stm ::= "if" "(" Exp ")" Stm ;
@@ -49,9 +49,14 @@ SIfElse. Stm ::= "if" "(" Exp ")" Stm "else" Stm ;
 SWhile.  Stm ::= "while" "(" Exp ")" Stm ;
 SReturn. Stm ::= "return" Exp  ";" ;
 SSend.   Stm ::= Exp "." "send" "(" Exp ")" ";" ;
+SSendT.  Stm ::= Ident "." "sendTransaction" "(" [CallArg] ")" ";" ;
+SSendC.  Stm ::= Ident "." "sendCommunication" "(" [Exp] ")" ";" ;
+SWait.   Stm ::= "wait" "(" Exp ")" ";" ;
+SBreak.  Stm ::= "break" ";" ;
 
 terminator Stm "" ;
 separator nonempty Ass "," ;
+separator Exp "," ;
 
 AAss.    Ass ::= Ident "=" Exp ;
 AArrAss. Ass ::= Ident "[" Exp "]" "=" Exp ;
@@ -72,8 +77,9 @@ EMod.    Exp5 ::= Exp5 "%" Exp6 ;
 ENeg.    Exp6 ::= "-" Exp7 ;
 ENot.    Exp6 ::= "!" Exp7 ;
 EArray.  Exp7 ::= Ident "[" Exp "]" ;
-EWait.   Exp7 ::= "wait" "(" Exp ")" ;
-ECall.   Exp7 ::= [Ident] "(" [CallArg] ")" ;
+ECall.   Exp7 ::= Ident "." "call" "(" [Exp] ")" ;
+ERand.   Exp7 ::= "random" "(" Exp ")" ;
+ERandL.  Exp7 ::= "random_lazy" "(" Exp ")" ;
 EVar.    Exp7 ::= Ident ;
 EValue.  Exp7 ::= "msg" "." "value" ;
 ESender. Exp7 ::= "msg" "." "sender" ;
