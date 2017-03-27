@@ -17,13 +17,6 @@ import WorldPrismEthver
 
 verStm :: ModifyModuleType -> Stm -> VerRes ()
 
--- TODO: Do wywalenia
-{-
-    verStm modifyModule (SExp exp) = do
-  _ <- verExp modifyModule exp 
-  return ()
--}
-
 verStm modifyModule (SAsses [AAss ident exp]) = 
   verFullAss modifyModule (AAss ident exp)
 
@@ -185,27 +178,6 @@ verStm modifyModule (SWait cond) = do
     ""
     [EOr evalCond $ EVar $ Ident sTimelocksReleased]
     [[]]
-
-
--- TODO: do wywalenia SExp
-{-
-verCallExp modifyModule (ECall idents args) = do
-  case idents of
-    [funName, suffix] 
-      | suffix == iSendTransaction -> do 
-        verSendTAux modifyModule funName args
-        return (ECall idents args)
-      | suffix == iSendCommunication -> do
-        verSendCAux modifyModule funName args
-        return (ECall idents args)
-      | suffix == iCall -> do
-        verCallAux modifyModule funName args
-    [ident]
-      | ident == iRandom -> do
-        verRandom modifyModule args
-      | ident == iRandomLazy -> do
-        verRandomLazy modifyModule args
--}
 
 
 ---------

@@ -122,8 +122,6 @@ createSmartOneTrans modifyModule (Fun funName args stms) condVarsList condArrays
 
 collectCondVars :: ModifyModuleType -> Stm -> VerRes ()
 
--- TODO: czy używamy SExp?
-
 collectCondVars modifyModule (SBlock stms) = do
   mapM_ (collectCondVars modifyModule) stms
 
@@ -285,11 +283,6 @@ updatesFromAss modifyModule (AArrAss (Ident ident) index exp) = do
 
 verSmartStm :: ModifyModuleType -> Stm -> VerRes [[(Ident, Exp)]]
 
-
--- TODO: Do wywalenia
-{-verSmartStm modifyModule (SExp exp) = do
-  return [[]]
--}
 
 verSmartStm modifyModule (SBlock stms) = do
   -- TODO: inteligentne powiększanie updateów w przypadku probabilistycznych przejsc

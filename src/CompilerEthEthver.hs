@@ -88,13 +88,6 @@ ethFun (FunR ident args ret stms) = do
 
 ethStm :: Stm -> EthRes ()
 
--- TODO: do wywalenia (1/2)
-{-
-ethStm (SExp exp) = do
-  ethExp exp
-  addContr ";\n"
--}
-
 ethStm (SAsses asses) = do
   mapM_ ethAss asses
 
@@ -129,12 +122,6 @@ ethScenario (Scen userName decls stms) = do
 -- Stm
 
 ethScStm :: Stm -> EthRes ()
-
--- TODO: do wywalenia (2/2)  
-{-ethScStm (SExp exp) = do
-  ethScExp exp
-  addScen "\n"
--}
 
 ethScStm (SAsses asses) = do
   mapM_ ethScAss asses
