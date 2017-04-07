@@ -65,7 +65,35 @@ addDFSStm modifyModule tr (SArrAss ident index exp) = do
   addAssToTr tr (SArrAss ident index exp)
 
 addDFSStm modifyModule (trName, guards, updates) (SIf cond ifBlock) = do
-  evaluatedCond <- evaluateExp modifyModule cond
+
+
+
+
+
+
+
+
+
+  -- TU
+
+
+
+  --evaluatedCond <- evaluateExp modifyModule cond
+  let evaluatedCond = cond
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   posTranss <- addDFSStm modifyModule (trName, evaluatedCond:guards, updates) ifBlock
   let negTranss = [(trName, (negateExp cond):guards, updates)]
   return $ posTranss ++ negTranss
@@ -477,6 +505,9 @@ verSmartStm modifyModule (SSend receiverExp arg) = do
 ------------------
 -- evaluateExp --
 ------------------
+{-
+
+CHYBA JEDNAK TRZEBA ZROBIĆ ZUPEŁNIE INACZEJ NIŻ evaluateExp
 
 evaluateBoolBinOp :: ModifyModuleType -> (Bool -> Bool -> Bool) -> Exp -> Exp -> VerRes Exp
 evaluateBoolBinOp modifyModule op e1 e2 = do
@@ -645,5 +676,4 @@ evaluateExp modifyModule tr ETrue = do
 
 evaluateExp modifyModule tr EFalse = do
   return ([tr], EFalse)
-
-
+-}
