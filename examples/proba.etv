@@ -1,0 +1,34 @@
+user "U";
+user "M";
+
+CONTRACT_BALANCE_MAX = 4;
+CONTRACT_BALANCE_INIT = 2;
+USER_BALANCE_MAX = 4;
+USER0_BALANCE_INIT = 0;
+USER1_BALANCE_INIT = 0;
+MAX_VALUE = 1;
+
+
+contract RPS {
+}
+
+communication {
+  uint(3) a;
+  uint(3) x;
+  uint(3) tab[2];
+
+  function set(uint(2) y) {
+    a = 2;
+    tab[y] = x;
+    // sprawdzic if a == ...
+    if (tab[y] == 1) {
+      a = 1;
+    }
+  }
+}
+
+scenario U {
+}
+
+scenario M {
+}

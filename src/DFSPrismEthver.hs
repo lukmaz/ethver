@@ -65,7 +65,8 @@ addDFSStm modifyModule tr (SArrAss ident index exp) = do
   addAssToTr tr (SArrAss ident index exp)
 
 addDFSStm modifyModule (trName, guards, updates) (SIf cond ifBlock) = do
-  posTranss <- addDFSStm modifyModule (trName, cond:guards, updates) ifBlock
+  evaluatedCond <- evaluateExp modifyModule cond
+  posTranss <- addDFSStm modifyModule (trName, evaluatedCond:guards, updates) ifBlock
   let negTranss = [(trName, (negateExp cond):guards, updates)]
   return $ posTranss ++ negTranss
 
@@ -106,6 +107,8 @@ addAssToTr tr (SAss varName exp) = do
   newTr <- addVarAssToTr tr (SAss varName exp)
   return [newTr]
 
+
+-- TODO DFS: to jest do przeniesienia do evaluateExp?
 addAssToTr (trName, guards, updates) (SArrAss (Ident arrName) index exp) = do
   case index of
     {-
@@ -474,7 +477,7 @@ verSmartStm modifyModule (SSend receiverExp arg) = do
 ------------------
 -- evaluateExp --
 ------------------
-{-
+
 evaluateBoolBinOp :: ModifyModuleType -> (Bool -> Bool -> Bool) -> Exp -> Exp -> VerRes Exp
 evaluateBoolBinOp modifyModule op e1 e2 = do
   v1 <- evaluateExp modifyModule e1
@@ -535,69 +538,112 @@ evaluateBoolUnOp modifyModule op e = do
 
 -- evaluateExp
 
-evaluateExp :: ModifyModuleType -> Exp -> VerRes Exp
+evaluateExp :: ModifyModuleType -> Trans -> Exp -> VerRes ([Trans], Exp)
 
-evaluateExp modifyModule (EOr e1 e2) = evaluateBoolBinOp modifyModule (||) e1 e2
-evaluateExp modifyModule (EAnd e1 e2) = evaluateBoolBinOp modifyModule (&&) e1 e2
+evaluateExp modifyModule tr (EOr e1 e2) = evaluateBoolBinOp modifyModule tr (||) e1 e2
+evaluateExp modifyModule tr (EAnd e1 e2) = evaluateBoolBinOp modifyModule tr (&&) e1 e2
 
-evaluateExp modifyModule (EEq e1 e2) = evaluateEq modifyModule e1 e2
-evaluateExp modifyModule (ENe e1 e2) = do
-  tmp <- evaluateEq modifyModule e1 e2
-  evaluateBoolUnOp modifyModule not tmp
+evaluateExp modifyModule tr (EEq e1 e2) = evaluateEq modifyModule tr e1 e2
+evaluateExp modifyModule tr (ENe e1 e2) = do
+  tmp <- evaluateEq modifyModule tr e1 e2
+  evaluateBoolUnOp modifyModule tr not tmp
 
-evaluateExp modifyModule (ELt e1 e2) = evaluateCompIntBinOp modifyModule (<) e1 e2
-evaluateExp modifyModule (ELe e1 e2) = evaluateCompIntBinOp modifyModule (<=) e1 e2
-evaluateExp modifyModule (EGt e1 e2) = evaluateCompIntBinOp modifyModule (>) e1 e2
-evaluateExp modifyModule (EGe e1 e2) = evaluateCompIntBinOp modifyModule (>=) e1 e2
-evaluateExp modifyModule (EAdd e1 e2) = evaluateArithmIntBinOp modifyModule (+) e1 e2
-evaluateExp modifyModule (ESub e1 e2) = evaluateArithmIntBinOp modifyModule (-) e1 e2
-evaluateExp modifyModule (EMul e1 e2) = evaluateArithmIntBinOp modifyModule (*) e1 e2
-evaluateExp modifyModule (EDiv e1 e2) = evaluateArithmIntBinOp modifyModule div e1 e2
-evaluateExp modifyModule (EMod e1 e2) = evaluateArithmIntBinOp modifyModule mod e1 e2
+evaluateExp modifyModule tr (ELt e1 e2) = evaluateCompIntBinOp modifyModule tr (<) e1 e2
+evaluateExp modifyModule  tr (ELe e1 e2) = evaluateCompIntBinOp modifyModule tr (<=) e1 e2
+evaluateExp modifyModule tr (EGt e1 e2) = evaluateCompIntBinOp modifyModule tr (>) e1 e2
+evaluateExp modifyModule tr (EGe e1 e2) = evaluateCompIntBinOp modifyModule tr (>=) e1 e2
+evaluateExp modifyModule tr (EAdd e1 e2) = evaluateArithmIntBinOp modifyModule tr (+) e1 e2
+evaluateExp modifyModule tr (ESub e1 e2) = evaluateArithmIntBinOp modifyModule tr (-) e1 e2
+evaluateExp modifyModule tr (EMul e1 e2) = evaluateArithmIntBinOp modifyModule tr (*) e1 e2
+evaluateExp modifyModule tr (EDiv e1 e2) = evaluateArithmIntBinOp modifyModule tr div e1 e2
+evaluateExp modifyModule tr (EMod e1 e2) = evaluateArithmIntBinOp modifyModule tr mod e1 e2
 
-evaluateExp modifyModule (ENeg e) = evaluateArithmIntBinOp modifyModule (-) (EInt 0) e
-evaluateExp modifyModule (ENot e) = evaluateBoolUnOp modifyModule not e
+evaluateExp modifyModule tr (ENeg e) = evaluateArithmIntBinOp modifyModule tr (-) (EInt 0) e
+evaluateExp modifyModule tr (ENot e) = evaluateBoolUnOp modifyModule tr not e
 
-evaluateExp modifyModule (EArray (Ident ident) index) = do
+
+
+DO WYWALENIA:
+evaluateExp modifyModule tr (EArray (Ident ident) index) = do
   mod <- modifyModule id
+  
+  case index of
+  
+  
   indexEvaluated <- evaluateExp modifyModule index
   case indexEvaluated of 
     EInt indexVal -> evaluateExp modifyModule $ EVar $ Ident $ ident ++ "_" ++ (show indexVal)
     _ -> error $ "Index " ++ (show indexEvaluated) ++ " doesn't evaluate to EInt a)"
 
+evaluateExp modifyModule (trName, guards, updates) (EArray (Ident arrName) index) = do
+  case index of
+    {-
+    JAKIES TARE:
+    ESender -> do -- TODO: np. trzeba dodać sendera do varsValues
+      world <- get
+      mod <- modifyModule id
+      return $ Map.lookup (whichSender mod) (varsValues world)
+    -}
+    EInt x -> do
+      return ([(trName, guards, updates)], EVar (Ident $ arrName ++ "_" ++ (show x)))
+    EVar varName -> do 
+      case deduceVarValueFromGuards guards varName of
+        (Just (EInt x)) -> do
+          return ([(trName, guards, updates)], EVar (Ident $ arrName ++ "_" ++ (show x)))
+        Nothing -> do
+          varType <- findVarType varName 
+          case varType of
+            Just typ -> do
+              let 
+                maxVal = maxTypeValueOfType typ
+                vals = [0..maxVal]
+              mapM
+                (\val -> 
+                  addVarAssToTr 
+                    (trName, (EEq (EVar varName) (EInt val)):guards, updates) 
+                    (SAss (Ident $ arrName ++ "_" ++ (show val)) exp)
+                )
+                vals
+            Nothing -> 
+              error $ "Var " ++ (unident varName) ++ " not found by findVarType"
+    _ -> do
+      error $ "Array index different than ESender, EInt a, or EVar a"
+
+
+
 -- TODO: should be moved to SWait?
 --evaluateExp modifyModule (EWait ...)
 
-evaluateExp modifyModule (EVar ident) = do
+evaluateExp modifyModule tr (EVar ident) = do
   exp <- findVarValue ident
   case exp of 
-    Just val -> return val
-    Nothing -> return $ EVar ident
+    Just val -> return ([tr], val)
+    Nothing -> return ([tr], EVar ident)
 
-evaluateExp modifyModule (EValue) = do
-  evaluateExp modifyModule (EVar $ Ident sValue)
+evaluateExp modifyModule tr (EValue) = do
+  evaluateExp modifyModule tr (EVar $ Ident sValue)
 
--- TODO: zrobić coś z senderem. Pewnie trzeba dodać do condVars i trzymać wartość w varsValues
-evaluateExp modifyModule ESender = do
+-- TODO DFS: możliwe, że tu trzeba będzie sprawdzać, czy nie dołożyć sendera do guardsów. albo dodawać zawsze domyślnie
+evaluateExp modifyModule tr ESender = do
   world <- get
   mod <- modifyModule id
   case Map.lookup (whichSender mod) (varsValues world) of
-    Just x -> return x
+    Just x -> return ([tr], x)
     Nothing -> error $ "Variable " ++ (show $ whichSender mod) ++ " not found in varsValues."
 
-evaluateExp modifyModule (EStr name) = do
+evaluateExp modifyModule tr (EStr name) = do
   world <- get
   case Map.lookup name $ playerNumbers world of
     Nothing -> error $ "Player '" ++ name ++ "' not found. (other string constants not supported)"
-    Just number -> return (EInt number)
+    Just number -> return ([tr], EInt number)
 
-evaluateExp modifyModule (EInt x) = do
-  return (EInt x)
+evaluateExp modifyModule tr (EInt x) = do
+  return ([tr], EInt x)
 
-evaluateExp modifyModule ETrue = do
-  return ETrue
+evaluateExp modifyModule tr ETrue = do
+  return ([tr], ETrue)
 
-evaluateExp modifyModule EFalse = do
-  return EFalse
+evaluateExp modifyModule tr EFalse = do
+  return ([tr], EFalse)
 
--}
+
