@@ -128,6 +128,9 @@ collectCondVars modifyModule (SBlock stms) = do
 collectCondVars modifyModule (SAss ident value) = do
   collectCondVarsFromAss modifyModule (SAss ident value)
 
+collectCondVars modifyModule (SArrAss ident index value) = do
+  collectCondVarsFromAss modifyModule (SArrAss ident index value)
+
 collectCondVars modifyModule (SIf cond ifBlock) = do
   collectCondVarsFromExp modifyModule cond
   collectCondVars modifyModule ifBlock
@@ -305,6 +308,13 @@ verSmartStm modifyModule (SAss ident value) = do
   -- TODO: assumption that newUpdates is a singleton (no probability)
   return $ [head newUpdates]
 
+verSmartStm modifyModule (SArrAss ident index value) = do
+  -- TODO: probabilistyczne?
+  newUpdates <- updatesFromAss modifyModule (SArrAss ident index value)
+  -- TODO: assumption that newUpdates is a singleton?
+  mapM_ (\(ident, val) -> assignArrayValue ident index val) (head newUpdates)
+  return $ [head newUpdates]
+  
 verSmartStm modifyModule (SIf cond stm) = do
   result <- evaluateExp modifyModule cond
   case result of
