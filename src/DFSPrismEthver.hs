@@ -58,12 +58,11 @@ addDFSStm modifyModule tr (SBlock (stmH:stmT)) = do
   newTrs <- addDFSStm modifyModule tr stmH
   verDFSStm modifyModule newTrs (SBlock stmT)
 
-addDFSStm modifyModule tr (SAsses []) = do
-  return [tr]
+addDFSStm modifyModule tr (SAss ident exp) = do
+  addAssToTr tr (SAss ident exp)
 
-addDFSStm modifyModule tr (SAsses (assH:assT)) = do
-  newTrs <- addAssToTr tr assH
-  verDFSStm modifyModule newTrs (SAsses assT)
+addDFSStm modifyModule tr (SArrAss ident index exp) = do
+  addAssToTr tr (SArrAss ident index exp)
 
 addDFSStm modifyModule (trName, guards, updates) (SIf cond ifBlock) = do
   posTranss <- addDFSStm modifyModule (trName, cond:guards, updates) ifBlock
@@ -84,30 +83,30 @@ addDFSStm modifyModule _ (SWhile _ _) = do
 ---------
 
 -- special case for AAss. Generates single trans
-addVarAssToTr :: Trans -> Ass -> VerRes Trans
+addVarAssToTr :: Trans -> Stm -> VerRes Trans
 
-addVarAssToTr (trName, guards, updates) (AAss varName exp) = do
+addVarAssToTr (trName, guards, updates) (SAss varName exp) = do
   newUpdates <- foldM
     (\acc branch -> do
-      partialUpdates <- addAssToUpdatesBranch guards (AAss varName exp) branch
+      partialUpdates <- addAssToUpdatesBranch guards (SAss varName exp) branch
       return $ partialUpdates ++ acc
     )
     []
     updates
   return $ (trName, guards, newUpdates)
 
-addVarAssToTr _ (AArrAss arrName index exp) = do
-  error $ "addVarAssToTr should not be called with AArrAss argument (" ++ (show (AArrAss arrName index exp))
+addVarAssToTr _ (SArrAss arrName index exp) = do
+  error $ "addVarAssToTr should not be called with SArrAss argument (" ++ (show (SArrAss arrName index exp))
 
 -- adds an assignment to a single transition
 -- can possibly create longer list of updates in case the array index is not known
-addAssToTr :: Trans -> Ass -> VerRes [Trans]
+addAssToTr :: Trans -> Stm -> VerRes [Trans]
 
-addAssToTr tr (AAss varName exp) = do
-  newTr <- addVarAssToTr tr (AAss varName exp)
+addAssToTr tr (SAss varName exp) = do
+  newTr <- addVarAssToTr tr (SAss varName exp)
   return [newTr]
 
-addAssToTr (trName, guards, updates) (AArrAss (Ident arrName) index exp) = do
+addAssToTr (trName, guards, updates) (SArrAss (Ident arrName) index exp) = do
   case index of
     {-
     ESender -> do -- TODO: np. trzeba dodać sendera do varsValues
@@ -116,23 +115,23 @@ addAssToTr (trName, guards, updates) (AArrAss (Ident arrName) index exp) = do
       return $ Map.lookup (whichSender mod) (varsValues world)
     -}
     EInt x -> do
-      addAssToTr (trName, guards, updates) $ AAss (Ident $ arrName ++ "_" ++ (show x)) exp
+      addAssToTr (trName, guards, updates) $ SAss (Ident $ arrName ++ "_" ++ (show x)) exp
     EVar varName -> do 
       case deduceVarValueFromGuards guards varName of
         (Just (EInt x)) -> do
-          addAssToTr (trName, guards, updates) $ AAss (Ident $ arrName ++ "_" ++ (show x)) exp
+          addAssToTr (trName, guards, updates) $ SAss (Ident $ arrName ++ "_" ++ (show x)) exp
         Nothing -> do
           varType <- findVarType varName 
           case varType of
             Just typ -> do
               let 
                 maxVal = maxTypeValueOfType typ
-                vals = map (EInt) [0..maxVal]
+                vals = [0..maxVal]
               mapM
                 (\val -> 
                   addVarAssToTr 
-                    (trName, (EEq (EVar varName) val):guards, updates) 
-                    (AAss (Ident $ arrName ++ "_" ++ (show val)) exp)
+                    (trName, (EEq (EVar varName) (EInt val)):guards, updates) 
+                    (SAss (Ident $ arrName ++ "_" ++ (show val)) exp)
                 )
                 vals
             Nothing -> 
@@ -141,18 +140,14 @@ addAssToTr (trName, guards, updates) (AArrAss (Ident arrName) index exp) = do
       error $ "Array index different than ESender, EInt a, or EVar a"
 
 
-
-
-
-
 -- modifyModule niepotrzebne?
 -- TODO: only simple assignments for a moment
 -- TODO: random
 -- Aux: adds an assignment to an updates branch
 -- can possibly create longer list of updates for randomized assignment
-addAssToUpdatesBranch :: [Exp] -> Ass -> [(Ident, Exp)] -> VerRes [[(Ident, Exp)]]
+addAssToUpdatesBranch :: [Exp] -> Stm -> [(Ident, Exp)] -> VerRes [[(Ident, Exp)]]
 
-addAssToUpdatesBranch guards (AAss ident exp) updatesBranch = do
+addAssToUpdatesBranch guards (SAss ident exp) updatesBranch = do
   -- TODO random (może przepisać case exp z updatesFromAss z SmartFunPrismEthver.hs?
   let 
     deleteOld :: [(Ident, Exp)] -> [(Ident, Exp)]
@@ -164,8 +159,8 @@ addAssToUpdatesBranch guards (AAss ident exp) updatesBranch = do
       updatesBranch
   return [newUpdates]
 
-addAssToUpdatesBranch _  (AArrAss arrName index exp) _ = do
-  error $ "addAssToUpdateBranch should not be called with AArrAss (" ++ (show $ AArrAss arrName index exp)
+addAssToUpdatesBranch _  (SArrAss arrName index exp) _ = do
+  error $ "addAssToUpdateBranch should not be called with SArrAss (" ++ (show $ SArrAss arrName index exp)
   
 
 deduceVarValueFromGuards :: [Exp] -> Ident -> Maybe Exp
@@ -186,7 +181,10 @@ deduceVarValueFromGuards guards varName =
 valueFromCond :: Ident -> Exp -> Maybe Exp
 valueFromCond varName cond = 
   case cond of
-    (EEq (EVar varName) val) -> Just val
+    (EEq (EVar someVar) val) -> 
+      if someVar == varName
+        then Just val
+        else Nothing
     (EAnd c1 c2) ->
       case ((valueFromCond varName c1), (valueFromCond varName c2)) of
         (Just val, _) -> Just val
