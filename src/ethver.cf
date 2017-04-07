@@ -43,7 +43,8 @@ separator  Arg "," ;
 
 -- SExp.    Stm ::= Exp ";" ;
 SBlock.  Stm ::= "{" [Stm] "}" ;
-SAsses.  Stm ::= [Ass] ";" ;
+SAss.    Stm ::= Ident "=" Exp ";" ;
+SArrAss. Stm ::= Ident "[" Exp "]" "=" Exp ";" ;
 SIf.     Stm ::= "if" "(" Exp ")" Stm ;
 SIfElse. Stm ::= "if" "(" Exp ")" Stm "else" Stm ;
 SWhile.  Stm ::= "while" "(" Exp ")" Stm ;
@@ -55,11 +56,7 @@ SWait.   Stm ::= "wait" "(" Exp ")" ";" ;
 SBreak.  Stm ::= "break" ";" ;
 
 terminator Stm "" ;
-separator nonempty Ass "," ;
 separator Exp "," ;
-
-AAss.    Ass ::= Ident "=" Exp ;
-AArrAss. Ass ::= Ident "[" Exp "]" "=" Exp ;
 
 EOr.     Exp ::= Exp "||" Exp1 ;
 EAnd.    Exp1 ::= Exp1 "&&" Exp2 ;

@@ -125,8 +125,11 @@ collectCondVars :: ModifyModuleType -> Stm -> VerRes ()
 collectCondVars modifyModule (SBlock stms) = do
   mapM_ (collectCondVars modifyModule) stms
 
-collectCondVars modifyModule (SAsses asses) = do
-  mapM_ (collectCondVarsFromAss modifyModule) asses
+collectCondVars modifyModule (SAss ident value) = do
+  collectCondVarsFromAss modifyModule (SAss ident value)
+
+collectCondVars modifyModule (SArrAss ident index value) = do
+  collectCondVarsFromAss modifyModule (SArrAss ident index value)
 
 collectCondVars modifyModule (SIf cond ifBlock) = do
   collectCondVarsFromExp modifyModule cond
@@ -149,11 +152,11 @@ collectCondVars modifyModule (SSend address value) = do
 -- collectCondVarsFromAss --
 ----------------------------
 
-collectCondVarsFromAss :: ModifyModuleType -> Ass -> VerRes ()
+collectCondVarsFromAss :: ModifyModuleType -> Stm -> VerRes ()
 
 -- TODO: dorobić: po przypisaniu A := B wpisuje A na liste "overwritten".
 -- Potem jak cos z overwritten sie pojawia po prawej, to nie dodawac do cond.
-collectCondVarsFromAss modifyModule (AAss ident value) = do
+collectCondVarsFromAss modifyModule (SAss ident value) = do
   case value of 
     -- TODO: random dla Booli
     -- TODO: range of random is ignored. Real range deducted from variable type
@@ -164,7 +167,7 @@ collectCondVarsFromAss modifyModule (AAss ident value) = do
     _ ->
       collectCondVarsFromExp modifyModule value
 
-collectCondVarsFromAss modifyModule (AArrAss ident index value) = do
+collectCondVarsFromAss modifyModule (SArrAss ident index value) = do
   case value of
     -- TODO: range of random is ignored. Real range deducted from variable type
     (ERand (EInt range)) -> do
@@ -239,8 +242,8 @@ collectCondArray modifyModule varName index = do
 ---------------------
 
 -- updatesFromAss ass
-updatesFromAss :: ModifyModuleType -> Ass -> VerRes [[(Ident, Exp)]]
-updatesFromAss modifyModule (AAss ident exp) = do
+updatesFromAss :: ModifyModuleType -> Stm -> VerRes [[(Ident, Exp)]]
+updatesFromAss modifyModule (SAss ident exp) = do
   case exp of
     ERand _ -> do
       addCondRandom ident
@@ -250,7 +253,7 @@ updatesFromAss modifyModule (AAss ident exp) = do
       val <- evaluateExp modifyModule exp
       return [[(ident, val)]]
 
-updatesFromAss modifyModule (AArrAss (Ident ident) index exp) = do
+updatesFromAss modifyModule (SArrAss (Ident ident) index exp) = do
   case exp of
     -- random calls handled separately in addRandomUpdates
     ERand  _ -> do
@@ -275,7 +278,7 @@ updatesFromAss modifyModule (AArrAss (Ident ident) index exp) = do
           (Just (EInt x)) -> x
           Nothing -> error $ "Array index: " ++ (show indexEIntVal) ++ " different than (Just EInt a)"
 
-      updatesFromAss modifyModule $ AAss (Ident $ ident ++ "_" ++ (show indexVal)) exp
+      updatesFromAss modifyModule $ SAss (Ident $ ident ++ "_" ++ (show indexVal)) exp
      
 -----------------
 -- verSmartStm --
@@ -296,20 +299,22 @@ verSmartStm modifyModule (SBlock stms) = do
     [[]]
     stms
 
-verSmartStm modifyModule (SAsses asses) = do
+verSmartStm modifyModule (SAss ident value) = do
   -- TODO: inteligentne powiększanie updateów przy probabilistycznych przejsciach
   
-  foldM
-    (\acc ass -> do
-      newUpdates <- updatesFromAss modifyModule ass
-      -- TODO: assumption that newUpdates is a singleton (no probability)
-      mapM_ (\(ident, val) -> assignVarValue ident val) (head newUpdates)
-      -- TODO: assumption that newUpdates is a singleton (no probability)
-      return $ [(head acc) ++ (head newUpdates)]
-    )
-    [[]]
-    asses
+  newUpdates <- updatesFromAss modifyModule (SAss ident value)
+  -- TODO: assumption that newUpdates is a singleton (no probability)
+  mapM_ (\(ident, val) -> assignVarValue ident val) (head newUpdates)
+  -- TODO: assumption that newUpdates is a singleton (no probability)
+  return $ [head newUpdates]
 
+verSmartStm modifyModule (SArrAss ident index value) = do
+  -- TODO: probabilistyczne?
+  newUpdates <- updatesFromAss modifyModule (SArrAss ident index value)
+  -- TODO: assumption that newUpdates is a singleton?
+  mapM_ (\(ident, val) -> assignArrayValue ident index val) (head newUpdates)
+  return $ [head newUpdates]
+  
 verSmartStm modifyModule (SIf cond stm) = do
   result <- evaluateExp modifyModule cond
   case result of

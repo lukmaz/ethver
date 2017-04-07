@@ -17,30 +17,16 @@ import WorldPrismEthver
 
 verStm :: ModifyModuleType -> Stm -> VerRes ()
 
-verStm modifyModule (SAsses [AAss ident exp]) = 
-  verFullAss modifyModule (AAss ident exp)
+verStm modifyModule (SAss ident exp) = 
+  verFullAss modifyModule (SAss ident exp)
 
-verStm modifyModule (SAsses [AArrAss ident index exp]) =
-  verFullAss modifyModule (AArrAss ident index exp)
-
--- DEPRECATED
-{-
-verStm modifyModule (SAsses asses) = do
-  assignments <- mapM (generateSimpleAss modifyModule) asses
-  let (unzippedGuards, unzippedUpdates) = unzip assignments
-  let (guards, updates) = (concat unzippedGuards, concat unzippedUpdates)
-
-  addTransToNewState
-    modifyModule
-    ""
-    guards
-    [updates]
--}
+verStm modifyModule (SArrAss ident index exp) =
+  verFullAss modifyModule (SArrAss ident index exp)
 
 verStm modifyModule (SReturn exp) = do
   evalExp <- verExp modifyModule exp 
   world <- get 
-  verStm modifyModule (SAsses [AAss (head $ returnVar world) evalExp])
+  verStm modifyModule (SAss (head $ returnVar world) evalExp)
 
 -- TODO: zrobić, żeby return wychodziło z wykonania bieżącej funkcji
 verStm modifyModule (SIf cond ifBlock) = do
@@ -229,16 +215,16 @@ verStm modifyModule (SWait cond) = do
 -- Ass --
 ---------
 
-verFullAss :: ModifyModuleType -> Ass -> VerRes ()
+verFullAss :: ModifyModuleType -> Stm -> VerRes ()
 
-verFullAss modifyModule (AAss ident exp) = do
+verFullAss modifyModule (SAss ident exp) = do
   case exp of
     ERandL (EInt _) ->
       addLazyRandom ident
     _ -> 
       return ()
 
-  (guards, updates) <- generateSimpleAss modifyModule (AAss ident exp)
+  (guards, updates) <- generateSimpleAss modifyModule (SAss ident exp)
   
   addTransToNewState
     modifyModule
@@ -246,7 +232,7 @@ verFullAss modifyModule (AAss ident exp) = do
     guards
     [updates]
 
-verFullAss modifyModule (AArrAss (Ident ident) index exp) = do
+verFullAss modifyModule (SArrAss (Ident ident) index exp) = do
   case index of
     ESender -> do
       mod <- modifyModule id
@@ -255,13 +241,13 @@ verFullAss modifyModule (AArrAss (Ident ident) index exp) = do
         modifyModule 
         (SIf 
           (EEq (EVar actualSender) (EInt 0))
-          (SAsses [AAss (Ident $ ident ++ "_0") exp])
+          (SAss (Ident $ ident ++ "_0") exp)
         )
       verStm
         modifyModule
         (SIf
           (EEq (EVar actualSender) (EInt 1))
-          (SAsses [AAss (Ident $ ident ++ "_1") exp])
+          (SAss (Ident $ ident ++ "_1") exp)
         )
     EVar v -> do
       var <- verExp modifyModule (EVar v)
@@ -269,27 +255,27 @@ verFullAss modifyModule (AArrAss (Ident ident) index exp) = do
         modifyModule 
         (SIf 
           (EEq var (EInt 0))
-          (SAsses [AAss (Ident $ ident ++ "_0") exp])
+          (SAss (Ident $ ident ++ "_0") exp)
         )
       verStm
         modifyModule
         (SIf
           (EEq var (EInt 1))
-          (SAsses [AAss (Ident $ ident ++ "_1") exp])
+          (SAss (Ident $ ident ++ "_1") exp)
         )
     EStr indexAddress -> do
       indexNumber <- getPlayerNumber indexAddress
       let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
-      verStm modifyModule $ SAsses [AAss indexVar exp]
+      verStm modifyModule $ SAss indexVar exp
     EInt indexNumber -> do
       let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
-      verStm modifyModule $ SAsses [AAss indexVar exp]
+      verStm modifyModule $ SAss indexVar exp
 
 -- generateSimpleAss
 
 -- returns simple updates [], not [[]]
-generateSimpleAss :: ModifyModuleType -> Ass -> VerRes ([Exp], [(Ident, Exp)])
-generateSimpleAss modifyModule (AAss ident exp) = do
+generateSimpleAss :: ModifyModuleType -> Stm -> VerRes ([Exp], [(Ident, Exp)])
+generateSimpleAss modifyModule (SAss ident exp) = do
   evalExp <- verExp modifyModule exp 
   typ <- findVarType ident
   minV <- minValue ident
@@ -298,16 +284,16 @@ generateSimpleAss modifyModule (AAss ident exp) = do
                            Just _ -> [EGe evalExp (EInt minV), ELe evalExp (EInt maxV)]
   return (guards, [(ident, evalExp)])
 
-generateSimpleAss modifyModule (AArrAss (Ident ident) index exp) = do
+generateSimpleAss modifyModule (SArrAss (Ident ident) index exp) = do
   case index of
     -- TODO: ESender (zmienić też verFullAss)
     EStr indexAddress -> do
       indexNumber <- getPlayerNumber indexAddress
       let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
-      generateSimpleAss modifyModule $ AAss indexVar exp 
+      generateSimpleAss modifyModule $ SAss indexVar exp 
     EInt indexNumber -> do
       let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
-      generateSimpleAss modifyModule $ AAss indexVar exp 
+      generateSimpleAss modifyModule $ SAss indexVar exp 
 
 
 ---------
@@ -485,13 +471,13 @@ verValExp modifyModule (EArray (Ident ident) index) = do
             modifyModule 
             (SIf 
               (EEq var (EInt 0))
-              (SAsses [AAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_0")])
+              (SAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_0"))
             )
           verStm
             modifyModule
             (SIf
               (EEq var (EInt 1))
-              (SAsses [AAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_1")])
+              (SAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_1"))
             )
           return $ EVar $ Ident localVarName
     EStr indexAddress -> do
