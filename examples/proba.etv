@@ -16,12 +16,14 @@ communication {
   uint(3) a;
   uint(3) x;
   uint(3) tab[2];
+  uint(3) pom;
 
   function set(uint(2) y) {
     a = 2;
     tab[y] = x;
     // sprawdzic if a == ...
-    if (tab[y] == 1) {
+    pom = tab[y];
+    if (pom == 1) {
       a = 1;
     }
   }

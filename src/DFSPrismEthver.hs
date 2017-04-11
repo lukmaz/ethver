@@ -59,42 +59,16 @@ addDFSStm modifyModule tr (SBlock (stmH:stmT)) = do
   verDFSStm modifyModule newTrs (SBlock stmT)
 
 addDFSStm modifyModule tr (SAss ident exp) = do
-  addAssToTr tr (SAss ident exp)
+  applyFunToStmWithEvaluation modifyModule tr addAssToTr (SAss ident exp)
 
 addDFSStm modifyModule tr (SArrAss ident index exp) = do
-  addAssToTr tr (SArrAss ident index exp)
-
+  applyFunToStmWithEvaluation modifyModule tr addAssToTr (SArrAss ident index exp)
+  
 addDFSStm modifyModule (trName, guards, updates) (SIf cond ifBlock) = do
+  -- TODO?: checkCond cond - sprawdzić czy warunek jest jedynego obsłubiwanego typu 
+  -- (korzysta tylko ze zmiennych ze zdefiniowaną wartością)
 
-
-
-
-
-
-
-
-
-  -- TU
-
-
-
-  --evaluatedCond <- evaluateExp modifyModule cond
-  let evaluatedCond = cond
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  posTranss <- addDFSStm modifyModule (trName, evaluatedCond:guards, updates) ifBlock
+  posTranss <- addDFSStm modifyModule (trName, cond:guards, updates) ifBlock
   let negTranss = [(trName, (negateExp cond):guards, updates)]
   return $ posTranss ++ negTranss
 
@@ -106,12 +80,37 @@ addDFSStm modifyModule (trName, guards, updates) (SIfElse cond ifBlock elseBlock
 addDFSStm modifyModule _ (SWhile _ _) = do
   error $ "while loop not supported in verDFS"
 
+-------------------------------------------------
+-- applyFun with evaluation ---------------------
+-- evaluates the argument and applies function --
+-------------------------------------------------
+
+-- ZWRACANIE STM DO WYWALENIA
+-- TODO: może też zrezygnować ze zwracania Stm?
+
+applyFunToStmWithEvaluation :: ModifyModuleType -> Trans -> (Trans -> Stm -> VerRes [Trans]) -> Stm -> VerRes [Trans]
+applyFunToStmWithEvaluation modifyModule tr fun stm = do
+  (trs, _) <- evaluateStm modifyModule tr stm
+  foldM
+    (\acc tr -> do
+      newTrs <- fun tr (determineStm tr stm)
+      return $ acc ++ newTrs
+    )
+    []
+    trs
+
 
 ---------
 -- Aux --
 ---------
 
--- special case for AAss. Generates single trans
+-- cheks if a cond is of the only supported type 
+-- checkCond
+-- TODO
+
+
+
+-- special case for SAss. Generates single trans
 addVarAssToTr :: Trans -> Stm -> VerRes Trans
 
 addVarAssToTr (trName, guards, updates) (SAss varName exp) = do
@@ -276,301 +275,89 @@ addRandomUpdates modifyModule oldUpdates = do
       return newUpdates
 -}
 
----------------------
--- collectCondVars --
----------------------
-{-
-collectCondVars :: ModifyModuleType -> Stm -> VerRes ()
-
-collectCondVars modifyModule (SSend address value) = do
-  collectCondVarsFromExp modifyModule address
-  collectCondVarsFromExp modifyModule value
-
-----------------------------
--- collectCondVarsFromAss --
-----------------------------
-
-collectCondVarsFromAss :: ModifyModuleType -> Ass -> VerRes ()
-
--- TODO: dorobić: po przypisaniu A := B wpisuje A na liste "overwritten".
--- Potem jak cos z overwritten sie pojawia po prawej, to nie dodawac do cond.
-collectCondVarsFromAss modifyModule (AAss ident value) = do
-  case value of 
-    -- TODO: random dla Booli
-    -- TODO: range of random is ignored. Real range deducted from variable type
-    (ECall [sRandom] [AExp (EInt range)]) ->
-      return ()
-    (ECall funs args) ->
-      error $ "ECall " ++ (show funs) ++ " (" ++ (show args) ++ ") not supported."
-    _ ->
-      collectCondVarsFromExp modifyModule value
-
-collectCondVarsFromAss modifyModule (AArrAss ident index value) = do
-  case value of
-    -- TODO: range of random is ignored. Real range deducted from variable type
-    (ECall [sRandom] [AExp (EInt range)]) -> do
-      collectCondVarsFromExp modifyModule index
-    (ECall funs args) ->
-      error $ "ECall " ++ (show funs) ++ " (" ++ (show args) ++ ") not supported."
-    _ -> do
-      collectCondVarsFromExp modifyModule index
-      collectCondVarsFromExp modifyModule value
-
--- TODO: do wywalenia
-{-
-collectCondVarsFromRandom :: ModifyModuleType -> Ident -> VerRes ()
-collectCondVarsFromRandom modifyModule varName = do
-  addCondRandom varName
-  
-collectCondArraysFromRandom :: ModifyModuleType -> Ident -> Exp -> VerRes ()
-collectCondArraysFromRandom modifyModule varName index = 
-  addCondRandomArray varName index
--}
-
------------------------------
--- collectCondVarsFromExp --
------------------------------
-
-collectCondVarsFromExp :: ModifyModuleType -> Exp -> VerRes ()
-collectCondVarsFromExp modifyModule exp = case exp of
-  EOr e1 e2 -> collect2arg modifyModule e1 e2
-  EAnd e1 e2 -> collect2arg modifyModule e1 e2
-  EEq e1 e2 -> collect2arg modifyModule e1 e2
-  ENe e1 e2 -> collect2arg modifyModule e1 e2
-  ELt e1 e2 -> collect2arg modifyModule e1 e2
-  ELe e1 e2 -> collect2arg modifyModule e1 e2
-  EGt e1 e2 -> collect2arg modifyModule e1 e2
-  EGe e1 e2 -> collect2arg modifyModule e1 e2
-  EAdd e1 e2 -> collect2arg modifyModule e1 e2
-  ESub e1 e2 -> collect2arg modifyModule e1 e2
-  EMul e1 e2 -> collect2arg modifyModule e1 e2
-  EDiv e1 e2 -> collect2arg modifyModule e1 e2
-  EMod e1 e2 -> collect2arg modifyModule e1 e2
-
-  ENeg e -> collectCondVarsFromExp modifyModule e
-  ENot e -> collectCondVarsFromExp modifyModule e
-  
-  EArray name index -> do
-    collectCondVarsFromExp modifyModule index
-    collectCondArray modifyModule name index
-
-  -- TODO: EWait should be moved to Stm
-  -- and is not used in contract functions
-  -- ECall -> should be moved to Stm
-  -- ESend -> should be moved to Stm? (maybe not for checking ret value)
-  
-  EVar ident -> addCondVar ident
-
-  EValue -> collectCondVarsFromExp modifyModule $ EVar iValue
-  ESender -> do
-    mod <- modifyModule id
-    let actualSender = whichSender mod
-    collectCondVarsFromExp modifyModule $ EVar actualSender
-  EStr _ -> return ()
-  EInt _ -> return ()
-  ETrue -> return ()
-  EFalse -> return ()
-
-collect2arg :: ModifyModuleType -> Exp -> Exp -> VerRes ()
-collect2arg modifyModule e1 e2 = do
-  collectCondVarsFromExp modifyModule e1
-  collectCondVarsFromExp modifyModule e2
-
-collectCondArray :: ModifyModuleType -> Ident -> Exp -> VerRes ()
-collectCondArray modifyModule varName index = do
-  addCondArrays varName index
--}
 
 
 
+------------------
+-- determineStm --
+------------------
+
+-- determines values (e.g. array index) from guards
 
 
+determineStm :: Trans -> Stm -> Stm
+
+determineStm tr (SAss ident exp) = 
+  SAss ident (determineExp tr exp)
+
+determineStm tr (SArrAss ident index exp) = 
+  SArrAss ident (determineExp tr index) (determineExp tr exp)
+
+------------------
+-- determineExp --
+------------------
+
+-- used mainly for EArray: showExp(tab[x]) = tab_2 for x = 2
+-- uses x value from guards
+
+determineExp :: Trans -> Exp -> Exp
+determineExp (trName, guards, updates) (EArray (Ident arrName) index) = 
+  case index of
+    EInt x ->
+      EVar $ Ident $ arrName ++ "_" ++ (show x)
+    EVar varName -> do 
+      case deduceVarValueFromGuards guards varName of
+        (Just (EInt x)) ->
+          EVar $ Ident $ arrName ++ "_" ++ (show x)
+        Nothing -> 
+          error $ "Array index should be determined when using showExp: " ++ (show $ EArray (Ident arrName) index)
+    _ -> 
+      error $ "Array index different than ESender, EInt a, or EVar a"
+
+determineExp _ (EInt x) = EInt x
+
+determineExp (trName, guards, updates) (EVar varIdent) = 
+  case deduceVarValueFromGuards guards varIdent of
+    (Just (EInt x)) ->
+      EInt x
+    Nothing ->
+      EVar varIdent
+      -- chyba musi tak być, bo jak inaczej sobie poradzić z wartością argumentu funkcji?
+      --error $ "Value of variable " ++ (show varIdent) ++ " not determined from guards: " ++ (show guards)
 
 
-
-
-
----------------------
--- verSmartStm Aux --
----------------------
-{-
--- updatesFromAss ass
-updatesFromAss :: ModifyModuleType -> Ass -> VerRes [[(Ident, Exp)]]
-updatesFromAss modifyModule (AAss ident exp) = do
-  case exp of
-    ECall [sRandom] _ -> do
-      addCondRandom ident
-      return [[]]
-    ECall funs args -> error $ "Updates from ECall " ++ (show funs) ++ "(" ++ (show args) ++ ") not supported."
-    _ -> do
-      val <- evaluateExp modifyModule exp
-      return [[(ident, val)]]
-
-updatesFromAss modifyModule (AArrAss (Ident ident) index exp) = do
-  case exp of
-    -- random calls handled separately in addRandomUpdates
-    ECall [sRandom] _ -> do
-      addCondRandomArray (Ident ident) index
-      return [[]]
-    ECall funs args -> error $ "Updates from ECall " ++ (show funs) ++ "(" ++ (show args) ++ ") not supported."
-    _ -> do
-      indexEIntVal <- case index of
-        ESender -> do
-          world <- get
-          mod <- modifyModule id
-          return $ Map.lookup (whichSender mod) (varsValues world)
-        EVar varName -> do
-          world <- get
-          mod <- modifyModule id
-          return $ Map.lookup varName (varsValues world)
-        -- TODO: EStr
-        EInt x -> return $ Just $ EInt x
-        _ -> error $ "Array index different than ESender, EInt a, or EVar a"
-      let 
-        indexVal = case indexEIntVal of
-          (Just (EInt x)) -> x
-          Nothing -> error $ "Array index: " ++ (show indexEIntVal) ++ "  different than (Just EInt a)"
-
-      updatesFromAss modifyModule $ AAss (Ident $ ident ++ "_" ++ (show indexVal)) exp
-     
 -----------------
--- verSmartStm --
+-- evaluateStm --
 -----------------
 
-verSmartStm :: ModifyModuleType -> Stm -> VerRes [[(Ident, Exp)]]
+evaluateStm :: ModifyModuleType -> Trans -> Stm -> VerRes ([Trans], Stm)
 
--- TODO: SExp - czy to na pewno jest niepotrzebne?
-verSmartStm modifyModule (SExp exp) = do
-  return [[]]
+evaluateStm modifyModule tr (SAss ident exp) = do
+  (trs, evaluatedExp) <- evaluateExp modifyModule tr exp
+  return (trs, SAss ident evaluatedExp)
 
-verSmartStm modifyModule (SBlock stms) = do
-  -- TODO: inteligentne powiększanie updateów w przypadku probabilistycznych przejsc
+evaluateStm modifyModule tr (SArrAss ident index exp) = do
+  trs <- evaluate2Exp modifyModule tr index exp
+  return (trs, SArrAss ident index exp)
+
+evaluate2Exp :: ModifyModuleType -> Trans -> Exp -> Exp -> VerRes [Trans]
+evaluate2Exp modifyModule tr exp1 exp2 = do
+  (trs, _) <- evaluateExp modifyModule tr exp1
   foldM
-    (\acc stm -> do
-      newUpdates <- verSmartStm modifyModule stm
-      -- TODO: assumption that newUpdates is a signleton (no probability)
-      -- TODO: Czy to nie problem, że jest return w pętli? (czy sie nie przerwie po pierwszym obrocie?)
-      return $ [(head acc) ++ (head newUpdates)]
+    (\acc tr -> do
+      -- TODO: nie ma jak wyciągnąć jednego evaluatedExp2, bo jest pętla
+      (newTrs, _) <- evaluateExp modifyModule tr exp2
+      return $ acc ++ newTrs
     )
-    [[]]
-    stms
+    []
+    trs
 
-verSmartStm modifyModule (SIf cond stm) = do
-  result <- evaluateExp modifyModule cond
-  case result of
-    ETrue -> verSmartStm modifyModule stm
-    EFalse -> return [[]]
-    _ -> error $ "Error in verSmartStm(SIf): condition not evaluated to bool: " ++ (show result)
-
-verSmartStm modifyModule (SIfElse cond stm1 stm2) = do
-  result <- evaluateExp modifyModule cond
-  case result of
-    ETrue -> verSmartStm modifyModule stm1
-    EFalse -> verSmartStm modifyModule stm2
-    _ -> error $ "Error in verSmartStm(SIf): condition not evaluated to bool: " ++ (show result)
-
-verSmartStm modifyModule (SReturn exp) = do
-  error $ "SReturn usage not supported"
-
-verSmartStm modifyModule (SSend receiverExp arg) = do
-  val <- evaluateExp modifyModule arg
-  mod <- modifyModule id
-  let actualSender = whichSender mod
-  case receiverExp of
-    ESender -> do
-      verSmartStm
-        modifyModule
-        (SIf
-          (EEq (EVar actualSender) (EInt 0))
-          (SSend (EInt 0) arg)
-        )
-      verSmartStm
-        modifyModule
-        (SIf
-          (EEq (EVar actualSender) (EInt 1))
-          (SSend (EInt 1) arg)
-        )
-    EStr receiverAddress -> do
-      receiverNumber <- getPlayerNumber receiverAddress
-      let receiverBalance = Ident $ sBalancePrefix ++ (show receiverNumber)
-      smartTransferFromContract receiverBalance val
-    EInt receiverNumber -> do
-      let receiverBalance = Ident $ sBalancePrefix ++ (show receiverNumber)
-      smartTransferFromContract receiverBalance val
--}
-
-
-
-
-------------------
+-----------------
 -- evaluateExp --
-------------------
-{-
-
-CHYBA JEDNAK TRZEBA ZROBIĆ ZUPEŁNIE INACZEJ NIŻ evaluateExp
-
-evaluateBoolBinOp :: ModifyModuleType -> (Bool -> Bool -> Bool) -> Exp -> Exp -> VerRes Exp
-evaluateBoolBinOp modifyModule op e1 e2 = do
-  v1 <- evaluateExp modifyModule e1
-  v2 <- evaluateExp modifyModule e2
-  let bool1 = case v1 of
-        ETrue -> True
-        EFalse -> False
-        _ -> error $ "Error in evaluateBoolBinOp: not a bool value: " ++ (show v1)
-  let bool2 = case v2 of
-        ETrue -> True
-        EFalse -> False
-        _ -> error $ "Error in evaluateBoolBinOp: not a bool value: " ++ (show v2)
-  
-  return $ expFromBool $ op bool1 bool2
-
-evaluateArithmIntBinOp :: ModifyModuleType -> (Integer -> Integer -> Integer) -> Exp -> Exp -> VerRes Exp
-evaluateArithmIntBinOp modifyModule op e1 e2 = do
-  v1 <- evaluateExp modifyModule e1
-  v2 <- evaluateExp modifyModule e2
-  case intFromExp v1 of 
-    Nothing -> error $ "Error in evaluateArithmIntBinOp: not an Int value: " ++ (show v1)
-    Just x1 -> case intFromExp v2 of
-      Nothing -> error $ "Error in evaluateArithmIntBinOp: not an Int value: " ++ (show v2)
-      Just x2 -> return $ expFromInt $ op x1 x2
-
-evaluateCompIntBinOp :: ModifyModuleType -> (Integer -> Integer -> Bool) -> Exp -> Exp -> VerRes Exp
-evaluateCompIntBinOp modifyModule op e1 e2 = do
-  v1 <- evaluateExp modifyModule e1
-  v2 <- evaluateExp modifyModule e2
-  case intFromExp v1 of 
-    Nothing -> error $ "Error in evaluateCompIntBinOp: not an Int value: " ++ (show v1)
-    Just x1 -> case intFromExp v2 of
-      Nothing -> error $ "Error in evaluateCompIntBinOp: not an Int value: " ++ (show v2)
-      Just x2 -> return $ expFromBool $ op x1 x2
-
-evaluateEq :: ModifyModuleType -> Exp -> Exp -> VerRes Exp
-evaluateEq modifyModule e1 e2 = do
-  world <- get
-  v1 <- evaluateExp modifyModule e1
-  v2 <- evaluateExp modifyModule e2
-  t1 <- findType v1
-  t2 <- findType v2
-  case (t1, t2) of 
-    (Just TBool, Just TBool) -> return $ expFromBool $ v1 == v2
-    (Just (TUInt _), Just (TUInt _)) -> do
-      return $ expFromBool $ v1 == v2
-    _ -> error $ "Error in evaluateBoolIntBinOp: not matching types: " ++ (show v1) ++ " and " ++ (show v2)
-
-evaluateBoolUnOp :: ModifyModuleType -> (Bool -> Bool) -> Exp -> VerRes Exp
-evaluateBoolUnOp modifyModule op e = do
-  v <- evaluateExp modifyModule e
-  let bool = case v of
-        ETrue -> True
-        EFalse -> False
-        _ -> error $ "Error in evaluateBoolUnOp: not a bool value: " ++ (show v)
-
-  return $ expFromBool $ op bool
-
--- evaluateExp
+-----------------
 
 evaluateExp :: ModifyModuleType -> Trans -> Exp -> VerRes ([Trans], Exp)
-
+{-
 evaluateExp modifyModule tr (EOr e1 e2) = evaluateBoolBinOp modifyModule tr (||) e1 e2
 evaluateExp modifyModule tr (EAnd e1 e2) = evaluateBoolBinOp modifyModule tr (&&) e1 e2
 
@@ -580,7 +367,7 @@ evaluateExp modifyModule tr (ENe e1 e2) = do
   evaluateBoolUnOp modifyModule tr not tmp
 
 evaluateExp modifyModule tr (ELt e1 e2) = evaluateCompIntBinOp modifyModule tr (<) e1 e2
-evaluateExp modifyModule  tr (ELe e1 e2) = evaluateCompIntBinOp modifyModule tr (<=) e1 e2
+evaluateExp modifyModule tr (ELe e1 e2) = evaluateCompIntBinOp modifyModule tr (<=) e1 e2
 evaluateExp modifyModule tr (EGt e1 e2) = evaluateCompIntBinOp modifyModule tr (>) e1 e2
 evaluateExp modifyModule tr (EGe e1 e2) = evaluateCompIntBinOp modifyModule tr (>=) e1 e2
 evaluateExp modifyModule tr (EAdd e1 e2) = evaluateArithmIntBinOp modifyModule tr (+) e1 e2
@@ -591,10 +378,11 @@ evaluateExp modifyModule tr (EMod e1 e2) = evaluateArithmIntBinOp modifyModule t
 
 evaluateExp modifyModule tr (ENeg e) = evaluateArithmIntBinOp modifyModule tr (-) (EInt 0) e
 evaluateExp modifyModule tr (ENot e) = evaluateBoolUnOp modifyModule tr not e
+-}
 
 
-
-DO WYWALENIA:
+--DO WYWALENIA?
+{-
 evaluateExp modifyModule tr (EArray (Ident ident) index) = do
   mod <- modifyModule id
   
@@ -605,11 +393,12 @@ evaluateExp modifyModule tr (EArray (Ident ident) index) = do
   case indexEvaluated of 
     EInt indexVal -> evaluateExp modifyModule $ EVar $ Ident $ ident ++ "_" ++ (show indexVal)
     _ -> error $ "Index " ++ (show indexEvaluated) ++ " doesn't evaluate to EInt a)"
+-}
 
 evaluateExp modifyModule (trName, guards, updates) (EArray (Ident arrName) index) = do
   case index of
     {-
-    JAKIES TARE:
+    JAKIES STARE:
     ESender -> do -- TODO: np. trzeba dodać sendera do varsValues
       world <- get
       mod <- modifyModule id
@@ -622,28 +411,25 @@ evaluateExp modifyModule (trName, guards, updates) (EArray (Ident arrName) index
         (Just (EInt x)) -> do
           return ([(trName, guards, updates)], EVar (Ident $ arrName ++ "_" ++ (show x)))
         Nothing -> do
-          varType <- findVarType varName 
+          varType <- findVarType varName
           case varType of
             Just typ -> do
               let 
                 maxVal = maxTypeValueOfType typ
                 vals = [0..maxVal]
-              mapM
-                (\val -> 
-                  addVarAssToTr 
+                trs = map
+                  (\val -> 
                     (trName, (EEq (EVar varName) (EInt val)):guards, updates) 
-                    (SAss (Ident $ arrName ++ "_" ++ (show val)) exp)
-                )
-                vals
+                  )
+                  vals
+              -- TODO: Zwraca starą postać. Ale co ma zwracać, skoro wygenerowała kilka?
+              -- Może w ogóle evaluateExp nie powinno nic zwracać?
+              return (trs, EArray (Ident arrName) index)
             Nothing -> 
               error $ "Var " ++ (unident varName) ++ " not found by findVarType"
     _ -> do
       error $ "Array index different than ESender, EInt a, or EVar a"
 
-
-
--- TODO: should be moved to SWait?
---evaluateExp modifyModule (EWait ...)
 
 evaluateExp modifyModule tr (EVar ident) = do
   exp <- findVarValue ident
@@ -676,4 +462,69 @@ evaluateExp modifyModule tr ETrue = do
 
 evaluateExp modifyModule tr EFalse = do
   return ([tr], EFalse)
+
+
+---------------------
+-- evaluateExp aux --
+---------------------
+
+{-
+evaluateBoolBinOp :: ModifyModuleType -> Trans -> (Bool -> Bool -> Bool) -> Exp -> Exp -> VerRes ([Trans], Exp)
+evaluateBoolBinOp modifyModule op e1 e2 = do
+  v1 <- evaluateExp modifyModule e1
+  v2 <- evaluateExp modifyModule e2
+  let bool1 = case v1 of
+        ETrue -> True
+        EFalse -> False
+        _ -> error $ "Error in evaluateBoolBinOp: not a bool value: " ++ (show v1)
+  let bool2 = case v2 of
+        ETrue -> True
+        EFalse -> False
+        _ -> error $ "Error in evaluateBoolBinOp: not a bool value: " ++ (show v2)
+  
+  return $ expFromBool $ op bool1 bool2
+
+evaluateArithmIntBinOp :: ModifyModuleType -> Trans -> (Integer -> Integer -> Integer) -> Exp -> Exp -> VerRes ([Trans], Exp)
+evaluateArithmIntBinOp modifyModule op e1 e2 = do
+  v1 <- evaluateExp modifyModule e1
+  v2 <- evaluateExp modifyModule e2
+  case intFromExp v1 of 
+    Nothing -> error $ "Error in evaluateArithmIntBinOp: not an Int value: " ++ (show v1)
+    Just x1 -> case intFromExp v2 of
+      Nothing -> error $ "Error in evaluateArithmIntBinOp: not an Int value: " ++ (show v2)
+      Just x2 -> return $ expFromInt $ op x1 x2
+
+evaluateCompIntBinOp :: ModifyModuleType -> Trans -> (Integer -> Integer -> Bool) -> Exp -> Exp -> VerRes ([Trans], Exp)
+evaluateCompIntBinOp modifyModule op e1 e2 = do
+  v1 <- evaluateExp modifyModule e1
+  v2 <- evaluateExp modifyModule e2
+  case intFromExp v1 of 
+    Nothing -> error $ "Error in evaluateCompIntBinOp: not an Int value: " ++ (show v1)
+    Just x1 -> case intFromExp v2 of
+      Nothing -> error $ "Error in evaluateCompIntBinOp: not an Int value: " ++ (show v2)
+      Just x2 -> return $ expFromBool $ op x1 x2
+
+evaluateEq :: ModifyModuleType -> Trans -> Exp -> Exp -> VerRes ([Trans], Exp)
+evaluateEq modifyModule e1 e2 = do
+  world <- get
+  v1 <- evaluateExp modifyModule e1
+  v2 <- evaluateExp modifyModule e2
+  t1 <- findType v1
+  t2 <- findType v2
+  case (t1, t2) of 
+    (Just TBool, Just TBool) -> return $ expFromBool $ v1 == v2
+    (Just (TUInt _), Just (TUInt _)) -> do
+      return $ expFromBool $ v1 == v2
+    _ -> error $ "Error in evaluateBoolIntBinOp: not matching types: " ++ (show v1) ++ " and " ++ (show v2)
+
+evaluateBoolUnOp :: ModifyModuleType -> Trans -> (Bool -> Bool) -> Exp -> VerRes ([Trans], Exp)
+evaluateBoolUnOp modifyModule op e = do
+  v <- evaluateExp modifyModule e
+  let bool = case v of
+        ETrue -> True
+        EFalse -> False
+        _ -> error $ "Error in evaluateBoolUnOp: not a bool value: " ++ (show v)
+
+  return $ expFromBool $ op bool
+
 -}
