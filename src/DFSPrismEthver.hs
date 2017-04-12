@@ -43,12 +43,14 @@ verDFSStm modifyModule (SBlock (stmH:stmT)) trs = do
   verDFSStm modifyModule stmH trs >>= 
     verDFSStm modifyModule (SBlock stmT)
 
--- TODO: zlikwidować jeden krok pośredni. Przekopoiować tu zawartość funkcji addAssToTr. A może nie? (Bo tr/trs)
-verDFSStm modifyModule (SAss varIdent value) trs = do
-  applyToTrList modifyModule (addAssToTr modifyModule (SAss varIdent value)) trs
+verDFSStm modifyModule (SAss varIdent value) oldTrs = do
+  newTrs <- applyToTrList modifyModule (evaluateExp modifyModule value) oldTrs
+  applyToTrList modifyModule (addAssToTr modifyModule varIdent value) newTrs
 
-verDFSStm modifyModule (SArrAss arrIdent index value) trs = do
-  applyToTrList modifyModule (addAssToTr modifyModule (SArrAss arrIdent index value)) trs
+verDFSStm modifyModule (SArrAss arrIdent index value) oldTrs = do
+  newTrs <- applyToTrList modifyModule (evaluateExp modifyModule index) oldTrs >>= 
+    applyToTrList modifyModule (evaluateExp modifyModule value)
+  applyToTrList modifyModule (addArrAssToTr modifyModule arrIdent index value) newTrs
 
 verDFSStm modifyModule (SIf cond ifBlock) trs = do
   condTranss <- applyToTrList modifyModule (evaluateExp modifyModule cond) trs
@@ -66,78 +68,63 @@ verDFSStm modifyModule (SWhile _ _) _ = do
 -- Ass --
 ---------
 
--- assumes Stm is evaluated.
--- TODO: One function for all Stms?
--- Małe TODO: mógłby zwracać jedno Trans zamiast listy. Ale to chyba nie problem
-addAssToTrSingle :: Stm -> Trans -> VerRes Trans
+-- adds an assignment to a single transition
+-- assumes value is evaluated
+addAssToTr :: ModifyModuleType -> Ident -> Exp -> Trans -> VerRes [Trans]
 
-addAssToTrSingle (SAss varIdent value) (trName, guards, updates) = do
+addAssToTr modifyModule varIdent value oldTr = do
+  newTr <- addAssToTrSingle varIdent value oldTr
+  return [newTr]
+
+-- simlarly, assumes index and value are evaluated
+addArrAssToTr :: ModifyModuleType -> Ident -> Exp -> Exp -> Trans -> VerRes [Trans]
+
+addArrAssToTr modifyModule arrIdent index value oldTr = do
+  newTr <- addArrAssToTrSingle arrIdent index value oldTr
+  return [newTr]
+
+-- assumes value is evaluated
+-- returns a SINGLE Trans
+addAssToTrSingle :: Ident -> Exp -> Trans -> VerRes Trans
+
+addAssToTrSingle varIdent value (trName, guards, updates) = do
   let determinedValue = determineExp value (trName, guards, updates)
   
   newUpdates <- foldM
     (\acc branch -> do
-      partialUpdates <- addAssToUpdatesBranch guards (SAss varIdent determinedValue) branch
+      partialUpdates <- addAssToUpdatesBranch varIdent determinedValue guards branch
       return $ partialUpdates ++ acc
     )
     []
     updates
   return (trName, guards, newUpdates)
 
-addAssToTrSingle (SArrAss arrIdent index value) tr = do
+-- assumes index and value are evaluated
+-- returns a SINGLE Trans
+addArrAssToTrSingle :: Ident -> Exp -> Exp -> Trans -> VerRes Trans
+
+addArrAssToTrSingle arrIdent index value tr = do
   case determineExp (EArray arrIdent index) tr of
     EVar varIdent ->
-      addAssToTrSingle (SAss varIdent value) tr
+      addAssToTrSingle varIdent value tr
     _ ->
       error $ "Cannot determine var name from array name after evaluation: " ++ (show $ EArray arrIdent index)
 
--- adds an assignment to a single transition
--- can possibly create longer list of updates in case the array index is not known
-addAssToTr :: ModifyModuleType -> Stm -> Trans -> VerRes [Trans]
-
--- TODO: zmienic nazewnictwo. Niech addDFSSTm robi evaluateExp i niech odpala addAssToTr(Single?)
-addAssToTr modifyModule (SAss varIdent value) oldTr = do
-  trs <- evaluateExp modifyModule value oldTr 
-  applyToTrList 
-    modifyModule 
-    (\tr -> do
-      newTr <- addAssToTrSingle (SAss varIdent value) tr
-      return [newTr]
-    )
-    trs
-
-addAssToTr modifyModule (SArrAss arrIdent index value) oldTr = do
-  trs <- evaluateExp modifyModule index oldTr >>= applyToTrList modifyModule (evaluateExp modifyModule value)
-  applyToTrList
-    modifyModule
-    (\tr -> do
-      newTr <- addAssToTrSingle (SArrAss arrIdent index value) tr
-      return [newTr]
-    )
-    trs
-
-
--- modifyModule niepotrzebne?
--- TODO: only simple assignments for a moment
--- TODO: random
+-- TODO random (może przepisać case exp z updatesFromAss z SmartFunPrismEthver.hs?
 -- Aux: adds an assignment to an updates branch
--- can possibly create longer list of updates for randomized assignment
-addAssToUpdatesBranch :: [Exp] -> Stm -> [(Ident, Exp)] -> VerRes [[(Ident, Exp)]]
+addAssToUpdatesBranch :: Ident -> Exp -> [Exp] -> [(Ident, Exp)] -> VerRes [[(Ident, Exp)]]
 
-addAssToUpdatesBranch guards (SAss ident exp) updatesBranch = do
-  -- TODO random (może przepisać case exp z updatesFromAss z SmartFunPrismEthver.hs?
+addAssToUpdatesBranch varIdent value guards updatesBranch = do
   let 
     deleteOld :: [(Ident, Exp)] -> [(Ident, Exp)]
     deleteOld list = filter
-      (\(i, _) -> i /= ident)
+      (\(i, _) -> i /= varIdent)
       list
     newUpdates =  
-      (((ident, exp):) . deleteOld)
+      (((varIdent, value):) . deleteOld)
       updatesBranch
   return [newUpdates]
 
-addAssToUpdatesBranch _  (SArrAss arrName index exp) _ = do
-  error $ "addAssToUpdateBranch should not be called with SArrAss (" ++ (show $ SArrAss arrName index exp)
-  
 --------
 -- If --
 --------

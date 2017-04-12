@@ -23,7 +23,7 @@ communication {
     tab[y] = x;
     // sprawdzic if a == ...
     pom = tab[y];
-    if (true) {
+    if (y == 1) {
       a = 1;
     }
   }

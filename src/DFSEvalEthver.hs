@@ -35,24 +35,24 @@ determineStm (SArrAss ident index exp) tr =
 -- uses x value from guards
 
 determineExp :: Exp -> Trans -> Exp
-determineExp (EArray (Ident arrName) index) (trName, guards, updates) = 
+determineExp (EArray (Ident arrName) index) tr = 
   case index of
     EInt x ->
       EVar $ Ident $ arrName ++ "_" ++ (show x)
-    EVar varName -> do 
-      case deduceVarValueFromGuards guards varName of
+    EVar varIdent -> do 
+      case deduceVarValue varIdent tr of
         (Just (EInt x)) ->
           EVar $ Ident $ arrName ++ "_" ++ (show x)
         Nothing -> 
           error $ "Array index cannot be determined from guards. Array: " ++ (show $ EArray (Ident arrName) index)
-            ++ "\nguards: " ++ (show guards)
+            ++ "\nTrans: " ++ (show tr)
     _ -> 
       error $ "Array index different than ESender, EInt a, or EVar a"
 
 determineExp (EInt x) _ = EInt x
 
-determineExp (EVar varIdent) (trName, guards, updates) = 
-  case deduceVarValueFromGuards guards varIdent of
+determineExp (EVar varIdent) tr = 
+  case deduceVarValue varIdent tr of
     (Just (EInt x)) ->
       EInt x
     Nothing ->
@@ -141,7 +141,7 @@ evaluateExp modifyModule (EArray (Ident arrName) index) (trName, guards, updates
     EInt x -> do
       return [(trName, guards, updates)]
     EVar varIdent -> do 
-      case deduceVarValueFromGuards guards varIdent of
+      case deduceVarValue varIdent (trName, guards, updates) of
         (Just (EInt x)) -> do
           return [(trName, guards, updates)]
         Nothing -> do
@@ -163,7 +163,7 @@ evaluateExp modifyModule (EArray (Ident arrName) index) (trName, guards, updates
 
 -- TODO: spora część kodu się pokrywa z evaluateExp (EArray). Może da się połączyć?
 evaluateExp modifyModule (EVar varIdent) (trName, guards, updates) = do
-  case deduceVarValueFromGuards guards varIdent of
+  case deduceVarValue varIdent (trName, guards, updates) of
     Just val -> 
       return [(trName, guards, updates)]
     Nothing -> do

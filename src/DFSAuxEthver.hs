@@ -29,8 +29,33 @@ applyToTrList modifyModule fun trs = do
 -- deduction of values --
 -------------------------
 
-deduceVarValueFromGuards :: [Exp] -> Ident -> Maybe Exp
-deduceVarValueFromGuards guards varName = 
+-- TODO: na pewno trzeba coś zrobić z updatesBranch
+deduceVarValue :: Ident -> Trans -> Maybe Exp
+deduceVarValue varIdent (trName, guards, updates) = 
+  -- TODO: updates vs updatesBranch?
+  deduceVarValueFromGuardsAndUpdatesBranch varIdent guards (head updates)
+
+deduceVarValueFromGuardsAndUpdatesBranch :: Ident -> [Exp] -> [(Ident, Exp)] -> Maybe Exp
+deduceVarValueFromGuardsAndUpdatesBranch varIdent guards updatesBranch =
+  -- TODO: nested guards
+  let
+    filteredGuards = 
+      filter
+      (\x -> case x of
+        Just _ -> True
+        _ -> False
+      )
+      (map (valueFromCond varIdent) guards)
+    filteredUpdates = filter (\(i, e) -> i == varIdent) updatesBranch
+  in
+    case filteredUpdates of
+      ((var, value):t) -> Just value
+      _ -> case filteredGuards of
+        (h:t) -> h
+        _ -> Nothing
+
+deduceVarValueFromGuards :: Ident -> [Exp] -> Maybe Exp
+deduceVarValueFromGuards varIdent guards = 
   let
     filteredGuards =
       filter
@@ -38,12 +63,13 @@ deduceVarValueFromGuards guards varName =
         Just _ -> True
         _ -> False
       )
-      (map (valueFromCond varName) guards)
+      (map (valueFromCond varIdent) guards)
   in
     case filteredGuards of
       (h:t) -> h
       _ -> Nothing
 
+-- TODO: Does not support bool operators different than And. (Needed?)
 valueFromCond :: Ident -> Exp -> Maybe Exp
 valueFromCond varName cond = 
   case cond of
@@ -61,26 +87,9 @@ valueFromCond varName cond =
 -- TODO: Czy musi być deduceVarValueFromUpdate?
 
 -- Aux: deduces value of a var from guards and updates
-{-
-deduceVarValue :: [Exp] -> [(Ident, Exp)] -> Ident -> Maybe Exp
-deduceVarValue guards updatesBranch varName =
-  -- TODO: nested guards
-  let
-    filteredGuards = 
-      filter
-      (\x -> case x of
-        Just _ -> True
-        _ -> False
-      )
-      (map (valueFromCond varName) guards)
-    filteredUpdates = filter (\(i, e) -> i == varName) updatesBranch
-  in
-    case filteredUpdates of
-      (h:t) -> Just h
-      _ -> case filteredGuards of
-        (h:t) -> Just h
-        _ -> Nothing
--}
+-- From updates first!
+
+
 
 --  (createSmartOneTrans modifyModule (Fun funName args stms) condVarsList condArraysList) valuations
 
