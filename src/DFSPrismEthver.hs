@@ -23,7 +23,7 @@ verDFSFun modifyModule (Fun funName args stms) = do
     stVar = Ident $ stateVar mod
     initGuards = [EEq (EVar stVar) (EInt $ currState mod)]
     initUpdates = [[(stVar, EInt 1)]]
-  trs <- verDFSStm modifyModule [("", initGuards, initUpdates)] (SBlock stms)
+  trs <- verDFSStm modifyModule (SBlock stms) [("", initGuards, initUpdates)]
   mapM_
     (\tr -> modifyModule (\mod -> mod {transs = tr:(transs mod)}))
     trs
@@ -32,13 +32,14 @@ verDFSFun modifyModule (Fun funName args stms) = do
 -- verDFSStm --
 ---------------
 
+-- TODO: zmienić na appplyToTrList
 -- interprets stm and applies result to every tr in trs
-verDFSStm :: ModifyModuleType -> [Trans] -> Stm -> VerRes ([Trans])
+verDFSStm :: ModifyModuleType -> Stm -> [Trans] -> VerRes ([Trans])
 
-verDFSStm modifyModule trs stm = do
+verDFSStm modifyModule stm trs = do
   foldM
     (\acc tr -> do
-      newTrs <- addDFSStm modifyModule tr stm
+      newTrs <- addDFSStm modifyModule stm tr
       return $ acc ++ newTrs
     )
     []
@@ -49,39 +50,42 @@ verDFSStm modifyModule trs stm = do
 ---------------
 
 -- interprets stm and applies result to a particular tr
-addDFSStm :: ModifyModuleType -> Trans -> Stm -> VerRes ([Trans])
+addDFSStm :: ModifyModuleType -> Stm -> Trans -> VerRes ([Trans])
 
-addDFSStm modifyModule tr (SBlock []) = do
+addDFSStm modifyModule (SBlock []) tr = do
   return [tr]
 
-addDFSStm modifyModule tr (SBlock (stmH:stmT)) = do
-  newTrs <- addDFSStm modifyModule tr stmH
-  verDFSStm modifyModule newTrs (SBlock stmT)
+addDFSStm modifyModule (SBlock (stmH:stmT)) tr = do
+  newTrs <- addDFSStm modifyModule stmH tr
+  verDFSStm modifyModule (SBlock stmT) newTrs
 
-addDFSStm modifyModule tr (SAss ident exp) = do
-  applyFunToStmWithEvaluation modifyModule tr addAssToTr (SAss ident exp)
+addDFSStm modifyModule (SAss ident exp) tr = do
+  applyFunToStmWithEvaluation modifyModule addAssToTr (SAss ident exp) tr
 
-addDFSStm modifyModule tr (SArrAss ident index exp) = do
-  applyFunToStmWithEvaluation modifyModule tr addAssToTr (SArrAss ident index exp)
+addDFSStm modifyModule (SArrAss ident index exp) tr = do
+  applyFunToStmWithEvaluation modifyModule addAssToTr (SArrAss ident index exp) tr
   
-addDFSStm modifyModule (trName, guards, updates) (SIf cond ifBlock) = do
-  let oldTr = (trName, guards, updates)
+addDFSStm modifyModule (SIf cond ifBlock) tr = do
+  let oldTr = tr
 
-  condTranss <- evaluateExp modifyModule oldTr cond
-  posTranss <- applyToTrList modifyModule condTranss (addDFSStm modifyModule ifBlock)
+  (condTranss, _) <- evaluateExp modifyModule cond oldTr
+  posTranss <- applyToTrList modifyModule (addDFSStm modifyModule ifBlock) condTranss
 
-  negCondTranss <- evaluateExp modifyModule oldTr (negateExp cond)
+  (negCondTranss, _) <- evaluateExp modifyModule (negateExp cond) oldTr
   
   return $ posTranss ++ negCondTranss
 
-{- TODO: Stare, zmienić na applyToTrList
-addDFSStm modifyModule (trName, guards, updates) (SIfElse cond ifBlock elseBlock) = do
-  posTranss <- addDFSStm modifyModule (trName, cond:guards, updates) ifBlock
-  negTranss <- addDFSStm modifyModule (trName, (negateExp cond):guards, updates) elseBlock
-  return $ posTranss ++ negTranss
--}
+addDFSStm modifyModule (SIfElse cond ifBlock elseBlock) tr = do
+  let oldTr = tr
+  (condTranss, _) <- evaluateExp modifyModule cond oldTr
+  posTranss <- applyToTrList modifyModule (addDFSStm modifyModule ifBlock) condTranss
 
-addDFSStm modifyModule _ (SWhile _ _) = do
+  (negCondTranss, _) <- evaluateExp modifyModule (negateExp cond) oldTr
+  negTranss <- applyToTrList modifyModule (addDFSStm modifyModule elseBlock) negCondTranss
+  
+  return $ posTranss ++ negTranss
+
+addDFSStm modifyModule (SWhile _ _) _ = do
   error $ "while loop not supported in verDFS"
 
 -------------------------------------------------
@@ -102,8 +106,8 @@ addDFSStm modifyModule _ (SWhile _ _) = do
 -------------------
 
 -- TODO: może zostawić tylko tę funkcję i reszta niech z niej korzysta?
-applyToTrList :: ModifyModuleType -> [Trans] -> (Trans -> VerRes [Trans]) -> VerRes [Trans]
-applyToTrList modifyModule trs fun = do
+applyToTrList :: ModifyModuleType -> (Trans -> VerRes [Trans]) -> [Trans] -> VerRes [Trans]
+applyToTrList modifyModule fun trs = do
   foldM
     (\acc tr -> do
       newTrs <- fun tr
@@ -115,12 +119,12 @@ applyToTrList modifyModule trs fun = do
 -- TODO: zamienić kolejność argumentów funkcji, żeby Trans było na końcu
 -- Żeby się dało skorzystać z applyToTrList
 
-applyFunToStmWithEvaluation :: ModifyModuleType -> Trans -> (Trans -> Stm -> VerRes [Trans]) -> Stm -> VerRes [Trans]
-applyFunToStmWithEvaluation modifyModule tr fun stm = do
-  (trs, _) <- evaluateStm modifyModule tr stm
+applyFunToStmWithEvaluation :: ModifyModuleType -> (Stm -> Trans -> VerRes [Trans]) -> Stm -> Trans -> VerRes [Trans]
+applyFunToStmWithEvaluation modifyModule fun stm tr = do
+  (trs, _) <- evaluateStm modifyModule stm tr
   foldM
     (\acc tr -> do
-      newTrs <- fun tr (determineStm tr stm)
+      newTrs <- fun (determineStm stm tr) tr
       return $ acc ++ newTrs
     )
     []
@@ -138,9 +142,9 @@ applyFunToStmWithEvaluation modifyModule tr fun stm = do
 
 
 -- special case for SAss. Generates single trans
-addVarAssToTr :: Trans -> Stm -> VerRes Trans
+addVarAssToTr :: Stm -> Trans -> VerRes Trans
 
-addVarAssToTr (trName, guards, updates) (SAss varName exp) = do
+addVarAssToTr (SAss varName exp) (trName, guards, updates) = do
   newUpdates <- foldM
     (\acc branch -> do
       partialUpdates <- addAssToUpdatesBranch guards (SAss varName exp) branch
@@ -150,20 +154,20 @@ addVarAssToTr (trName, guards, updates) (SAss varName exp) = do
     updates
   return $ (trName, guards, newUpdates)
 
-addVarAssToTr _ (SArrAss arrName index exp) = do
+addVarAssToTr (SArrAss arrName index exp) _ = do
   error $ "addVarAssToTr should not be called with SArrAss argument (" ++ (show (SArrAss arrName index exp))
 
 -- adds an assignment to a single transition
 -- can possibly create longer list of updates in case the array index is not known
-addAssToTr :: Trans -> Stm -> VerRes [Trans]
+addAssToTr :: Stm -> Trans -> VerRes [Trans]
 
-addAssToTr tr (SAss varName exp) = do
-  newTr <- addVarAssToTr tr (SAss varName exp)
+addAssToTr (SAss varName exp) tr = do
+  newTr <- addVarAssToTr (SAss varName exp) tr
   return [newTr]
 
 
 -- TODO DFS: to jest do przeniesienia do evaluateExp?
-addAssToTr (trName, guards, updates) (SArrAss (Ident arrName) index exp) = do
+addAssToTr (SArrAss (Ident arrName) index exp) (trName, guards, updates) = do
   case index of
     {-
     ESender -> do -- TODO: np. trzeba dodać sendera do varsValues
@@ -172,11 +176,11 @@ addAssToTr (trName, guards, updates) (SArrAss (Ident arrName) index exp) = do
       return $ Map.lookup (whichSender mod) (varsValues world)
     -}
     EInt x -> do
-      addAssToTr (trName, guards, updates) $ SAss (Ident $ arrName ++ "_" ++ (show x)) exp
+      addAssToTr (SAss (Ident $ arrName ++ "_" ++ (show x)) exp) (trName, guards, updates)
     EVar varName -> do 
       case deduceVarValueFromGuards guards varName of
         (Just (EInt x)) -> do
-          addAssToTr (trName, guards, updates) $ SAss (Ident $ arrName ++ "_" ++ (show x)) exp
+          addAssToTr (SAss (Ident $ arrName ++ "_" ++ (show x)) exp) (trName, guards, updates)
         Nothing -> do
           varType <- findVarType varName 
           case varType of
@@ -187,8 +191,8 @@ addAssToTr (trName, guards, updates) (SArrAss (Ident arrName) index exp) = do
               mapM
                 (\val -> 
                   addVarAssToTr 
-                    (trName, (EEq (EVar varName) (EInt val)):guards, updates) 
                     (SAss (Ident $ arrName ++ "_" ++ (show val)) exp)
+                    (trName, (EEq (EVar varName) (EInt val)):guards, updates) 
                 )
                 vals
             Nothing -> 
@@ -312,13 +316,13 @@ addRandomUpdates modifyModule oldUpdates = do
 -- determines values (e.g. array index) from guards
 
 
-determineStm :: Trans -> Stm -> Stm
+determineStm :: Stm -> Trans -> Stm
 
-determineStm tr (SAss ident exp) = 
-  SAss ident (determineExp tr exp)
+determineStm (SAss ident exp) tr = 
+  SAss ident (determineExp exp tr)
 
-determineStm tr (SArrAss ident index exp) = 
-  SArrAss ident (determineExp tr index) (determineExp tr exp)
+determineStm (SArrAss ident index exp) tr = 
+  SArrAss ident (determineExp index tr) (determineExp exp tr)
 
 ------------------
 -- determineExp --
@@ -327,8 +331,8 @@ determineStm tr (SArrAss ident index exp) =
 -- used mainly for EArray: showExp(tab[x]) = tab_2 for x = 2
 -- uses x value from guards
 
-determineExp :: Trans -> Exp -> Exp
-determineExp (trName, guards, updates) (EArray (Ident arrName) index) = 
+determineExp :: Exp -> Trans -> Exp
+determineExp (EArray (Ident arrName) index) (trName, guards, updates) = 
   case index of
     EInt x ->
       EVar $ Ident $ arrName ++ "_" ++ (show x)
@@ -341,9 +345,9 @@ determineExp (trName, guards, updates) (EArray (Ident arrName) index) =
     _ -> 
       error $ "Array index different than ESender, EInt a, or EVar a"
 
-determineExp _ (EInt x) = EInt x
+determineExp (EInt x) _ = EInt x
 
-determineExp (trName, guards, updates) (EVar varIdent) = 
+determineExp (EVar varIdent) (trName, guards, updates) = 
   case deduceVarValueFromGuards guards varIdent of
     (Just (EInt x)) ->
       EInt x
@@ -357,23 +361,23 @@ determineExp (trName, guards, updates) (EVar varIdent) =
 -- evaluateStm --
 -----------------
 
-evaluateStm :: ModifyModuleType -> Trans -> Stm -> VerRes ([Trans], Stm)
+evaluateStm :: ModifyModuleType -> Stm -> Trans -> VerRes ([Trans], Stm)
 
-evaluateStm modifyModule tr (SAss ident exp) = do
-  (trs, evaluatedExp) <- evaluateExp modifyModule tr exp
+evaluateStm modifyModule (SAss ident exp) tr = do
+  (trs, evaluatedExp) <- evaluateExp modifyModule exp tr
   return (trs, SAss ident evaluatedExp)
 
-evaluateStm modifyModule tr (SArrAss ident index exp) = do
-  trs <- evaluate2Exp modifyModule tr index exp
+evaluateStm modifyModule (SArrAss ident index exp) tr = do
+  trs <- evaluate2Exp modifyModule index exp tr
   return (trs, SArrAss ident index exp)
 
-evaluate2Exp :: ModifyModuleType -> Trans -> Exp -> Exp -> VerRes [Trans]
-evaluate2Exp modifyModule tr exp1 exp2 = do
-  (trs, _) <- evaluateExp modifyModule tr exp1
+evaluate2Exp :: ModifyModuleType -> Exp -> Exp -> Trans -> VerRes [Trans]
+evaluate2Exp modifyModule exp1 exp2 tr = do
+  (trs, _) <- evaluateExp modifyModule exp1 tr
   foldM
     (\acc tr -> do
       -- TODO: nie ma jak wyciągnąć jednego evaluatedExp2, bo jest pętla
-      (newTrs, _) <- evaluateExp modifyModule tr exp2
+      (newTrs, _) <- evaluateExp modifyModule exp2 tr
       return $ acc ++ newTrs
     )
     []
@@ -383,46 +387,46 @@ evaluate2Exp modifyModule tr exp1 exp2 = do
 -- evaluateExp --
 -----------------
 
-evaluateExp :: ModifyModuleType -> Trans -> Exp -> VerRes ([Trans], Exp)
+evaluateExp :: ModifyModuleType -> Exp -> Trans -> VerRes ([Trans], Exp)
 {-
-evaluateExp modifyModule tr (EOr e1 e2) = evaluateBoolBinOp modifyModule tr (||) e1 e2
-evaluateExp modifyModule tr (EAnd e1 e2) = evaluateBoolBinOp modifyModule tr (&&) e1 e2
+evaluateExp modifyModule (EOr e1 e2) = evaluateBoolBinOp modifyModule (||) e1 e2 tr
+evaluateExp modifyModule (EAnd e1 e2) = evaluateBoolBinOp modifyModule (&&) e1 e2 tr
 
-evaluateExp modifyModule tr (EEq e1 e2) = evaluateEq modifyModule tr e1 e2
-evaluateExp modifyModule tr (ENe e1 e2) = do
-  tmp <- evaluateEq modifyModule tr e1 e2
-  evaluateBoolUnOp modifyModule tr not tmp
+evaluateExp modifyModule (EEq e1 e2) = evaluateEq modifyModule e1 e2 tr
+evaluateExp modifyModule (ENe e1 e2) = do
+  tmp <- evaluateEq modifyModule e1 e2 tr
+  evaluateBoolUnOp modifyModule not tmp tr
 
-evaluateExp modifyModule tr (ELt e1 e2) = evaluateCompIntBinOp modifyModule tr (<) e1 e2
-evaluateExp modifyModule tr (ELe e1 e2) = evaluateCompIntBinOp modifyModule tr (<=) e1 e2
-evaluateExp modifyModule tr (EGt e1 e2) = evaluateCompIntBinOp modifyModule tr (>) e1 e2
-evaluateExp modifyModule tr (EGe e1 e2) = evaluateCompIntBinOp modifyModule tr (>=) e1 e2
-evaluateExp modifyModule tr (EAdd e1 e2) = evaluateArithmIntBinOp modifyModule tr (+) e1 e2
-evaluateExp modifyModule tr (ESub e1 e2) = evaluateArithmIntBinOp modifyModule tr (-) e1 e2
-evaluateExp modifyModule tr (EMul e1 e2) = evaluateArithmIntBinOp modifyModule tr (*) e1 e2
-evaluateExp modifyModule tr (EDiv e1 e2) = evaluateArithmIntBinOp modifyModule tr div e1 e2
-evaluateExp modifyModule tr (EMod e1 e2) = evaluateArithmIntBinOp modifyModule tr mod e1 e2
+evaluateExp modifyModule (ELt e1 e2) tr = evaluateCompIntBinOp modifyModule (<) e1 e2 tr
+evaluateExp modifyModule (ELe e1 e2) tr = evaluateCompIntBinOp modifyModule (<=) e1 e2 tr
+evaluateExp modifyModule (EGt e1 e2) tr = evaluateCompIntBinOp modifyModule (>) e1 e2 tr
+evaluateExp modifyModule (EGe e1 e2) tr = evaluateCompIntBinOp modifyModule (>=) e1 e2 tr
+evaluateExp modifyModule (EAdd e1 e2) tr = evaluateArithmIntBinOp modifyModule (+) e1 e2 tr
+evaluateExp modifyModule (ESub e1 e2) tr = evaluateArithmIntBinOp modifyModule (-) e1 e2 tr
+evaluateExp modifyModule (EMul e1 e2) tr = evaluateArithmIntBinOp modifyModule (*) e1 e2 tr
+evaluateExp modifyModule (EDiv e1 e2) tr = evaluateArithmIntBinOp modifyModule div e1 e2 tr
+evaluateExp modifyModule (EMod e1 e2) tr = evaluateArithmIntBinOp modifyModule mod e1 e2 tr
 
-evaluateExp modifyModule tr (ENeg e) = evaluateArithmIntBinOp modifyModule tr (-) (EInt 0) e
-evaluateExp modifyModule tr (ENot e) = evaluateBoolUnOp modifyModule tr not e
+evaluateExp modifyModule (ENeg e) tr = evaluateArithmIntBinOp modifyModule (-) (EInt 0) e tr
+evaluateExp modifyModule (ENot e) tr = evaluateBoolUnOp modifyModule not e tr
 -}
 
 
 --DO WYWALENIA?
 {-
-evaluateExp modifyModule tr (EArray (Ident ident) index) = do
+evaluateExp modifyModule (EArray (Ident ident) index) tr = do
   mod <- modifyModule id
   
   case index of
   
   
-  indexEvaluated <- evaluateExp modifyModule index
+  indexEvaluated <- evaluateExp modifyModule index tr
   case indexEvaluated of 
     EInt indexVal -> evaluateExp modifyModule $ EVar $ Ident $ ident ++ "_" ++ (show indexVal)
     _ -> error $ "Index " ++ (show indexEvaluated) ++ " doesn't evaluate to EInt a)"
 -}
 
-evaluateExp modifyModule (trName, guards, updates) (EArray (Ident arrName) index) = do
+evaluateExp modifyModule (EArray (Ident arrName) index) (trName, guards, updates) = do
   case index of
     {-
     JAKIES STARE:
@@ -458,36 +462,36 @@ evaluateExp modifyModule (trName, guards, updates) (EArray (Ident arrName) index
       error $ "Array index different than ESender, EInt a, or EVar a"
 
 
-evaluateExp modifyModule tr (EVar ident) = do
+evaluateExp modifyModule (EVar ident) tr = do
   exp <- findVarValue ident
   case exp of 
     Just val -> return ([tr], val)
     Nothing -> return ([tr], EVar ident)
 
-evaluateExp modifyModule tr (EValue) = do
-  evaluateExp modifyModule tr (EVar $ Ident sValue)
+evaluateExp modifyModule (EValue) tr = do
+  evaluateExp modifyModule (EVar $ Ident sValue) tr
 
 -- TODO DFS: możliwe, że tu trzeba będzie sprawdzać, czy nie dołożyć sendera do guardsów. albo dodawać zawsze domyślnie
-evaluateExp modifyModule tr ESender = do
+evaluateExp modifyModule ESender tr = do
   world <- get
   mod <- modifyModule id
   case Map.lookup (whichSender mod) (varsValues world) of
     Just x -> return ([tr], x)
     Nothing -> error $ "Variable " ++ (show $ whichSender mod) ++ " not found in varsValues."
 
-evaluateExp modifyModule tr (EStr name) = do
+evaluateExp modifyModule (EStr name) tr = do
   world <- get
   case Map.lookup name $ playerNumbers world of
     Nothing -> error $ "Player '" ++ name ++ "' not found. (other string constants not supported)"
     Just number -> return ([tr], EInt number)
 
-evaluateExp modifyModule tr (EInt x) = do
+evaluateExp modifyModule (EInt x) tr = do
   return ([tr], EInt x)
 
-evaluateExp modifyModule tr ETrue = do
+evaluateExp modifyModule ETrue tr = do
   return ([tr], ETrue)
 
-evaluateExp modifyModule tr EFalse = do
+evaluateExp modifyModule EFalse tr = do
   return ([tr], EFalse)
 
 
