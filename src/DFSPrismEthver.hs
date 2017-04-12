@@ -67,24 +67,20 @@ addDFSStm modifyModule (SBlock (stmH:stmT)) tr = do
   
 addDFSStm modifyModule (SAss varIdent value) tr = do
   addAssToTr modifyModule (SAss varIdent value) tr
-  --applyFunToStmWithEvaluation modifyModule addAssToTr (SAss ident exp) tr
 
--- TODO: to jest do przerobienia jak powyższe
-addDFSStm modifyModule (SArrAss ident index exp) tr = do
-  applyFunToStmWithEvaluation modifyModule (addAssToTr modifyModule) (SArrAss ident index exp) tr
-  
-addDFSStm modifyModule (SIf cond ifBlock) tr = do
-  let oldTr = tr
+addDFSStm modifyModule (SArrAss arrIdent index value) tr = do
+  addAssToTr modifyModule (SArrAss arrIdent index value) tr
 
+
+addDFSStm modifyModule (SIf cond ifBlock) oldTr = do
   condTranss <- evaluateExp modifyModule cond oldTr
   posTranss <- applyToTrList modifyModule (addDFSStm modifyModule ifBlock) condTranss
 
-  negCondTranss <- evaluateExp modifyModule (negateExp cond) oldTr
+  --negCondTranss <- evaluateExp modifyModule (negateExp cond) oldTr
   
-  return $ posTranss ++ negCondTranss
+  return $ posTranss -- ++ negCondTranss
 
-addDFSStm modifyModule (SIfElse cond ifBlock elseBlock) tr = do
-  let oldTr = tr
+addDFSStm modifyModule (SIfElse cond ifBlock elseBlock) oldTr = do
   condTranss <- evaluateExp modifyModule cond oldTr
   posTranss <- applyToTrList modifyModule (addDFSStm modifyModule ifBlock) condTranss
 
@@ -96,12 +92,8 @@ addDFSStm modifyModule (SIfElse cond ifBlock elseBlock) tr = do
 addDFSStm modifyModule (SWhile _ _) _ = do
   error $ "while loop not supported in verDFS"
 
--------------------------------------------------
--- applyFun with evaluation ---------------------
--- evaluates the argument and applies function --
--------------------------------------------------
 
-
+-- TODO Do wywalenia
 -- TODO: zamienić kolejność argumentów funkcji, żeby Trans było na końcu
 -- Żeby się dało skorzystać z applyToTrList
 
@@ -138,17 +130,20 @@ addAssToTrAfterEval (SAss varIdent value) (trName, guards, updates) = do
     updates
   return (trName, guards, newUpdates)
 
-addAssToTrAfterEval (SArrAss arrName index exp) _ = do
-  -- TODO: Ten przypadek chyba jednak będzie miał miejsce
-  error $ "addAssToTrAfterEval should not be called with SArrAss argument (" ++ (show (SArrAss arrName index exp))
+addAssToTrAfterEval (SArrAss arrIdent index value) tr = do
+  case determineExp (EArray arrIdent index) tr of
+    EVar varIdent ->
+      addAssToTrAfterEval (SAss varIdent value) tr
+    _ ->
+      error $ "Cannot determine var name from array name after evaluation: " ++ (show $ EArray arrIdent index)
 
 -- adds an assignment to a single transition
 -- can possibly create longer list of updates in case the array index is not known
 addAssToTr :: ModifyModuleType -> Stm -> Trans -> VerRes [Trans]
 
 -- TODO: zmienic nazewnictwo. Niech addDFSSTm robi evaluateExp i niech odpala addAssToTrAfterEval
-addAssToTr modifyModule (SAss varIdent value) tr = do
-  trs <- evaluateExp modifyModule value tr 
+addAssToTr modifyModule (SAss varIdent value) oldTr = do
+  trs <- evaluateExp modifyModule value oldTr 
   applyToTrList 
     modifyModule 
     (\tr -> do
@@ -158,38 +153,15 @@ addAssToTr modifyModule (SAss varIdent value) tr = do
     trs
 
 -- TODO DFS: to jest do przeniesienia do evaluateExp?
-addAssToTr modifyModule (SArrAss (Ident arrName) index exp) (trName, guards, updates) = do
-  case index of
-    {-
-    ESender -> do -- TODO: np. trzeba dodać sendera do varsValues
-      world <- get
-      mod <- modifyModule id
-      return $ Map.lookup (whichSender mod) (varsValues world)
-    -}
-    EInt x -> do
-      addAssToTr modifyModule (SAss (Ident $ arrName ++ "_" ++ (show x)) exp) (trName, guards, updates)
-    EVar varName -> do 
-      case deduceVarValueFromGuards guards varName of
-        (Just (EInt x)) -> do
-          addAssToTr modifyModule (SAss (Ident $ arrName ++ "_" ++ (show x)) exp) (trName, guards, updates)
-        Nothing -> do
-          varType <- findVarType varName 
-          case varType of
-            Just typ -> do
-              let 
-                maxVal = maxTypeValueOfType typ
-                vals = [0..maxVal]
-              mapM
-                (\val -> 
-                  addAssToTrAfterEval
-                    (SAss (Ident $ arrName ++ "_" ++ (show val)) exp)
-                    (trName, (EEq (EVar varName) (EInt val)):guards, updates) 
-                )
-                vals
-            Nothing -> 
-              error $ "Var " ++ (unident varName) ++ " not found by findVarType"
-    _ -> do
-      error $ "Array index different than ESender, EInt a, or EVar a"
+addAssToTr modifyModule (SArrAss arrIdent index value) oldTr = do
+  trs <- evaluateExp modifyModule index oldTr >>= applyToTrList modifyModule (evaluateExp modifyModule value)
+  applyToTrList
+    modifyModule
+    (\tr -> do
+      newTr <- addAssToTrAfterEval (SArrAss arrIdent index value) tr
+      return [newTr]
+    )
+    trs
 
 
 -- modifyModule niepotrzebne?
@@ -332,7 +304,8 @@ determineExp (EArray (Ident arrName) index) (trName, guards, updates) =
         (Just (EInt x)) ->
           EVar $ Ident $ arrName ++ "_" ++ (show x)
         Nothing -> 
-          error $ "Array index should be determined when using showExp: " ++ (show $ EArray (Ident arrName) index)
+          error $ "Array index cannot be determined from guards. Array: " ++ (show $ EArray (Ident arrName) index)
+            ++ "\nguards: " ++ (show guards)
     _ -> 
       error $ "Array index different than ESender, EInt a, or EVar a"
 
@@ -427,36 +400,46 @@ evaluateExp modifyModule (EArray (Ident arrName) index) (trName, guards, updates
     -}
     EInt x -> do
       return [(trName, guards, updates)]
-    EVar varName -> do 
-      case deduceVarValueFromGuards guards varName of
+    EVar varIdent -> do 
+      case deduceVarValueFromGuards guards varIdent of
         (Just (EInt x)) -> do
           return [(trName, guards, updates)]
         Nothing -> do
-          varType <- findVarType varName
+          varType <- findVarType varIdent
           case varType of
             Just typ -> do
               let 
                 maxVal = maxTypeValueOfType typ
                 vals = [0..maxVal]
-                trs = map
+              return $ map
                   (\val -> 
-                    (trName, (EEq (EVar varName) (EInt val)):guards, updates) 
+                    (trName, (EEq (EVar varIdent) (EInt val)):guards, updates) 
                   )
                   vals
-              -- TODO: Zwraca starą postać. Ale co ma zwracać, skoro wygenerowała kilka?
-              -- Może w ogóle evaluateExp nie powinno nic zwracać?
-              return trs
             Nothing -> 
-              error $ "Var " ++ (unident varName) ++ " not found by findVarType"
+              error $ "Var " ++ (unident varIdent) ++ " not found by findVarType"
     _ -> do
       error $ "Array index different than ESender, EInt a, or EVar a"
 
-
-evaluateExp modifyModule (EVar ident) tr = do
-  exp <- findVarValue ident
-  case exp of 
-    Just val -> return [tr]
-    Nothing -> return [tr]
+-- TODO: spora część kodu się pokrywa z evaluateExp (EArray). Może da się połączyć?
+evaluateExp modifyModule (EVar varIdent) (trName, guards, updates) = do
+  case deduceVarValueFromGuards guards varIdent of
+    Just val -> 
+      return [(trName, guards, updates)]
+    Nothing -> do
+      varType <- findVarType varIdent
+      case varType of
+        Just typ -> do
+          let
+            maxVal = maxTypeValueOfType typ
+            vals = [0..maxVal]
+          return $ map
+              (\val ->
+                (trName, (EEq (EVar varIdent) (EInt val)):guards, updates)
+              )
+              vals
+        Nothing ->
+          error $ "Var " ++ (unident varIdent) ++ " type not found by findVarType"
 
 evaluateExp modifyModule (EValue) tr = do
   evaluateExp modifyModule (EVar $ Ident sValue) tr

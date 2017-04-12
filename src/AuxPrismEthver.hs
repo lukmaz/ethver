@@ -24,6 +24,10 @@ maxTypeValueOfType TBool = 1
 
 -- negate cond --
 negateExp :: Exp -> Exp
+
+negateExp ETrue = EFalse
+negateExp EFalse = ETrue
+
 negateExp (EEq e1 e2) = (ENe e1 e2)
 negateExp (ENe e1 e2) = (EEq e1 e2)
 negateExp (ELt e1 e2) = (EGe e1 e2)
@@ -32,6 +36,7 @@ negateExp (EGt e1 e2) = (ELe e1 e2)
 negateExp (EGe e1 e2) = (ELt e1 e2)
 
 negateExp exp = ENot exp
+
 
 unident :: Ident -> String
 unident (Ident ident) = ident
