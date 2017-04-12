@@ -65,17 +65,21 @@ addDFSStm modifyModule tr (SArrAss ident index exp) = do
   applyFunToStmWithEvaluation modifyModule tr addAssToTr (SArrAss ident index exp)
   
 addDFSStm modifyModule (trName, guards, updates) (SIf cond ifBlock) = do
-  -- TODO?: checkCond cond - sprawdzić czy warunek jest jedynego obsłubiwanego typu 
-  -- (korzysta tylko ze zmiennych ze zdefiniowaną wartością)
+  let oldTr = (trName, guards, updates)
 
-  posTranss <- addDFSStm modifyModule (trName, cond:guards, updates) ifBlock
-  let negTranss = [(trName, (negateExp cond):guards, updates)]
-  return $ posTranss ++ negTranss
+  condTranss <- evaluateExp modifyModule oldTr cond
+  posTranss <- applyToTrList modifyModule condTranss (addDFSStm modifyModule ifBlock)
 
+  negCondTranss <- evaluateExp modifyModule oldTr (negateExp cond)
+  
+  return $ posTranss ++ negCondTranss
+
+{- TODO: Stare, zmienić na applyToTrList
 addDFSStm modifyModule (trName, guards, updates) (SIfElse cond ifBlock elseBlock) = do
   posTranss <- addDFSStm modifyModule (trName, cond:guards, updates) ifBlock
   negTranss <- addDFSStm modifyModule (trName, (negateExp cond):guards, updates) elseBlock
   return $ posTranss ++ negTranss
+-}
 
 addDFSStm modifyModule _ (SWhile _ _) = do
   error $ "while loop not supported in verDFS"
@@ -87,6 +91,29 @@ addDFSStm modifyModule _ (SWhile _ _) = do
 
 -- ZWRACANIE STM DO WYWALENIA
 -- TODO: może też zrezygnować ze zwracania Stm?
+
+
+---------------------------
+-- WAZNE TODO
+---------------------------
+
+-------------------
+-- applyToTrList --
+-------------------
+
+-- TODO: może zostawić tylko tę funkcję i reszta niech z niej korzysta?
+applyToTrList :: ModifyModuleType -> [Trans] -> (Trans -> VerRes [Trans]) -> VerRes [Trans]
+applyToTrList modifyModule trs fun = do
+  foldM
+    (\acc tr -> do
+      newTrs <- fun tr
+      return $ acc ++ newTrs
+    )
+    []
+    trs
+
+-- TODO: zamienić kolejność argumentów funkcji, żeby Trans było na końcu
+-- Żeby się dało skorzystać z applyToTrList
 
 applyFunToStmWithEvaluation :: ModifyModuleType -> Trans -> (Trans -> Stm -> VerRes [Trans]) -> Stm -> VerRes [Trans]
 applyFunToStmWithEvaluation modifyModule tr fun stm = do
