@@ -13,25 +13,10 @@ import DFSAuxEthver
 import WorldPrismEthver
 
 ------------------
--- determineStm --
-------------------
-
--- determines values (e.g. array index) from guards
-
-
-determineStm :: Stm -> Trans -> Stm
-
-determineStm (SAss ident exp) tr = 
-  SAss ident (determineExp exp tr)
-
-determineStm (SArrAss ident index exp) tr = 
-  SArrAss ident (determineExp index tr) (determineExp exp tr)
-
-------------------
 -- determineExp --
 ------------------
 
--- used mainly for EArray: showExp(tab[x]) = tab_2 for x = 2
+-- used mainly for EArray: determineExp(tab[x]) = tab_2 for x = 2
 -- uses x value from guards
 
 determineExp :: Exp -> Trans -> Exp
@@ -62,44 +47,22 @@ determineExp (EVar varIdent) tr =
 
 
 -----------------
--- evaluateStm --
------------------
-
-evaluateStm :: ModifyModuleType -> Stm -> Trans -> VerRes [Trans]
-
-evaluateStm modifyModule (SAss ident exp) tr = do
-  trs <- evaluateExp modifyModule exp tr
-  return trs
-
-evaluateStm modifyModule (SArrAss ident index exp) tr = do
-  trs <- evaluate2Exp modifyModule index exp tr
-  return trs
-
-evaluate2Exp :: ModifyModuleType -> Exp -> Exp -> Trans -> VerRes [Trans]
-evaluate2Exp modifyModule exp1 exp2 tr = do
-  trs <- evaluateExp modifyModule exp1 tr
-  foldM
-    (\acc tr -> do
-      newTrs <- evaluateExp modifyModule exp2 tr
-      return $ acc ++ newTrs
-    )
-    []
-    trs
-
------------------
 -- evaluateExp --
 -----------------
 
 evaluateExp :: ModifyModuleType -> Exp -> Trans -> VerRes [Trans]
 {-
-evaluateExp modifyModule (EOr e1 e2) = evaluateBoolBinOp modifyModule (||) e1 e2 tr
-evaluateExp modifyModule (EAnd e1 e2) = evaluateBoolBinOp modifyModule (&&) e1 e2 tr
-
-evaluateExp modifyModule (EEq e1 e2) = evaluateEq modifyModule e1 e2 tr
-evaluateExp modifyModule (ENe e1 e2) = do
+evaluateExp modifyModule (EOr e1 e2) tr = evaluateBoolBinOp modifyModule (||) e1 e2 tr
+evaluateExp modifyModule (EAnd e1 e2) tr = evaluateBoolBinOp modifyModule (&&) e1 e2 tr
+-}
+evaluateExp modifyModule (EEq e1 e2) tr = evaluateExp2Arg modifyModule e1 e2 tr
+{-
+evaluateExp modifyModule (ENe e1 e2) tr = do
   tmp <- evaluateEq modifyModule e1 e2 tr
   evaluateBoolUnOp modifyModule not tmp tr
+-}
 
+{-
 evaluateExp modifyModule (ELt e1 e2) tr = evaluateCompIntBinOp modifyModule (<) e1 e2 tr
 evaluateExp modifyModule (ELe e1 e2) tr = evaluateCompIntBinOp modifyModule (<=) e1 e2 tr
 evaluateExp modifyModule (EGt e1 e2) tr = evaluateCompIntBinOp modifyModule (>) e1 e2 tr
@@ -114,20 +77,6 @@ evaluateExp modifyModule (ENeg e) tr = evaluateArithmIntBinOp modifyModule (-) (
 evaluateExp modifyModule (ENot e) tr = evaluateBoolUnOp modifyModule not e tr
 -}
 
-
---DO WYWALENIA?
-{-
-evaluateExp modifyModule (EArray (Ident ident) index) tr = do
-  mod <- modifyModule id
-  
-  case index of
-  
-  
-  indexEvaluated <- evaluateExp modifyModule index tr
-  case indexEvaluated of 
-    EInt indexVal -> evaluateExp modifyModule $ EVar $ Ident $ ident ++ "_" ++ (show indexVal)
-    _ -> error $ "Index " ++ (show indexEvaluated) ++ " doesn't evaluate to EInt a)"
--}
 
 evaluateExp modifyModule (EArray (Ident arrName) index) (trName, guards, updates) = do
   case index of
@@ -212,8 +161,25 @@ evaluateExp modifyModule EFalse tr = do
 -- evaluateExp aux --
 ---------------------
 
+evaluateExp2Arg :: ModifyModuleType -> Exp -> Exp -> Trans -> VerRes [Trans]
+evaluateExp2Arg modifyModule exp1 exp2 tr = do
+  evaluateExp modifyModule exp1 tr >>= applyToTrList modifyModule (evaluateExp modifyModule exp2)
+
 {-
-evaluateBoolBinOp :: ModifyModuleType -> Trans -> (Bool -> Bool -> Bool) -> Exp -> Exp -> VerRes ([Trans], Exp)
+evaluateEq :: ModifyModuleType -> Exp -> Exp -> Trans -> VerRes ([Trans], Exp)
+evaluateEq modifyModule e1 e2 = do
+  
+  v1 <- evaluateExp modifyModule e1
+  v2 <- evaluateExp modifyModule e2
+  t1 <- findType v1
+  t2 <- findType v2
+  case (t1, t2) of 
+    (Just TBool, Just TBool) -> return $ expFromBool $ v1 == v2
+    (Just (TUInt _), Just (TUInt _)) -> do
+      return $ expFromBool $ v1 == v2
+    _ -> error $ "Error in evaluateBoolIntBinOp: not matching types: " ++ (show v1) ++ " and " ++ (show v2)
+
+evaluateBoolBinOp :: ModifyModuleType -> (Bool -> Bool -> Bool) -> Exp -> Exp -> Trans -> VerRes ([Trans], Exp)
 evaluateBoolBinOp modifyModule op e1 e2 = do
   v1 <- evaluateExp modifyModule e1
   v2 <- evaluateExp modifyModule e2
@@ -247,19 +213,6 @@ evaluateCompIntBinOp modifyModule op e1 e2 = do
     Just x1 -> case intFromExp v2 of
       Nothing -> error $ "Error in evaluateCompIntBinOp: not an Int value: " ++ (show v2)
       Just x2 -> return $ expFromBool $ op x1 x2
-
-evaluateEq :: ModifyModuleType -> Trans -> Exp -> Exp -> VerRes ([Trans], Exp)
-evaluateEq modifyModule e1 e2 = do
-  world <- get
-  v1 <- evaluateExp modifyModule e1
-  v2 <- evaluateExp modifyModule e2
-  t1 <- findType v1
-  t2 <- findType v2
-  case (t1, t2) of 
-    (Just TBool, Just TBool) -> return $ expFromBool $ v1 == v2
-    (Just (TUInt _), Just (TUInt _)) -> do
-      return $ expFromBool $ v1 == v2
-    _ -> error $ "Error in evaluateBoolIntBinOp: not matching types: " ++ (show v1) ++ " and " ++ (show v2)
 
 evaluateBoolUnOp :: ModifyModuleType -> Trans -> (Bool -> Bool) -> Exp -> VerRes ([Trans], Exp)
 evaluateBoolUnOp modifyModule op e = do
