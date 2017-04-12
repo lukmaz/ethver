@@ -23,9 +23,9 @@ communication {
     tab[y] = x;
     // sprawdzic if a == ...
     pom = tab[y];
-    if (pom == 1) {
+    /*if (pom == 1) {
       a = 1;
-    }
+    }*/
   }
 }
 

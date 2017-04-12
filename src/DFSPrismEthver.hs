@@ -28,22 +28,28 @@ verDFSFun modifyModule (Fun funName args stms) = do
     (\tr -> modifyModule (\mod -> mod {transs = tr:(transs mod)}))
     trs
 
----------------
--- verDFSStm --
----------------
+-------------------
+-- applyToTrList --
+-------------------
 
--- TODO: zmienić na appplyToTrList
--- interprets stm and applies result to every tr in trs
-verDFSStm :: ModifyModuleType -> Stm -> [Trans] -> VerRes ([Trans])
-
-verDFSStm modifyModule stm trs = do
+applyToTrList :: ModifyModuleType -> (Trans -> VerRes [Trans]) -> [Trans] -> VerRes [Trans]
+applyToTrList modifyModule fun trs = do
   foldM
     (\acc tr -> do
-      newTrs <- addDFSStm modifyModule stm tr
+      newTrs <- fun tr
       return $ acc ++ newTrs
     )
     []
     trs
+
+---------------
+-- verDFSStm --
+---------------
+
+verDFSStm :: ModifyModuleType -> Stm -> [Trans] -> VerRes ([Trans])
+
+verDFSStm modifyModule stm trs = do
+  applyToTrList modifyModule (addDFSStm modifyModule stm) trs
 
 ---------------
 -- addDFSStm --
@@ -56,14 +62,16 @@ addDFSStm modifyModule (SBlock []) tr = do
   return [tr]
 
 addDFSStm modifyModule (SBlock (stmH:stmT)) tr = do
-  newTrs <- addDFSStm modifyModule stmH tr
-  verDFSStm modifyModule (SBlock stmT) newTrs
+  addDFSStm modifyModule stmH tr >>= verDFSStm modifyModule (SBlock stmT)
 
-addDFSStm modifyModule (SAss ident exp) tr = do
-  applyFunToStmWithEvaluation modifyModule addAssToTr (SAss ident exp) tr
+  
+addDFSStm modifyModule (SAss varIdent value) tr = do
+  addAssToTr modifyModule (SAss varIdent value) tr
+  --applyFunToStmWithEvaluation modifyModule addAssToTr (SAss ident exp) tr
 
+-- TODO: to jest do przerobienia jak powyższe
 addDFSStm modifyModule (SArrAss ident index exp) tr = do
-  applyFunToStmWithEvaluation modifyModule addAssToTr (SArrAss ident index exp) tr
+  applyFunToStmWithEvaluation modifyModule (addAssToTr modifyModule) (SArrAss ident index exp) tr
   
 addDFSStm modifyModule (SIf cond ifBlock) tr = do
   let oldTr = tr
@@ -93,28 +101,6 @@ addDFSStm modifyModule (SWhile _ _) _ = do
 -- evaluates the argument and applies function --
 -------------------------------------------------
 
--- ZWRACANIE STM DO WYWALENIA
--- TODO: może też zrezygnować ze zwracania Stm?
-
-
----------------------------
--- WAZNE TODO
----------------------------
-
--------------------
--- applyToTrList --
--------------------
-
--- TODO: może zostawić tylko tę funkcję i reszta niech z niej korzysta?
-applyToTrList :: ModifyModuleType -> (Trans -> VerRes [Trans]) -> [Trans] -> VerRes [Trans]
-applyToTrList modifyModule fun trs = do
-  foldM
-    (\acc tr -> do
-      newTrs <- fun tr
-      return $ acc ++ newTrs
-    )
-    []
-    trs
 
 -- TODO: zamienić kolejność argumentów funkcji, żeby Trans było na końcu
 -- Żeby się dało skorzystać z applyToTrList
@@ -135,39 +121,44 @@ applyFunToStmWithEvaluation modifyModule fun stm tr = do
 -- Aux --
 ---------
 
--- cheks if a cond is of the only supported type 
--- checkCond
--- TODO
+-- assumes Stm is evaluated.
+-- TODO: One function for all Stms?
+-- Małe TODO: mógłby zwracać jedno Trans zamiast listy. Ale to chyba nie problem
+addAssToTrAfterEval :: Stm -> Trans -> VerRes Trans
 
-
-
--- special case for SAss. Generates single trans
-addVarAssToTr :: Stm -> Trans -> VerRes Trans
-
-addVarAssToTr (SAss varName exp) (trName, guards, updates) = do
+addAssToTrAfterEval (SAss varIdent value) (trName, guards, updates) = do
+  let determinedValue = determineExp value (trName, guards, updates)
+  
   newUpdates <- foldM
     (\acc branch -> do
-      partialUpdates <- addAssToUpdatesBranch guards (SAss varName exp) branch
+      partialUpdates <- addAssToUpdatesBranch guards (SAss varIdent determinedValue) branch
       return $ partialUpdates ++ acc
     )
     []
     updates
-  return $ (trName, guards, newUpdates)
+  return (trName, guards, newUpdates)
 
-addVarAssToTr (SArrAss arrName index exp) _ = do
-  error $ "addVarAssToTr should not be called with SArrAss argument (" ++ (show (SArrAss arrName index exp))
+addAssToTrAfterEval (SArrAss arrName index exp) _ = do
+  -- TODO: Ten przypadek chyba jednak będzie miał miejsce
+  error $ "addAssToTrAfterEval should not be called with SArrAss argument (" ++ (show (SArrAss arrName index exp))
 
 -- adds an assignment to a single transition
 -- can possibly create longer list of updates in case the array index is not known
-addAssToTr :: Stm -> Trans -> VerRes [Trans]
+addAssToTr :: ModifyModuleType -> Stm -> Trans -> VerRes [Trans]
 
-addAssToTr (SAss varName exp) tr = do
-  newTr <- addVarAssToTr (SAss varName exp) tr
-  return [newTr]
-
+-- TODO: zmienic nazewnictwo. Niech addDFSSTm robi evaluateExp i niech odpala addAssToTrAfterEval
+addAssToTr modifyModule (SAss varIdent value) tr = do
+  trs <- evaluateExp modifyModule value tr 
+  applyToTrList 
+    modifyModule 
+    (\tr -> do
+      newTr <- addAssToTrAfterEval (SAss varIdent value) tr
+      return [newTr]
+    )
+    trs
 
 -- TODO DFS: to jest do przeniesienia do evaluateExp?
-addAssToTr (SArrAss (Ident arrName) index exp) (trName, guards, updates) = do
+addAssToTr modifyModule (SArrAss (Ident arrName) index exp) (trName, guards, updates) = do
   case index of
     {-
     ESender -> do -- TODO: np. trzeba dodać sendera do varsValues
@@ -176,11 +167,11 @@ addAssToTr (SArrAss (Ident arrName) index exp) (trName, guards, updates) = do
       return $ Map.lookup (whichSender mod) (varsValues world)
     -}
     EInt x -> do
-      addAssToTr (SAss (Ident $ arrName ++ "_" ++ (show x)) exp) (trName, guards, updates)
+      addAssToTr modifyModule (SAss (Ident $ arrName ++ "_" ++ (show x)) exp) (trName, guards, updates)
     EVar varName -> do 
       case deduceVarValueFromGuards guards varName of
         (Just (EInt x)) -> do
-          addAssToTr (SAss (Ident $ arrName ++ "_" ++ (show x)) exp) (trName, guards, updates)
+          addAssToTr modifyModule (SAss (Ident $ arrName ++ "_" ++ (show x)) exp) (trName, guards, updates)
         Nothing -> do
           varType <- findVarType varName 
           case varType of
@@ -190,7 +181,7 @@ addAssToTr (SArrAss (Ident arrName) index exp) (trName, guards, updates) = do
                 vals = [0..maxVal]
               mapM
                 (\val -> 
-                  addVarAssToTr 
+                  addAssToTrAfterEval
                     (SAss (Ident $ arrName ++ "_" ++ (show val)) exp)
                     (trName, (EEq (EVar varName) (EInt val)):guards, updates) 
                 )
