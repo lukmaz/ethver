@@ -15,8 +15,8 @@ import WorldPrismEthver
 -- applyToTrList --
 -------------------
 
-applyToTrList :: ModifyModuleType -> (Trans -> VerRes [Trans]) -> [Trans] -> VerRes [Trans]
-applyToTrList modifyModule fun trs = do
+applyToTrList :: (Trans -> VerRes [Trans]) -> [Trans] -> VerRes [Trans]
+applyToTrList fun trs = do
   foldM
     (\acc tr -> do
       newTrs <- fun tr

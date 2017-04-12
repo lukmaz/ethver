@@ -44,21 +44,21 @@ verDFSStm modifyModule (SBlock (stmH:stmT)) trs = do
     verDFSStm modifyModule (SBlock stmT)
 
 verDFSStm modifyModule (SAss varIdent value) oldTrs = do
-  newTrs <- applyToTrList modifyModule (evaluateExp modifyModule value) oldTrs
-  applyToTrList modifyModule (addAssToTr modifyModule varIdent value) newTrs
+  newTrs <- applyToTrList (evaluateExp modifyModule value) oldTrs
+  applyToTrList (addAssToTr modifyModule varIdent value) newTrs
 
 verDFSStm modifyModule (SArrAss arrIdent index value) oldTrs = do
-  newTrs <- applyToTrList modifyModule (evaluateExp modifyModule index) oldTrs >>= 
-    applyToTrList modifyModule (evaluateExp modifyModule value)
-  applyToTrList modifyModule (addArrAssToTr modifyModule arrIdent index value) newTrs
+  newTrs <- applyToTrList (evaluateExp modifyModule index) oldTrs >>= 
+    applyToTrList (evaluateExp modifyModule value)
+  applyToTrList (addArrAssToTr modifyModule arrIdent index value) newTrs
 
 verDFSStm modifyModule (SIf cond ifBlock) trs = do
-  condTranss <- applyToTrList modifyModule (evaluateExp modifyModule cond) trs
-  applyToTrList modifyModule (updateIf modifyModule cond ifBlock) condTranss
+  condTranss <- applyToTrList (evaluateExp modifyModule cond) trs
+  applyToTrList (updateIf modifyModule cond ifBlock) condTranss
 
 verDFSStm modifyModule (SIfElse cond ifBlock elseBlock) trs = do
-  condTranss <- applyToTrList modifyModule (evaluateExp modifyModule cond) trs
-  applyToTrList modifyModule (updateIfElse modifyModule cond ifBlock elseBlock) condTranss
+  condTranss <- applyToTrList (evaluateExp modifyModule cond) trs
+  applyToTrList (updateIfElse modifyModule cond ifBlock elseBlock) condTranss
 
 verDFSStm modifyModule (SWhile _ _) _ = do
   error $ "while loop not supported in verDFS"

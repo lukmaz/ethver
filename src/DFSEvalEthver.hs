@@ -163,7 +163,7 @@ evaluateExp modifyModule EFalse tr = do
 
 evaluateExp2Arg :: ModifyModuleType -> Exp -> Exp -> Trans -> VerRes [Trans]
 evaluateExp2Arg modifyModule exp1 exp2 tr = do
-  evaluateExp modifyModule exp1 tr >>= applyToTrList modifyModule (evaluateExp modifyModule exp2)
+  evaluateExp modifyModule exp1 tr >>= applyToTrList (evaluateExp modifyModule exp2)
 
 {-
 evaluateEq :: ModifyModuleType -> Exp -> Exp -> Trans -> VerRes ([Trans], Exp)
