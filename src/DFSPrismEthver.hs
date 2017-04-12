@@ -68,19 +68,19 @@ addDFSStm modifyModule (SArrAss ident index exp) tr = do
 addDFSStm modifyModule (SIf cond ifBlock) tr = do
   let oldTr = tr
 
-  (condTranss, _) <- evaluateExp modifyModule cond oldTr
+  condTranss <- evaluateExp modifyModule cond oldTr
   posTranss <- applyToTrList modifyModule (addDFSStm modifyModule ifBlock) condTranss
 
-  (negCondTranss, _) <- evaluateExp modifyModule (negateExp cond) oldTr
+  negCondTranss <- evaluateExp modifyModule (negateExp cond) oldTr
   
   return $ posTranss ++ negCondTranss
 
 addDFSStm modifyModule (SIfElse cond ifBlock elseBlock) tr = do
   let oldTr = tr
-  (condTranss, _) <- evaluateExp modifyModule cond oldTr
+  condTranss <- evaluateExp modifyModule cond oldTr
   posTranss <- applyToTrList modifyModule (addDFSStm modifyModule ifBlock) condTranss
 
-  (negCondTranss, _) <- evaluateExp modifyModule (negateExp cond) oldTr
+  negCondTranss <- evaluateExp modifyModule (negateExp cond) oldTr
   negTranss <- applyToTrList modifyModule (addDFSStm modifyModule elseBlock) negCondTranss
   
   return $ posTranss ++ negTranss
@@ -121,7 +121,7 @@ applyToTrList modifyModule fun trs = do
 
 applyFunToStmWithEvaluation :: ModifyModuleType -> (Stm -> Trans -> VerRes [Trans]) -> Stm -> Trans -> VerRes [Trans]
 applyFunToStmWithEvaluation modifyModule fun stm tr = do
-  (trs, _) <- evaluateStm modifyModule stm tr
+  trs <- evaluateStm modifyModule stm tr
   foldM
     (\acc tr -> do
       newTrs <- fun (determineStm stm tr) tr
@@ -361,23 +361,22 @@ determineExp (EVar varIdent) (trName, guards, updates) =
 -- evaluateStm --
 -----------------
 
-evaluateStm :: ModifyModuleType -> Stm -> Trans -> VerRes ([Trans], Stm)
+evaluateStm :: ModifyModuleType -> Stm -> Trans -> VerRes [Trans]
 
 evaluateStm modifyModule (SAss ident exp) tr = do
-  (trs, evaluatedExp) <- evaluateExp modifyModule exp tr
-  return (trs, SAss ident evaluatedExp)
+  trs <- evaluateExp modifyModule exp tr
+  return trs
 
 evaluateStm modifyModule (SArrAss ident index exp) tr = do
   trs <- evaluate2Exp modifyModule index exp tr
-  return (trs, SArrAss ident index exp)
+  return trs
 
 evaluate2Exp :: ModifyModuleType -> Exp -> Exp -> Trans -> VerRes [Trans]
 evaluate2Exp modifyModule exp1 exp2 tr = do
-  (trs, _) <- evaluateExp modifyModule exp1 tr
+  trs <- evaluateExp modifyModule exp1 tr
   foldM
     (\acc tr -> do
-      -- TODO: nie ma jak wyciągnąć jednego evaluatedExp2, bo jest pętla
-      (newTrs, _) <- evaluateExp modifyModule exp2 tr
+      newTrs <- evaluateExp modifyModule exp2 tr
       return $ acc ++ newTrs
     )
     []
@@ -387,7 +386,7 @@ evaluate2Exp modifyModule exp1 exp2 tr = do
 -- evaluateExp --
 -----------------
 
-evaluateExp :: ModifyModuleType -> Exp -> Trans -> VerRes ([Trans], Exp)
+evaluateExp :: ModifyModuleType -> Exp -> Trans -> VerRes [Trans]
 {-
 evaluateExp modifyModule (EOr e1 e2) = evaluateBoolBinOp modifyModule (||) e1 e2 tr
 evaluateExp modifyModule (EAnd e1 e2) = evaluateBoolBinOp modifyModule (&&) e1 e2 tr
@@ -436,11 +435,11 @@ evaluateExp modifyModule (EArray (Ident arrName) index) (trName, guards, updates
       return $ Map.lookup (whichSender mod) (varsValues world)
     -}
     EInt x -> do
-      return ([(trName, guards, updates)], EVar (Ident $ arrName ++ "_" ++ (show x)))
+      return [(trName, guards, updates)]
     EVar varName -> do 
       case deduceVarValueFromGuards guards varName of
         (Just (EInt x)) -> do
-          return ([(trName, guards, updates)], EVar (Ident $ arrName ++ "_" ++ (show x)))
+          return [(trName, guards, updates)]
         Nothing -> do
           varType <- findVarType varName
           case varType of
@@ -455,7 +454,7 @@ evaluateExp modifyModule (EArray (Ident arrName) index) (trName, guards, updates
                   vals
               -- TODO: Zwraca starą postać. Ale co ma zwracać, skoro wygenerowała kilka?
               -- Może w ogóle evaluateExp nie powinno nic zwracać?
-              return (trs, EArray (Ident arrName) index)
+              return trs
             Nothing -> 
               error $ "Var " ++ (unident varName) ++ " not found by findVarType"
     _ -> do
@@ -465,8 +464,8 @@ evaluateExp modifyModule (EArray (Ident arrName) index) (trName, guards, updates
 evaluateExp modifyModule (EVar ident) tr = do
   exp <- findVarValue ident
   case exp of 
-    Just val -> return ([tr], val)
-    Nothing -> return ([tr], EVar ident)
+    Just val -> return [tr]
+    Nothing -> return [tr]
 
 evaluateExp modifyModule (EValue) tr = do
   evaluateExp modifyModule (EVar $ Ident sValue) tr
@@ -476,23 +475,23 @@ evaluateExp modifyModule ESender tr = do
   world <- get
   mod <- modifyModule id
   case Map.lookup (whichSender mod) (varsValues world) of
-    Just x -> return ([tr], x)
+    Just x -> return [tr]
     Nothing -> error $ "Variable " ++ (show $ whichSender mod) ++ " not found in varsValues."
 
 evaluateExp modifyModule (EStr name) tr = do
   world <- get
   case Map.lookup name $ playerNumbers world of
     Nothing -> error $ "Player '" ++ name ++ "' not found. (other string constants not supported)"
-    Just number -> return ([tr], EInt number)
+    Just number -> return [tr]
 
 evaluateExp modifyModule (EInt x) tr = do
-  return ([tr], EInt x)
+  return [tr]
 
 evaluateExp modifyModule ETrue tr = do
-  return ([tr], ETrue)
+  return [tr]
 
 evaluateExp modifyModule EFalse tr = do
-  return ([tr], EFalse)
+  return [tr]
 
 
 ---------------------
