@@ -48,67 +48,50 @@ applyToTrList modifyModule fun trs = do
 
 verDFSStm :: ModifyModuleType -> Stm -> [Trans] -> VerRes ([Trans])
 
-verDFSStm modifyModule stm trs = do
-  applyToTrList modifyModule (addDFSStm modifyModule stm) trs
+verDFSStm modifyModule (SBlock []) trs = do
+  return trs
 
----------------
--- addDFSStm --
----------------
+verDFSStm modifyModule (SBlock (stmH:stmT)) trs = do
+  verDFSStm modifyModule stmH trs >>= 
+    verDFSStm modifyModule (SBlock stmT)
 
--- interprets stm and applies result to a particular tr
-addDFSStm :: ModifyModuleType -> Stm -> Trans -> VerRes ([Trans])
+-- TODO: zlikwidować jeden krok pośredni. Przekopoiować tu zawartość funkcji addAssToTr. A może nie? (Bo tr/trs)
+verDFSStm modifyModule (SAss varIdent value) trs = do
+  applyToTrList modifyModule (addAssToTr modifyModule (SAss varIdent value)) trs
 
-addDFSStm modifyModule (SBlock []) tr = do
-  return [tr]
+verDFSStm modifyModule (SArrAss arrIdent index value) trs = do
+  applyToTrList modifyModule (addAssToTr modifyModule (SArrAss arrIdent index value)) trs
 
-addDFSStm modifyModule (SBlock (stmH:stmT)) tr = do
-  addDFSStm modifyModule stmH tr >>= verDFSStm modifyModule (SBlock stmT)
+verDFSStm modifyModule (SIf cond ifBlock) trs = do
+  condTranss <- applyToTrList modifyModule (evaluateExp modifyModule cond) trs
+  applyToTrList modifyModule (updateIf modifyModule cond ifBlock) condTranss
 
-  
-addDFSStm modifyModule (SAss varIdent value) tr = do
-  addAssToTr modifyModule (SAss varIdent value) tr
+verDFSStm modifyModule (SIfElse cond ifBlock elseBlock) trs = do
+  condTranss <- applyToTrList modifyModule (evaluateExp modifyModule cond) trs
+  applyToTrList modifyModule (updateIfElse modifyModule cond ifBlock elseBlock) condTranss
 
-addDFSStm modifyModule (SArrAss arrIdent index value) tr = do
-  addAssToTr modifyModule (SArrAss arrIdent index value) tr
-
-
-addDFSStm modifyModule (SIf cond ifBlock) oldTr = do
-  condTranss <- evaluateExp modifyModule cond oldTr
-  posTranss <- applyToTrList modifyModule (addDFSStm modifyModule ifBlock) condTranss
-
-  --negCondTranss <- evaluateExp modifyModule (negateExp cond) oldTr
-  
-  return $ posTranss -- ++ negCondTranss
-
-addDFSStm modifyModule (SIfElse cond ifBlock elseBlock) oldTr = do
-  condTranss <- evaluateExp modifyModule cond oldTr
-  posTranss <- applyToTrList modifyModule (addDFSStm modifyModule ifBlock) condTranss
-
-  negCondTranss <- evaluateExp modifyModule (negateExp cond) oldTr
-  negTranss <- applyToTrList modifyModule (addDFSStm modifyModule elseBlock) negCondTranss
-  
-  return $ posTranss ++ negTranss
-
-addDFSStm modifyModule (SWhile _ _) _ = do
+verDFSStm modifyModule (SWhile _ _) _ = do
   error $ "while loop not supported in verDFS"
 
+--------
+-- If --
+--------
 
--- TODO Do wywalenia
--- TODO: zamienić kolejność argumentów funkcji, żeby Trans było na końcu
--- Żeby się dało skorzystać z applyToTrList
+-- updateIf
+updateIf :: ModifyModuleType -> Exp -> Stm -> Trans -> VerRes [Trans]
+updateIf modifyModule cond ifBlock (trName, guards, updates) = do
+  posTranss <- verDFSStm modifyModule ifBlock [(trName, cond:guards, updates)]
+  let negTranss = [(trName, (negateExp cond):guards, updates)]
 
-applyFunToStmWithEvaluation :: ModifyModuleType -> (Stm -> Trans -> VerRes [Trans]) -> Stm -> Trans -> VerRes [Trans]
-applyFunToStmWithEvaluation modifyModule fun stm tr = do
-  trs <- evaluateStm modifyModule stm tr
-  foldM
-    (\acc tr -> do
-      newTrs <- fun (determineStm stm tr) tr
-      return $ acc ++ newTrs
-    )
-    []
-    trs
+  return $ posTranss ++ negTranss
 
+updateIfElse :: ModifyModuleType -> Exp -> Stm -> Stm -> Trans -> VerRes [Trans]
+updateIfElse modifyModule cond ifBlock elseBlock (trName, guards, updates) = do
+  posTranss <- verDFSStm modifyModule ifBlock [(trName, cond:guards, updates)]
+  negTranss <- verDFSStm modifyModule elseBlock [(trName, (negateExp cond):guards, updates)]
 
+  return $ posTranss ++ negTranss
+  
 ---------
 -- Aux --
 ---------
@@ -116,9 +99,9 @@ applyFunToStmWithEvaluation modifyModule fun stm tr = do
 -- assumes Stm is evaluated.
 -- TODO: One function for all Stms?
 -- Małe TODO: mógłby zwracać jedno Trans zamiast listy. Ale to chyba nie problem
-addAssToTrAfterEval :: Stm -> Trans -> VerRes Trans
+addAssToTrSingle :: Stm -> Trans -> VerRes Trans
 
-addAssToTrAfterEval (SAss varIdent value) (trName, guards, updates) = do
+addAssToTrSingle (SAss varIdent value) (trName, guards, updates) = do
   let determinedValue = determineExp value (trName, guards, updates)
   
   newUpdates <- foldM
@@ -130,10 +113,10 @@ addAssToTrAfterEval (SAss varIdent value) (trName, guards, updates) = do
     updates
   return (trName, guards, newUpdates)
 
-addAssToTrAfterEval (SArrAss arrIdent index value) tr = do
+addAssToTrSingle (SArrAss arrIdent index value) tr = do
   case determineExp (EArray arrIdent index) tr of
     EVar varIdent ->
-      addAssToTrAfterEval (SAss varIdent value) tr
+      addAssToTrSingle (SAss varIdent value) tr
     _ ->
       error $ "Cannot determine var name from array name after evaluation: " ++ (show $ EArray arrIdent index)
 
@@ -141,24 +124,23 @@ addAssToTrAfterEval (SArrAss arrIdent index value) tr = do
 -- can possibly create longer list of updates in case the array index is not known
 addAssToTr :: ModifyModuleType -> Stm -> Trans -> VerRes [Trans]
 
--- TODO: zmienic nazewnictwo. Niech addDFSSTm robi evaluateExp i niech odpala addAssToTrAfterEval
+-- TODO: zmienic nazewnictwo. Niech addDFSSTm robi evaluateExp i niech odpala addAssToTr(Single?)
 addAssToTr modifyModule (SAss varIdent value) oldTr = do
   trs <- evaluateExp modifyModule value oldTr 
   applyToTrList 
     modifyModule 
     (\tr -> do
-      newTr <- addAssToTrAfterEval (SAss varIdent value) tr
+      newTr <- addAssToTrSingle (SAss varIdent value) tr
       return [newTr]
     )
     trs
 
--- TODO DFS: to jest do przeniesienia do evaluateExp?
 addAssToTr modifyModule (SArrAss arrIdent index value) oldTr = do
   trs <- evaluateExp modifyModule index oldTr >>= applyToTrList modifyModule (evaluateExp modifyModule value)
   applyToTrList
     modifyModule
     (\tr -> do
-      newTr <- addAssToTrAfterEval (SArrAss arrIdent index value) tr
+      newTr <- addAssToTrSingle (SArrAss arrIdent index value) tr
       return [newTr]
     )
     trs
