@@ -132,19 +132,23 @@ addAssToUpdatesBranch varIdent value guards updatesBranch = do
 -- updateIf
 updateIf :: ModifyModuleType -> Exp -> Stm -> Trans -> VerRes [Trans]
 updateIf modifyModule cond ifBlock tr = do
-  posCondTranss <- applyCond cond tr
+  let determinedCond = determineExp cond tr
+
+  posCondTranss <- applyCond determinedCond tr
   posTranss <- verDFSStm modifyModule ifBlock posCondTranss
 
-  negCondTranss <- applyCond (negateExp cond) tr
+  negCondTranss <- applyCond (negateExp determinedCond) tr
 
   return $ posTranss ++ negCondTranss
 
 updateIfElse :: ModifyModuleType -> Exp -> Stm -> Stm -> Trans -> VerRes [Trans]
 updateIfElse modifyModule cond ifBlock elseBlock tr = do
-  posCondTranss <- applyCond cond tr
+  let determinedCond = determineExp cond tr
+
+  posCondTranss <- applyCond determinedCond tr
   posTranss <- verDFSStm modifyModule ifBlock posCondTranss
 
-  negCondTranss <- applyCond (negateExp cond) tr
+  negCondTranss <- applyCond (negateExp determinedCond) tr
   negTranss <- verDFSStm modifyModule elseBlock negCondTranss
 
   return $ posTranss ++ negTranss

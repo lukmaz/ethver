@@ -110,7 +110,7 @@ applyCond (ENe (EVar varIdent) value) (trName, guards, updates) = do
     Just oldValue ->
       if (oldValue == value)
         then return []
-        else return [(trName, (ENe (EVar varIdent) value):guards, updates)]
+        else return [(trName, guards, updates)]
     Nothing ->
       return [(trName, (ENe (EVar varIdent) value):guards, updates)]
   

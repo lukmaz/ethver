@@ -19,11 +19,11 @@ communication {
   uint(3) pom;
 
   function set(uint(2) y) {
-    //a = 2;
+    a = 2;
     tab[y] = x;
     // sprawdzic if a == ...
     pom = tab[y];
-    if (y == 1) {
+    if (tab[y] == 1) {
       a = 1;
     }
   }

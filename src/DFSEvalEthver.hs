@@ -20,6 +20,24 @@ import WorldPrismEthver
 -- uses x value from guards
 
 determineExp :: Exp -> Trans -> Exp
+
+determineExp (EOr e1 e2) tr = EOr (determineExp e1 tr) (determineExp e2 tr)
+determineExp (EAnd e1 e2) tr = EAnd (determineExp e1 tr) (determineExp e2 tr)
+determineExp (EEq e1 e2) tr = EEq (determineExp e1 tr) (determineExp e2 tr)
+determineExp (ENe e1 e2) tr = ENe (determineExp e1 tr) (determineExp e2 tr)
+determineExp (ELt e1 e2) tr = ELt (determineExp e1 tr) (determineExp e2 tr)
+determineExp (ELe e1 e2) tr = ELe (determineExp e1 tr) (determineExp e2 tr)
+determineExp (EGt e1 e2) tr = EGt (determineExp e1 tr) (determineExp e2 tr)
+determineExp (EGe e1 e2) tr = EGe (determineExp e1 tr) (determineExp e2 tr)
+determineExp (EAdd e1 e2) tr = EAdd (determineExp e1 tr) (determineExp e2 tr)
+determineExp (ESub e1 e2) tr = ESub (determineExp e1 tr) (determineExp e2 tr)
+determineExp (EMul e1 e2) tr = EMul (determineExp e1 tr) (determineExp e2 tr)
+determineExp (EDiv e1 e2) tr = EDiv (determineExp e1 tr) (determineExp e2 tr)
+determineExp (EMod e1 e2) tr = EMod (determineExp e1 tr) (determineExp e2 tr)
+
+determineExp (ENeg e) tr = ENeg (determineExp e tr)
+determineExp (ENot e) tr = ENot (determineExp e tr)
+
 determineExp (EArray (Ident arrName) index) tr = 
   case index of
     EInt x ->
@@ -45,38 +63,31 @@ determineExp (EVar varIdent) tr =
       -- chyba musi tak być, bo jak inaczej sobie poradzić z wartością argumentu funkcji?
       --error $ "Value of variable " ++ (show varIdent) ++ " not determined from guards: " ++ (show guards)
 
+determineExp exp _ = 
+  error $ "This type of expression not supported by determineExp: " ++ (show exp)
 
 -----------------
 -- evaluateExp --
 -----------------
 
 evaluateExp :: ModifyModuleType -> Exp -> Trans -> VerRes [Trans]
-{-
-evaluateExp modifyModule (EOr e1 e2) tr = evaluateBoolBinOp modifyModule (||) e1 e2 tr
-evaluateExp modifyModule (EAnd e1 e2) tr = evaluateBoolBinOp modifyModule (&&) e1 e2 tr
--}
+
+evaluateExp modifyModule (EOr e1 e2) tr = evaluateExp2Arg modifyModule e1 e2 tr
+evaluateExp modifyModule (EAnd e1 e2) tr = evaluateExp2Arg modifyModule e1 e2 tr
 evaluateExp modifyModule (EEq e1 e2) tr = evaluateExp2Arg modifyModule e1 e2 tr
-{-
-evaluateExp modifyModule (ENe e1 e2) tr = do
-  tmp <- evaluateEq modifyModule e1 e2 tr
-  evaluateBoolUnOp modifyModule not tmp tr
--}
+evaluateExp modifyModule (ENe e1 e2) tr = evaluateExp2Arg modifyModule e1 e2 tr
+evaluateExp modifyModule (ELt e1 e2) tr = evaluateExp2Arg modifyModule e1 e2 tr
+evaluateExp modifyModule (ELe e1 e2) tr = evaluateExp2Arg modifyModule e1 e2 tr
+evaluateExp modifyModule (EGt e1 e2) tr = evaluateExp2Arg modifyModule e1 e2 tr
+evaluateExp modifyModule (EGe e1 e2) tr = evaluateExp2Arg modifyModule e1 e2 tr
+evaluateExp modifyModule (EAdd e1 e2) tr = evaluateExp2Arg modifyModule e1 e2 tr
+evaluateExp modifyModule (ESub e1 e2) tr = evaluateExp2Arg modifyModule e1 e2 tr
+evaluateExp modifyModule (EMul e1 e2) tr = evaluateExp2Arg modifyModule e1 e2 tr
+evaluateExp modifyModule (EDiv e1 e2) tr = evaluateExp2Arg modifyModule e1 e2 tr
+evaluateExp modifyModule (EMod e1 e2) tr = evaluateExp2Arg modifyModule e1 e2 tr
 
-{-
-evaluateExp modifyModule (ELt e1 e2) tr = evaluateCompIntBinOp modifyModule (<) e1 e2 tr
-evaluateExp modifyModule (ELe e1 e2) tr = evaluateCompIntBinOp modifyModule (<=) e1 e2 tr
-evaluateExp modifyModule (EGt e1 e2) tr = evaluateCompIntBinOp modifyModule (>) e1 e2 tr
-evaluateExp modifyModule (EGe e1 e2) tr = evaluateCompIntBinOp modifyModule (>=) e1 e2 tr
-evaluateExp modifyModule (EAdd e1 e2) tr = evaluateArithmIntBinOp modifyModule (+) e1 e2 tr
-evaluateExp modifyModule (ESub e1 e2) tr = evaluateArithmIntBinOp modifyModule (-) e1 e2 tr
-evaluateExp modifyModule (EMul e1 e2) tr = evaluateArithmIntBinOp modifyModule (*) e1 e2 tr
-evaluateExp modifyModule (EDiv e1 e2) tr = evaluateArithmIntBinOp modifyModule div e1 e2 tr
-evaluateExp modifyModule (EMod e1 e2) tr = evaluateArithmIntBinOp modifyModule mod e1 e2 tr
-
-evaluateExp modifyModule (ENeg e) tr = evaluateArithmIntBinOp modifyModule (-) (EInt 0) e tr
-evaluateExp modifyModule (ENot e) tr = evaluateBoolUnOp modifyModule not e tr
--}
-
+evaluateExp modifyModule (ENeg e) tr = evaluateExp modifyModule e tr
+evaluateExp modifyModule (ENot e) tr = evaluateExp modifyModule e tr
 
 evaluateExp modifyModule (EArray (Ident arrName) index) (trName, guards, updates) = do
   case index of
@@ -164,64 +175,3 @@ evaluateExp modifyModule EFalse tr = do
 evaluateExp2Arg :: ModifyModuleType -> Exp -> Exp -> Trans -> VerRes [Trans]
 evaluateExp2Arg modifyModule exp1 exp2 tr = do
   evaluateExp modifyModule exp1 tr >>= applyToTrList (evaluateExp modifyModule exp2)
-
-{-
-evaluateEq :: ModifyModuleType -> Exp -> Exp -> Trans -> VerRes ([Trans], Exp)
-evaluateEq modifyModule e1 e2 = do
-  
-  v1 <- evaluateExp modifyModule e1
-  v2 <- evaluateExp modifyModule e2
-  t1 <- findType v1
-  t2 <- findType v2
-  case (t1, t2) of 
-    (Just TBool, Just TBool) -> return $ expFromBool $ v1 == v2
-    (Just (TUInt _), Just (TUInt _)) -> do
-      return $ expFromBool $ v1 == v2
-    _ -> error $ "Error in evaluateBoolIntBinOp: not matching types: " ++ (show v1) ++ " and " ++ (show v2)
-
-evaluateBoolBinOp :: ModifyModuleType -> (Bool -> Bool -> Bool) -> Exp -> Exp -> Trans -> VerRes ([Trans], Exp)
-evaluateBoolBinOp modifyModule op e1 e2 = do
-  v1 <- evaluateExp modifyModule e1
-  v2 <- evaluateExp modifyModule e2
-  let bool1 = case v1 of
-        ETrue -> True
-        EFalse -> False
-        _ -> error $ "Error in evaluateBoolBinOp: not a bool value: " ++ (show v1)
-  let bool2 = case v2 of
-        ETrue -> True
-        EFalse -> False
-        _ -> error $ "Error in evaluateBoolBinOp: not a bool value: " ++ (show v2)
-  
-  return $ expFromBool $ op bool1 bool2
-
-evaluateArithmIntBinOp :: ModifyModuleType -> Trans -> (Integer -> Integer -> Integer) -> Exp -> Exp -> VerRes ([Trans], Exp)
-evaluateArithmIntBinOp modifyModule op e1 e2 = do
-  v1 <- evaluateExp modifyModule e1
-  v2 <- evaluateExp modifyModule e2
-  case intFromExp v1 of 
-    Nothing -> error $ "Error in evaluateArithmIntBinOp: not an Int value: " ++ (show v1)
-    Just x1 -> case intFromExp v2 of
-      Nothing -> error $ "Error in evaluateArithmIntBinOp: not an Int value: " ++ (show v2)
-      Just x2 -> return $ expFromInt $ op x1 x2
-
-evaluateCompIntBinOp :: ModifyModuleType -> Trans -> (Integer -> Integer -> Bool) -> Exp -> Exp -> VerRes ([Trans], Exp)
-evaluateCompIntBinOp modifyModule op e1 e2 = do
-  v1 <- evaluateExp modifyModule e1
-  v2 <- evaluateExp modifyModule e2
-  case intFromExp v1 of 
-    Nothing -> error $ "Error in evaluateCompIntBinOp: not an Int value: " ++ (show v1)
-    Just x1 -> case intFromExp v2 of
-      Nothing -> error $ "Error in evaluateCompIntBinOp: not an Int value: " ++ (show v2)
-      Just x2 -> return $ expFromBool $ op x1 x2
-
-evaluateBoolUnOp :: ModifyModuleType -> Trans -> (Bool -> Bool) -> Exp -> VerRes ([Trans], Exp)
-evaluateBoolUnOp modifyModule op e = do
-  v <- evaluateExp modifyModule e
-  let bool = case v of
-        ETrue -> True
-        EFalse -> False
-        _ -> error $ "Error in evaluateBoolUnOp: not a bool value: " ++ (show v)
-
-  return $ expFromBool $ op bool
-
--}
