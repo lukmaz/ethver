@@ -45,12 +45,12 @@ verDFSStm modifyModule (SBlock (stmH:stmT)) trs = do
 
 verDFSStm modifyModule (SAss varIdent value) oldTrs = do
   newTrs <- applyToTrList (evaluateExp modifyModule value) oldTrs
-  applyToTrList (addAssToTr modifyModule varIdent value) newTrs
+  applyToTrList (addAssToTr varIdent value) newTrs
 
 verDFSStm modifyModule (SArrAss arrIdent index value) oldTrs = do
   newTrs <- applyToTrList (evaluateExp modifyModule index) oldTrs >>= 
     applyToTrList (evaluateExp modifyModule value)
-  applyToTrList (addArrAssToTr modifyModule arrIdent index value) newTrs
+  applyToTrList (addArrAssToTr arrIdent index value) newTrs
 
 verDFSStm modifyModule (SIf cond ifBlock) trs = do
   condTranss <- applyToTrList (evaluateExp modifyModule cond) trs
@@ -70,60 +70,60 @@ verDFSStm modifyModule (SWhile _ _) _ = do
 
 -- adds an assignment to a single transition
 -- assumes value is evaluated
-addAssToTr :: ModifyModuleType -> Ident -> Exp -> Trans -> VerRes [Trans]
+-- male TODO: to jest sztuczne, że zwraca [Trans], a nie Trans
+addAssToTr :: Ident -> Exp -> Trans -> VerRes [Trans]
 
-addAssToTr modifyModule varIdent value oldTr = do
-  newTr <- addAssToTrSingle varIdent value oldTr
-  return [newTr]
+addAssToTr varIdent value (trName, guards, updates) = do
+  let determinedValue = determineExp value (trName, guards, updates)
+  case determinedValue of
+    ERand (EInt range) -> do
+      newUpdates <- addRandomAssToUpdates varIdent range updates
+      return [(trName, guards, newUpdates)]
+    _ -> do
+      newUpdates <- addAssToUpdates varIdent determinedValue updates
+      return [(trName, guards, newUpdates)]
 
 -- simlarly, assumes index and value are evaluated
-addArrAssToTr :: ModifyModuleType -> Ident -> Exp -> Exp -> Trans -> VerRes [Trans]
-
-addArrAssToTr modifyModule arrIdent index value oldTr = do
-  newTr <- addArrAssToTrSingle arrIdent index value oldTr
-  return [newTr]
-
--- assumes value is evaluated
--- returns a SINGLE Trans
-addAssToTrSingle :: Ident -> Exp -> Trans -> VerRes Trans
-
-addAssToTrSingle varIdent value (trName, guards, updates) = do
-  let determinedValue = determineExp value (trName, guards, updates)
-  
-  newUpdates <- foldM
-    (\acc branch -> do
-      partialUpdates <- addAssToUpdatesBranch varIdent determinedValue guards branch
-      return $ partialUpdates ++ acc
-    )
-    []
-    updates
-  return (trName, guards, newUpdates)
-
--- assumes index and value are evaluated
--- returns a SINGLE Trans
-addArrAssToTrSingle :: Ident -> Exp -> Exp -> Trans -> VerRes Trans
-
-addArrAssToTrSingle arrIdent index value tr = do
+addArrAssToTr :: Ident -> Exp -> Exp -> Trans -> VerRes [Trans]
+addArrAssToTr arrIdent index value tr = do
   case determineExp (EArray arrIdent index) tr of
     EVar varIdent ->
-      addAssToTrSingle varIdent value tr
+      addAssToTr varIdent value tr
     _ ->
       error $ "Cannot determine var name from array name after evaluation: " ++ (show $ EArray arrIdent index)
 
--- TODO random (może przepisać case exp z updatesFromAss z SmartFunPrismEthver.hs?
--- Aux: adds an assignment to an updates branch
-addAssToUpdatesBranch :: Ident -> Exp -> [Exp] -> [(Ident, Exp)] -> VerRes [[(Ident, Exp)]]
+-- adds a non-random assignment to updates
+addAssToUpdates :: Ident -> Exp -> [[(Ident, Exp)]] -> VerRes [[(Ident, Exp)]]
+addAssToUpdates varIdent value updates = do
+  foldM
+    (\acc branch -> do
+      partialBranch <- addAssToUpdatesBranch varIdent value branch
+      return $ partialBranch:acc
+    )
+    []
+    updates
 
-addAssToUpdatesBranch varIdent value guards updatesBranch = do
+-- adds a random assignment to updates
+addRandomAssToUpdates :: Ident -> Integer -> [[(Ident, Exp)]] -> VerRes [[(Ident, Exp)]]
+addRandomAssToUpdates varIdent range updates = do
+  foldM
+    (\acc val -> do
+      partialBranches <- addAssToUpdates varIdent (EInt val) updates
+      return $ partialBranches ++ acc
+    )
+    []
+    [0..(range - 1)]
+
+-- adds a particular assignment to an updates branch
+addAssToUpdatesBranch :: Ident -> Exp -> [(Ident, Exp)] -> VerRes [(Ident, Exp)]
+addAssToUpdatesBranch varIdent value updatesBranch = do
   let 
     deleteOld :: [(Ident, Exp)] -> [(Ident, Exp)]
     deleteOld list = filter
       (\(i, _) -> i /= varIdent)
       list
-    newUpdates =  
-      (((varIdent, value):) . deleteOld)
-      updatesBranch
-  return [newUpdates]
+    newBranch = (varIdent, value):(deleteOld updatesBranch)
+  return newBranch
 
 --------
 -- If --

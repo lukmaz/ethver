@@ -52,6 +52,7 @@ determineExp (EArray (Ident arrName) index) tr =
     _ -> 
       error $ "Array index different than ESender, EInt a, or EVar a"
 
+determineExp (ERand x) _ = ERand x
 determineExp (EInt x) _ = EInt x
 
 determineExp (EVar varIdent) tr = 
@@ -120,6 +121,9 @@ evaluateExp modifyModule (EArray (Ident arrName) index) (trName, guards, updates
               error $ "Var " ++ (unident varIdent) ++ " not found by findVarType"
     _ -> do
       error $ "Array index different than ESender, EInt a, or EVar a"
+
+evaluateExp modifyModule (ERand _) tr = 
+  return [tr]
 
 -- TODO: spora część kodu się pokrywa z evaluateExp (EArray). Może da się połączyć?
 evaluateExp modifyModule (EVar varIdent) (trName, guards, updates) = do

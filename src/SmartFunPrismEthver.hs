@@ -178,17 +178,6 @@ collectCondVarsFromAss modifyModule (SArrAss ident index value) = do
       collectCondVarsFromExp modifyModule index
       collectCondVarsFromExp modifyModule value
 
--- TODO: do wywalenia
-{-
-collectCondVarsFromRandom :: ModifyModuleType -> Ident -> VerRes ()
-collectCondVarsFromRandom modifyModule varName = do
-  addCondRandom varName
-  
-collectCondArraysFromRandom :: ModifyModuleType -> Ident -> Exp -> VerRes ()
-collectCondArraysFromRandom modifyModule varName index = 
-  addCondRandomArray varName index
--}
-
 -----------------------------
 -- collectCondVarsFromExp --
 -----------------------------
