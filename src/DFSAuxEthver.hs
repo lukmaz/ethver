@@ -29,17 +29,14 @@ applyToTrList fun trs = do
 -- deduction of values --
 -------------------------
 
--- TODO: assumption: updates is single-branch
-deduceVarValue :: Ident -> Trans -> Maybe Exp
-deduceVarValue varIdent (trName, guards, updates) = 
-  -- TODO: (head updates)
-  case deduceVarValueFromUpdatesBranch varIdent (head updates) of
+deduceVarValue :: Ident -> [Exp] -> [(Ident, Exp)] -> Maybe Exp
+deduceVarValue varIdent guards updatesBranch = 
+  case deduceVarValueFromUpdatesBranch varIdent updatesBranch of
     Just val -> Just val
     _ -> case deduceVarValueFromGuards varIdent guards of
       Just val -> Just val
       _ -> Nothing
 
--- TODO: multi-branch updates
 deduceVarValueFromUpdatesBranch :: Ident -> [(Ident, Exp)] -> Maybe Exp
 deduceVarValueFromUpdatesBranch varIdent updatesBranch =
   let
@@ -90,6 +87,10 @@ valueFromCond varIdent cond =
 -- Can create empty list of Transs (if contradiction) --
 -- of longer list (if cond is an alternative) ----------
 --------------------------------------------------------
+
+
+TODO: powinno być do każdego brancha osobno
+
 
 applyCond :: Exp -> Trans -> VerRes [Trans]
 
