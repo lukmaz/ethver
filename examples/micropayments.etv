@@ -83,7 +83,7 @@ scenario U {
   uint(3) i0;
   i0 = 0;
 
-  while (i0 < 2) {
+  while (i0 < 1) {
     wait(!product_asked);
     ask_product.sendCommunication();
     wait(is_committed["M"]);
@@ -106,7 +106,7 @@ scenario M {
   uint(3) i1;
   i1 = 0;
 
-  while (i1 < 2) {
+  while (i1 < 1) {
     rand1 = random_lazy(3);
     wait(product_asked);
     if (product_asked && contract_balance > 0) {

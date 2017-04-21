@@ -24,38 +24,43 @@ contract RPS {
   bool finalized;
   bool completed_honestly;
 
-  function_with_value send_commit(random_uint(3) commit) {
+  
+  function send_commit(random_uint(3) cmt) {
     if (finalized) {
       msg.sender.send(msg.value);
     }
     else if (msg.value == 1) {
       if ((msg.sender == "A") && (!committed0)) {
-        commit0 = commit;
+        commit0 = cmt;
         committed0 = true;
       }
       if ((msg.sender == "B") && (!committed1)){
-        commit1 = commit;
+        commit1 = cmt;
         committed1 = true;
       }
     }
   }
-
+  
+  
 	function send_open() {
     if (msg.sender == "A") {
       if (committed0 && (!input0_set)) {
-        if (commit0 == random_lazy(3)) {  //special value
+        if (commit0 == 0) { //random_lazy(3)) {  //special value TODO
           input0 = random(3);
           input0_set = true;
         }
-        if (commit0 != random_lazy(3)) {  //special value
+        
+        
+        if (commit0 != 0) { //random_lazy(3)) {  //special value TODO
           input0 = commit0;
           input0_set = true;
         }
+        
       }
     }
     if (msg.sender == "B") {
       if (committed1 && (!input1_set)) {
-        if (commit1 == random_lazy(3)) {  //special value
+        if (commit1 == 0) { // random_lazy(3)) {  //special value TODO
           input1 = random(3);
           input1_set = true;
         }
@@ -65,8 +70,10 @@ contract RPS {
         }
       }
     }
+    
 	}
-
+  
+  
 	function finalize() {
     if (!finalized) {
       if (input0_set && input1_set) {
@@ -85,7 +92,8 @@ contract RPS {
       }
     }
   }
-
+  
+  
   function withdraw() {
     if (timelocksReleased && !finalized) {
       if ((!input0_set) || (!input1_set)) {
@@ -109,6 +117,7 @@ contract RPS {
       }
     }
   }
+  
 }
 
 communication {
@@ -135,6 +144,7 @@ scenario A {
     withdraw.sendTransaction({from: "A", value: 0});
   }
   endA = true;
+
 }
 
 scenario B {
