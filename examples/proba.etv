@@ -13,6 +13,8 @@ contract RPS {
 }
 
 communication {
+  /*
+  COŚ
   uint(3) a;
   uint(3) x;
   uint(3) tab[3];
@@ -20,9 +22,54 @@ communication {
 
   function set(uint(2) y) {
     x = random(3);
-    a = x;
-    tab[x] = 1;
+    //a = x;
+    //tab[x] = 1;
+    if (x == 1) { // || a == 1) {
+      x = 0;
+    }
   }
+  */
+
+  /*
+  // T2
+  uint(2) x;
+  uint(2) y;
+  uint(2) z;
+  function T2() {
+    x = random(2);
+    if (x == 1)
+      y = 1;
+    if (y == 1)
+      z = 1;
+  }
+  */
+
+  // T5
+  uint(2) x;
+  uint(3) y;
+  uint(2) a;
+
+  function T5() {
+    x = random(2);
+    if ((x == 1) || (a == 1)) {
+      y = random(3);
+    }
+  }
+
+  /*
+  // T6
+  uint(2) x;
+  uint(3) y;
+  uint(2) z;
+  function T6() {
+    x = random(2);
+    if (x == 1) {
+      if ((y == 1) || (y == 2)) {
+        z = 3;
+      }
+    }
+  }
+
 }
 
 scenario U {
