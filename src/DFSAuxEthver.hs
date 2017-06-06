@@ -88,7 +88,7 @@ valueFromCond varIdent cond =
 -- or longer list (if cond is an alternative) ----------
 --------------------------------------------------------
 
-
+{-
 verDFSIf :: ModifyModule -> Exp -> Stm -> Trans -> VerRes [Trans]
 verDFSIf modifyModule (EEq (EVar varIdent) value) ifBlock tr@(trName, guards, updates) = do
   let 
@@ -97,9 +97,33 @@ verDFSIf modifyModule (EEq (EVar varIdent) value) ifBlock tr@(trName, guards, up
     determined = not $ elem Nothing deducedFromBranches
 
   if determined
-    
+-}  
+
+applyCondToBranch :: Exp -> [(Ident, Exp)] -> [(Ident, Exp)]
+applyCondToBranchWithPos :: Exp -> [(Ident, Exp)] -> [(Ident, Exp)]
+applyCondToBranchWithNeg :: Exp -> [(Ident, Exp)] -> [(Ident, Exp)]
+
+--TODO
+applyCondToBranch _ branch = branch
+applyCondToBranchWithPos _ branch = branch
+applyCondToBranchWithNeg _ branch = branch
+{-
+applyCondToBranch (EEq (EVar varIdent) value) branch =
+  case deduceVarValueFromUpdatesBranch varIdent branch of
+    Just oldValue ->
+      if (oldValue == value)
 
 
+
+
+        then return branch
+      
+      
+      
+      else return []
+    Nothing ->
+      return [(trName, (EEq (EVar varIdent) value):guards, updates)]
+-}
 
 applyCond :: Exp -> Trans -> VerRes [Trans]
 
@@ -109,49 +133,31 @@ applyCond (EEq (EVar varIdent) value) (trName, guards, updates) = do
     determined = not $ elem Nothing deducedFromBranches
 
   if determined
-    then
+    then do
       let newUpdates = map (applyCondToBranch (EEq (EVar varIdent) value)) updates
       return [(trName, guards, newUpdates)]
     else
       case deduceVarValueFromGuards varIdent guards of
         Just oldValue ->
           if (oldValue == value)
-            then 
+            then do
               let newUpdates = map (applyCondToBranchWithPos (EEq (EVar varIdent) value)) updates
               return [(trName, guards, newUpdates)]
-            else
+            else do
               let newUpdates = map (applyCondToBranchWithNeg (EEq (EVar varIdent) value)) updates
               return [(trName, guards, newUpdates)]
-        Nothing ->
+        Nothing -> do
           let newUpdatesPos = map (applyCondToBranchWithPos (EEq (EVar varIdent) value)) updates
           let newUpdatesNeg = map (applyCondToBranchWithNeg (EEq (EVar varIdent) value)) updates
           return [(trName, (EEq (EVar varIdent) value):guards, newUpdatesPos),
             (trName, (ENe (EVar varIdent) value):guards, newUpdatesNeg)]
 
 
-applyCondToBranch :: Exp -> [(Ident, Exp)] -> [(Ident, Exp)]
-
-applyCondToBranch (EEq (EVar varIdent) value) branch =
-  case deduceVarValueFromUpdatesBranch varIdent branch of
-    Just oldValue ->
-      if (oldValue == value)
-
-
-
-
-        then return [(trName, guards, branch)]
-      
-      
-      
-      else return []
-    Nothing ->
-      return [(trName, (EEq (EVar varIdent) value):guards, updates)]
-  
 applyCond (EEq value (EVar varIdent)) tr =
   applyCond (EEq (EVar varIdent) value) tr
 
 applyCond (ENe (EVar varIdent) value) (trName, guards, updates) = do
-  case deduceVarValue varIdent (trName, guards, updates) of
+  case deduceVarValue varIdent updates of
     Just oldValue ->
       if (oldValue == value)
         then return []

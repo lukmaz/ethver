@@ -54,7 +54,7 @@ verDFSStm modifyModule (SArrAss arrIdent index value) oldTrs = do
 
 verDFSStm modifyModule (SIf cond ifBlock) trs = do
   condTranss <- applyToTrList (evaluateExp modifyModule cond) trs
-  applyToTrList (updateIf modifyModule cond ifBlock) condTranss
+  applyToTrList (verDFSIf modifyModule cond ifBlock) condTranss
 
 verDFSStm modifyModule (SIfElse cond ifBlock elseBlock) trs = do
   condTranss <- applyToTrList (evaluateExp modifyModule cond) trs
@@ -141,6 +141,8 @@ updateIf modifyModule cond ifBlock tr = do
 
   return $ posTranss ++ negCondTranss
 
+
+-- TODO: zrobić jak updateIf
 updateIfElse :: ModifyModuleType -> Exp -> Stm -> Stm -> Trans -> VerRes [Trans]
 updateIfElse modifyModule cond ifBlock elseBlock tr = do
   let determinedCond = determineExp cond tr
