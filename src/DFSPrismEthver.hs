@@ -94,7 +94,7 @@ addArrAssToTr arrIdent index value tr = do
       error $ "Cannot determine var name from array name after evaluation: " ++ (show $ EArray arrIdent index)
 
 -- adds a non-random assignment to updates
-addAssToUpdates :: Ident -> Exp -> Branch -> VerRes [[(Ident, Exp)]]
+addAssToUpdates :: Ident -> Exp -> [Branch] -> VerRes [Branch]
 addAssToUpdates varIdent value updates = do
   foldM
     (\acc branch -> do
@@ -105,7 +105,7 @@ addAssToUpdates varIdent value updates = do
     updates
 
 -- adds a random assignment to updates
-addRandomAssToUpdates :: Ident -> Integer -> Branch -> VerRes [Branch]
+addRandomAssToUpdates :: Ident -> Integer -> [Branch] -> VerRes [Branch]
 addRandomAssToUpdates varIdent range updates = do
   foldM
     (\acc val -> do
@@ -125,7 +125,7 @@ addAssToUpdatesBranch varIdent value updatesBranch = do
       list
     --TODO: Alive?
     newBranch old = (varIdent, value):(deleteOld old)
-  return $ apply... newBranch
+  return $ applyToBranch newBranch updatesBranch
 
 --------
 -- If --
