@@ -40,14 +40,18 @@ deduceVarValue varIdent (trName, guards, updates) =
       _ -> Nothing
 
 -- TODO: multi-branch updates
-deduceVarValueFromUpdatesBranch :: Ident -> [(Ident, Exp)] -> Maybe Exp
-deduceVarValueFromUpdatesBranch varIdent updatesBranch =
+deduceVarValueFromUpdatesBranch :: Ident -> Branch -> Maybe Exp
+deduceVarValueFromUpdatesBranch varIdent (Alive updatesBranch) =
   let
     filteredUpdates = filter (\(i, _) -> i == varIdent) updatesBranch
   in
     case filteredUpdates of
       ((_, value):t) -> Just value
       _ -> Nothing
+
+--TODO: Alive?
+deduceVarValueFromUpdatesBranch varIdent (Dead updatesBranch) =
+  deduceVarValueFromUpdatesBranch varIdent (Alive updatesBranch) 
 
 deduceVarValueFromGuards :: Ident -> [Exp] -> Maybe Exp
 deduceVarValueFromGuards varIdent guards = 

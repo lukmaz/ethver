@@ -37,7 +37,8 @@ verStm modifyModule (SIf cond ifBlock) = do
     modifyModule
     ""  
     [evalCond]
-    [[]]
+    -- TODO: Alive?
+    [Alive []]
   verStm modifyModule ifBlock
   mod <- modifyModule id
   addCustomTrans
@@ -46,7 +47,8 @@ verStm modifyModule (SIf cond ifBlock) = do
     ifState
     (currState mod)
     [negateExp evalCond]
-    [[]]
+    -- TODO: Alive?
+    [Alive []]
 
 verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
   evalCond <- verExp modifyModule cond
@@ -56,7 +58,8 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
     modifyModule
     ""  
     [evalCond]
-    [[]]
+    -- TODO: Alive?
+    [Alive []]
   verStm modifyModule ifBlock
   mod <- modifyModule id
   let endIfState = currState mod 
@@ -66,7 +69,8 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
     ifState
     (numStates mod + 1)
     [negateExp evalCond]
-    [[]]
+    -- TODO: Alive?
+    [Alive []]
   mod <- modifyModule id
   let newState = numStates mod + 1
   modifyModule (setCurrState newState)
@@ -79,7 +83,8 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
     (currState mod)
     endIfState
     []
-    [[]]
+    -- TODO: Alive?
+    [Alive []]
   _ <- modifyModule (setCurrState endIfState)
   return ()
 
@@ -97,7 +102,8 @@ verStm modifyModule (SWhile cond whileBlock) = do
     (currState mod)
     whileState
     []
-    [[]]
+    -- TODO: Alive?
+    [Alive []]
 
   modifyModule (setCurrState whileState)
   modifyModule (setNumStates whileState)
@@ -108,7 +114,8 @@ verStm modifyModule (SWhile cond whileBlock) = do
     modifyModule
     ""  
     [evalCond]
-    [[]]
+    -- TODO: Alive?
+    [Alive []]
 
   verStm modifyModule whileBlock
   mod <- modifyModule id
@@ -120,7 +127,8 @@ verStm modifyModule (SWhile cond whileBlock) = do
     (currState mod)
     whileState
     []
-    [[]]
+    -- TODO: Alive?
+    [Alive []]
 
   mod <- modifyModule id
 
@@ -131,7 +139,8 @@ verStm modifyModule (SWhile cond whileBlock) = do
     whileState
     (numStates mod + 1)
     [negateExp evalCond]
-    [[]]
+    -- TODO: Alive?
+    [Alive []]
 
   -- escape from breakState
   addCustomTrans
@@ -140,7 +149,8 @@ verStm modifyModule (SWhile cond whileBlock) = do
     breakState
     (numStates mod + 1)
     []
-    [[]]
+    -- TODO: Alive?
+    [Alive []]
 
   mod <- modifyModule id
   let newState = numStates mod + 1
@@ -159,7 +169,8 @@ verStm modifyModule (SBreak) = do
     (currState mod)
     (head $ breakStates mod)
     []
-    [[]]
+    -- TODO: Alive?
+    [Alive []]
 
   mod <- modifyModule id
   let newState = numStates mod + 1
@@ -208,7 +219,8 @@ verStm modifyModule (SWait cond) = do
     modifyModule
     ""
     [EOr evalCond $ EVar $ Ident sTimelocksReleased]
-    [[]]
+    -- TODO: Alive?
+    [Alive []]
 
 
 ---------
@@ -230,7 +242,8 @@ verFullAss modifyModule (SAss ident exp) = do
     modifyModule
     ""
     guards
-    [updates]
+    -- TODO: Alive?
+    [Alive updates]
 
 verFullAss modifyModule (SArrAss (Ident ident) index exp) = do
   case index of
@@ -526,8 +539,9 @@ verRandom modifyModule (EInt range) = do
     modifyModule 
     ""
     []
+    -- TODO: Alive?
     (foldl
-      (\acc x -> acc ++ [[(Ident localVarName, EInt x)]])
+      (\acc x -> acc ++ [Alive [(Ident localVarName, EInt x)]])
       []
       [0..(range - 1)]
     )
@@ -580,7 +594,8 @@ verSendTAux modifyModule funName argsVals = do
       -- TODO: ta linijka chyba jest nie potrzebna w function_without_value
       let updates0 = [[(Ident $ (unident funName) ++ sValueSuffix ++ (show $ number mod), value)]]
       let addAssignment acc (argName, argVal) = acc ++ [createAssignment (number mod) funName argName argVal]
-      let updates1 = [foldl addAssignment (head updates0) $ zip argNames expArgsVals]
+      --TODO: Alive?
+      let updates1 = [Alive $ foldl addAssignment (head updates0) $ zip argNames expArgsVals]
       
 
       addTransToNewState 
@@ -597,7 +612,8 @@ verSendTAux modifyModule funName argsVals = do
             (EVar (Ident (unident funName ++ sStatusSuffix ++ (show $ number mod)))) 
             (EVar iTExecuted)
         ]
-        [[]]
+        --TODO: Alive?
+        [Alive []]
 
 -----------
 -- SendC --
@@ -611,7 +627,8 @@ verSendCAux modifyModule funName expArgsVals = do
     Just fun -> do
       let argNames = getArgNames fun
       let addAssignment acc (argName, argVal) = acc ++ [createAssignment (number mod) funName argName argVal]
-      let updates1 = [foldl addAssignment [] $ zip argNames expArgsVals]
+      --TODO: Alive?
+      let updates1 = [Alive $ foldl addAssignment [] $ zip argNames expArgsVals]
       
       addTransToNewState
         modifyModule
@@ -623,7 +640,8 @@ verSendCAux modifyModule funName expArgsVals = do
         modifyModule
         (sCommunicatePrefix ++ (unident funName) ++ (show $ number mod))
         []
-        [[]]
+        --TODO: Alive?
+        [Alive []]
     _ -> error $ "Function " ++ (unident funName) ++ " not found in (funs world)"
 
 -- TODO: adds function name in prefix of a variable name

@@ -142,10 +142,12 @@ prismGuards (h:t) =
       ""
       t
 
-prismUpdates :: [[(Ident, Exp)]] -> String
+prismUpdates :: [Branch] -> String
 prismUpdates [] = ""
 
-prismUpdates [[]] = "    true"
+prismUpdates [Alive []] = "    true"
+
+prismUpdates [Dead []] = "    true"
 
 prismUpdates [updates] = 
   "    " ++ prismUpdatesDeterm updates
@@ -158,13 +160,15 @@ prismUpdates (h:t) =
       ("    1/" ++ (show n) ++ ": " ++ (prismUpdatesDeterm h))
       t
 
-prismUpdatesDeterm :: [(Ident, Exp)] -> String
-prismUpdatesDeterm (h:t) = 
+prismUpdatesDeterm :: Branch -> String
+prismUpdatesDeterm (Alive (h:t)) = 
   (prismUpdate h) ++
     foldl
       (\acc update -> acc ++ "\n  & " ++ (prismUpdate update))
       ""
       t
+
+prismUpdatesDeterm (Dead l) = prismUpdatesDeterm (Alive l)
 
 prismUpdate :: (Ident, Exp) -> String
 prismUpdate (ident, exp) =

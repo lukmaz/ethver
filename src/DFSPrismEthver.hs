@@ -24,7 +24,8 @@ verDFSFun modifyModule (Fun funName args stms) = do
   let
     stVar = Ident $ stateVar mod
     initGuards = [EEq (EVar stVar) (EInt $ currState mod)]
-    initUpdates = [[(stVar, EInt 1)]]
+    --TODO: Alive?
+    initUpdates = [Alive [(stVar, EInt 1)]]
   trs <- verDFSStm modifyModule (SBlock stms) [("", initGuards, initUpdates)]
   mapM_
     (\tr -> modifyModule (\mod -> mod {transs = tr:(transs mod)}))
@@ -93,7 +94,7 @@ addArrAssToTr arrIdent index value tr = do
       error $ "Cannot determine var name from array name after evaluation: " ++ (show $ EArray arrIdent index)
 
 -- adds a non-random assignment to updates
-addAssToUpdates :: Ident -> Exp -> [[(Ident, Exp)]] -> VerRes [[(Ident, Exp)]]
+addAssToUpdates :: Ident -> Exp -> Branch -> VerRes [[(Ident, Exp)]]
 addAssToUpdates varIdent value updates = do
   foldM
     (\acc branch -> do
@@ -104,7 +105,7 @@ addAssToUpdates varIdent value updates = do
     updates
 
 -- adds a random assignment to updates
-addRandomAssToUpdates :: Ident -> Integer -> [[(Ident, Exp)]] -> VerRes [[(Ident, Exp)]]
+addRandomAssToUpdates :: Ident -> Integer -> Branch -> VerRes [Branch]
 addRandomAssToUpdates varIdent range updates = do
   foldM
     (\acc val -> do
@@ -115,15 +116,16 @@ addRandomAssToUpdates varIdent range updates = do
     [0..(range - 1)]
 
 -- adds a particular assignment to an updates branch
-addAssToUpdatesBranch :: Ident -> Exp -> [(Ident, Exp)] -> VerRes [(Ident, Exp)]
+addAssToUpdatesBranch :: Ident -> Exp -> Branch -> VerRes Branch
 addAssToUpdatesBranch varIdent value updatesBranch = do
   let 
     deleteOld :: [(Ident, Exp)] -> [(Ident, Exp)]
     deleteOld list = filter
       (\(i, _) -> i /= varIdent)
       list
-    newBranch = (varIdent, value):(deleteOld updatesBranch)
-  return newBranch
+    --TODO: Alive?
+    newBranch old = (varIdent, value):(deleteOld old)
+  return $ apply... newBranch
 
 --------
 -- If --

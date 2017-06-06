@@ -10,8 +10,14 @@ import ConstantsEthver
 -- TYPES --
 
 type VerRes a = State VerWorld a
-type Trans = (String, [Exp], [[(Ident, Exp)]])
+type Trans = (String, [Exp], [Branch])
 type ModifyModuleType = (Module -> Module) -> VerRes Module
+
+data Branch = Alive [(Ident, Exp)] | Dead [(Ident, Exp)]
+
+instance Show Branch where
+  show (Alive l) = "Alive " ++ (show l)
+  show (Dead l) = "Dead " ++ (show l)
 
 data VerWorld = VerWorld {
   props :: String,

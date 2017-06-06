@@ -131,12 +131,19 @@ addUser :: UserDecl -> VerRes ()
 addUser (UDec name) = do
   addPlayer name
 
+-------------------
+-- applyToBranch --
+-------------------
+
+applyToBranch :: ([(Ident, Exp)] -> [(Ident, Exp)]) -> Branch -> Branch
+applyToBranch f (Alive x) = Alive (f x)
+applyToBranch f (Dead x) = Dead (f x)
 
 -----------
 -- Trans --
 -----------
 
-addTransToNewState :: ModifyModuleType -> String -> [Exp] -> [[(Ident, Exp)]] -> VerRes ()
+addTransToNewState :: ModifyModuleType -> String -> [Exp] -> [Branch] -> VerRes ()
 addTransToNewState modifyModule transName guards updates = do
   mod <- modifyModule id
   let newState = numStates mod + 1
@@ -145,14 +152,14 @@ addTransToNewState modifyModule transName guards updates = do
   _ <- modifyModule (setNumStates newState)
   return ()
 
-addCustomTrans :: ModifyModuleType -> String -> Integer -> Integer -> [Exp] -> [[(Ident, Exp)]] -> VerRes ()
+addCustomTrans :: ModifyModuleType -> String -> Integer -> Integer -> [Exp] -> [Branch] -> VerRes ()
 addCustomTrans modifyModule transName fromState toState guards updates = do
   mod <- modifyModule id
   let newTrans = newCustomTrans (stateVar mod) transName fromState toState guards updates
   _ <- modifyModule (addTransToModule newTrans)
   return ()
 
-addFirstCustomTrans :: ModifyModuleType -> String -> Integer -> Integer -> [Exp] -> [[(Ident, Exp)]] -> VerRes ()
+addFirstCustomTrans :: ModifyModuleType -> String -> Integer -> Integer -> [Exp] -> [Branch] -> VerRes ()
 addFirstCustomTrans modifyModule transName fromState toState guards updates = do
   mod <- modifyModule id
   let newTrans = newCustomTrans (stateVar mod) transName fromState toState guards updates
@@ -160,22 +167,23 @@ addFirstCustomTrans modifyModule transName fromState toState guards updates = do
   return ()
 
 
-addTransNoState :: ModifyModuleType -> String -> [Exp] -> [[(Ident, Exp)]] -> VerRes ()
+addTransNoState :: ModifyModuleType -> String -> [Exp] -> [Branch] -> VerRes ()
 addTransNoState modifyModule transName guards updates = do
   mod <- modifyModule id
   let newTrans = newTransNoState transName guards updates
   _ <- modifyModule (addTransToModule newTrans)
   return ()
 
-newCustomTrans :: String -> String -> Integer -> Integer -> [Exp] -> [[(Ident, Exp)]] -> Trans
+newCustomTrans :: String -> String -> Integer -> Integer -> [Exp] -> [Branch] -> Trans
 newCustomTrans stateVar transName fromState toState guards updates =
   newTransNoState
     transName
     ((EEq (EVar (Ident stateVar)) (EInt fromState)):guards)
-    (map ((Ident stateVar, EInt toState):) updates)
+    -- TODO: Alive?
+    (map (applyToBranch ((Ident stateVar, EInt toState):)) updates)
   
 
-newTransNoState :: String -> [Exp] -> [[(Ident, Exp)]] -> Trans
+newTransNoState :: String -> [Exp] -> [Branch] -> Trans
 newTransNoState transName guards updates =
   (transName, guards, updates)
 
@@ -196,7 +204,8 @@ addCommunicateOnePlayer funName args playerNumber = do
   let addAssignment acc (Ar _ varName) = acc ++
         [(createCoArgumentName funName varName, 
           EVar $ createScenarioArgumentName funName varName playerNumber)]
-  let updates = [foldl addAssignment (head updates0) args]
+  -- TODO: Alive?
+  let updates = [Alive $ foldl addAssignment (head updates0) args]
 
   addCustomTrans
     modifyCommunication
@@ -228,7 +237,7 @@ setCS number (_, guards, _) =
     (ENot $ EVar iCriticalSection0)
       :(ENot $ EVar iCriticalSection1)
       :guards,
-    [[(Ident $ sCriticalSection ++ (show number), ETrue)]]
+    [Alive [(Ident $ sCriticalSection ++ (show number), ETrue)]]
   )
 
 unsetCS :: Integer -> Trans -> Trans
@@ -269,14 +278,14 @@ setCS2 number  =
     [ENot $ EVar iCriticalSection0,
       ENot $ EVar iCriticalSection1,
       EGt (EVar $ Ident $ sStatePrefix ++ (show number)) (EInt 0)],
-    [[(Ident $ sCriticalSection ++ (show number), ETrue)]]
+    [Alive [(Ident $ sCriticalSection ++ (show number), ETrue)]]
   ),
   (
     "",
     [EVar $ Ident $ sCriticalSection ++ (show number),
     -- one line quickfix:
       EEq (EVar iContrState) (EInt 1)],
-    [[(Ident $ sCriticalSection ++ (show number), EFalse)]]
+    [Alive [(Ident $ sCriticalSection ++ (show number), EFalse)]]
   )]
 
 ------------------------------
@@ -332,8 +341,9 @@ generateAdvTranss modifyModule whichPrefix whichState withVal funName args maxes
           EEq (EVar iContrState) (EInt 1), 
           EEq (EVar iCommState) (EInt 1), 
           EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
-        ]   
-        [[]]
+        ]
+        -- TODO: Alive?
+        [Alive []]
     maxValsList ->
       forM_
         maxValsList
@@ -347,7 +357,8 @@ generateAdvTranss modifyModule whichPrefix whichState withVal funName args maxes
             EEq (EVar iCommState) (EInt 1),
             EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
           ]
-          (advUpdates withVal (number mod) (Ident funName) args vals)
+          -- TODO: Alive?
+          (map Alive (advUpdates withVal (number mod) (Ident funName) args vals))
         )
 
 
@@ -368,7 +379,8 @@ transferMoney from to maxTo value = do
     modifyContract
     ""
     [EGe (EVar from) value, ELe (EAdd (EVar to) value) maxTo]
-    [[(from, ESub (EVar from) value), (to, EAdd (EVar to) value)]]
+    -- TODO: Alive?
+    [Alive [(from, ESub (EVar from) value), (to, EAdd (EVar to) value)]]
 
 -- TODO: one MAX_USER_BALANCE for all users
 smartTransferFromContract :: Ident -> Exp -> VerRes [[(Ident, Exp)]]
