@@ -129,7 +129,8 @@ verFunBroadcast modifyModule (Fun name args stms) = do
       EEq (EVar iContrState) (EInt 1), 
       ENe (EVar $ Ident $ unident name ++ sStatusSuffix ++ (show $ number mod)) (EVar $ Ident sTBroadcast)
     ]
-    [[(Ident $ unident name ++ sStatusSuffix ++ (show $ number mod), EVar (Ident sTBroadcast))]]
+    -- TODO: ALive?
+    [Alive [(Ident $ unident name ++ sStatusSuffix ++ (show $ number mod), EVar (Ident sTBroadcast))]]
 
 ----------------
 -- verFunExecute
@@ -152,7 +153,8 @@ verFunExecute modifyModule (Fun name args stms) = do
           ++ (show $ number mod), EVar (Ident sTExecuted))]]
   let addAssignment acc (Ar _ varName) = acc ++ 
         [(createCoArgumentName name varName, EVar $ createScenarioArgumentName name varName $ number mod)]
-  let updates = [foldl addAssignment (head updates0) args]
+  -- TODO: Alive?
+  let updates = [Alive $ foldl addAssignment (head updates0) args]
 
   addTransNoState
     modifyBlockchain 
@@ -180,8 +182,9 @@ verFunExecute modifyModule (Fun name args stms) = do
         (EVar $ Ident $ unident name ++ sValueSuffix ++ (show $ number mod)) 
         (EVar $ Ident $ sBalancePrefix ++ (show $ number mod))
     ]
+    -- TODO: Alive?
     [
-      [(Ident $ unident name ++ sStatusSuffix ++ (show $ number mod), EVar iTInvalidated)]
+      Alive [(Ident $ unident name ++ sStatusSuffix ++ (show $ number mod), EVar iTInvalidated)]
     ]
 
 ------------------------
@@ -201,7 +204,8 @@ verExecTransaction modifyModule = do
       EGe (EVar $ Ident $ sBalancePrefix ++ (show $ number mod)) (EVar iValue),
       ELe (EAdd (EVar iContractBalance) (EVar iValue)) (EVar iMaxContractBalance)
     ]
-    [[
+    -- TODO: Alive?
+    [Alive [
       (iContrState, EVar $ iNextState),
       (Ident $ sBalancePrefix ++ (show $ number mod), 
         ESub (EVar $ Ident $ sBalancePrefix ++ (show $ number mod)) (EVar iValue)),
@@ -214,7 +218,7 @@ verExecTransaction modifyModule = do
 ---------------------------------------
 
 -- SMART: (~ one command for each valuation)
-verSmartFunContractOrCommunication :: ModifyModuleType -> (Function -> VerRes ()) -> Function -> VerRes ()
+{-verSmartFunContractOrCommunication :: ModifyModuleType -> (Function -> VerRes ()) -> Function -> VerRes ()
 verSmartFunContractOrCommunication modifyModule commonFun (Fun funName args stms) = do
   commonFun (Fun funName args stms)
 
@@ -223,7 +227,7 @@ verSmartFunContractOrCommunication modifyModule commonFun (Fun funName args stms
   createSmartTranss modifyModule (Fun funName args stms)
 
   clearCondVarsAndArrays
-
+-}
 -------------------------------------
 -- verDFSContract/Communication --
 -------------------------------------
@@ -264,7 +268,8 @@ commonVerFunContract (Fun name args stms) = do
     1
     0
     []
-    [[(iNextState, EInt $ numStates mod + 1)]]
+    -- TODO: Alive?
+    [Alive [(iNextState, EInt $ numStates mod + 1)]]
   
   modifyContract (\mod -> mod {currState = numStates mod + 1, numStates = numStates mod + 1})
 
@@ -290,12 +295,13 @@ verFunContract (Fun name args stms) = do
     (currState mod)
     1
     []
-    [[]]
+    -- TODO: Alive?
+    [Alive []]
 
 -- SMART
-verSmartFunContract :: Function -> VerRes ()
+{-verSmartFunContract :: Function -> VerRes ()
 verSmartFunContract fun = verSmartFunContractOrCommunication modifyContract commonVerFunContract fun
-
+-}
 -- DFS
 verDFSFunContract :: Function -> VerRes ()
 verDFSFunContract fun = verDFSFunContractOrCommunication modifyContract commonVerFunContract fun
@@ -340,12 +346,13 @@ verFunCommunication (Fun funName args stms) = do
     (currState mod)
     1
     []
-    [[]]
+    -- TODO: Alive?
+    [Alive []]
 
 -- SMART
-verSmartFunCommunication :: Function -> VerRes ()
+{-verSmartFunCommunication :: Function -> VerRes ()
 verSmartFunCommunication fun = verSmartFunContractOrCommunication modifyCommunication commonVerFunCommunication fun
-
+-}
 -- DFS
 verDFSFunCommunication :: Function -> VerRes ()
 verDFSFunCommunication fun = verDFSFunContractOrCommunication modifyCommunication commonVerFunCommunication fun
@@ -383,7 +390,8 @@ verScenario modifyModule decls stms = do
     0
     1
     [ENe (EVar iAdversaryFlag) (EInt $ number mod)]
-    [[]]
+    -- TODO: Alive?
+    [Alive []]
 
   addCustomTrans
     modifyModule
@@ -391,7 +399,8 @@ verScenario modifyModule decls stms = do
     0
     (-1)
     [EEq (EVar iAdversaryFlag) (EInt $ number mod)]
-    [[]]
+    -- TODO: Alive?
+    [Alive []]
 
   -- two transitions for ability for adversary to interrupt the protocol
   addCustomTrans
@@ -401,7 +410,8 @@ verScenario modifyModule decls stms = do
     (-2)
     [EEq (EVar iContrState) (EInt 1),
       EEq (EVar iCommState) (EInt 1)]
-    [[]]
+    -- TODO: Alive?
+    [Alive []]
   
   world <- get
 
@@ -425,4 +435,5 @@ verScenario modifyModule decls stms = do
             (contractFuns world)
           )
     )
-    [[(Ident sTimelocksReleased, ETrue)]]
+    -- TODO: Alive?
+    [Alive [(Ident sTimelocksReleased, ETrue)]]
