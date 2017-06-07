@@ -95,8 +95,6 @@ valueFromCond varIdent cond =
 -- of longer list (if cond is an alternative) ----------
 --------------------------------------------------------
 
--- TODO: TO CHYBA JEST DO ZMIANY CALKOWITEJ
-
 applyCond :: Exp -> Trans -> VerRes [Trans]
 
 applyCond (EEq (EInt x) (EInt y)) tr@(trName, guards, updates) = do
