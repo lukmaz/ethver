@@ -29,19 +29,21 @@ applyToTrList fun trs = do
 -- deduction of values --
 -------------------------
 
+-- TODO: do wywalenia
+{-
 -- TODO: assumption: updates is single-branch
 deduceVarValue :: Ident -> Trans -> Maybe Exp
 deduceVarValue varIdent (trName, guards, updates) = 
   -- TODO: (head updates)
-  case deduceVarValueFromUpdatesBranch varIdent (head updates) of
+  case deduceVarValueFromBranch varIdent (head updates) of
     Just val -> Just val
     _ -> case deduceVarValueFromGuards varIdent guards of
       Just val -> Just val
       _ -> Nothing
-
+-}
 -- TODO: multi-branch updates
-deduceVarValueFromUpdatesBranch :: Ident -> Branch -> Maybe Exp
-deduceVarValueFromUpdatesBranch varIdent (Alive updatesBranch) =
+deduceVarValueFromBranch :: Ident -> Branch -> Maybe Exp
+deduceVarValueFromBranch varIdent (Alive updatesBranch) =
   let
     filteredUpdates = filter (\(i, _) -> i == varIdent) updatesBranch
   in
@@ -50,8 +52,8 @@ deduceVarValueFromUpdatesBranch varIdent (Alive updatesBranch) =
       _ -> Nothing
 
 --TODO: Alive?
-deduceVarValueFromUpdatesBranch varIdent (Dead updatesBranch) =
-  deduceVarValueFromUpdatesBranch varIdent (Alive updatesBranch) 
+deduceVarValueFromBranch varIdent (Dead updatesBranch) =
+  deduceVarValueFromBranch varIdent (Alive updatesBranch) 
 
 deduceVarValueFromGuards :: Ident -> [Exp] -> Maybe Exp
 deduceVarValueFromGuards varIdent guards = 
@@ -97,11 +99,13 @@ valueFromCond varIdent cond =
 
 applyCond :: Exp -> Trans -> VerRes [Trans]
 
+-- TODO
 applyCond (EEq (EInt x) (EInt y)) tr@(trName, guards, updates) = do
   if (x == y)
     then return [tr]
     else return []
 
+-- TODO
 applyCond (ENe (EInt x) (EInt y)) tr@(trName, guards, updates) = do
   if (x /= y)
     then return [tr]
@@ -169,4 +173,10 @@ addRandomUpdates modifyModule oldUpdates = do
       return newUpdates
 -}
 
+makeAlive :: Branch -> Branch
+makeAlive (Alive x) = Alive x
+makeAlive (Dead x) = Alive x
 
+makeDead :: Branch -> Branch
+makeDead (Alive x) = Dead x
+makeDead (Dead x) = Dead x

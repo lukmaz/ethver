@@ -17,7 +17,19 @@ communication {
   uint(2) x;
   uint(3) y;
   uint(2) z;
-   
+  
+  /*
+  function T1() {
+    y = random(3);
+    if (y == 1)
+      x = 1;
+    if (y == 0)
+      x = 0;
+    if (x == 1)
+      z = 1;
+  }
+  */
+
   function T2() {
     x = random(2);
     if (x == 1)

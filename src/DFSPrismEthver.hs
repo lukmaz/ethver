@@ -133,14 +133,19 @@ addAssToUpdatesBranch varIdent value updatesBranch = do
 
 -- verDFSIf
 verDFSIf :: ModifyModuleType -> Exp -> Stm -> Trans -> VerRes [Trans]
-verDFSIf modifyModule cond ifBlock tr = do
-  let determinedCond = determineExp cond tr
+verDFSIf modifyModule cond ifBlock tr@(trName, guards, updates) = do
+  let 
+    determinedCond = determineExp cond tr
+    -- TODO: chyba wystarczy robić makeAlive tylko na koniec
+    aliveUpdates = map makeAlive updates
 
-  afterCondTranss <- applyCond determinedCond tr
+  afterCondTranss <- applyCond determinedCond (trName, guards, aliveUpdates)
   afterBlockTranss <- verDFSStm modifyModule ifBlock afterCondTranss
 
   return afterCondTranss
   --return afterBlockTranss
+
+  -- TODO: map makeAlive resultUpdates
 
 verDFSIfElse :: ModifyModuleType -> Exp -> Stm -> Stm -> Trans -> VerRes [Trans]
 verDFSIfElse modifyModule cond ifBlock elseBlock tr = do
