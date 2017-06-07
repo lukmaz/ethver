@@ -95,7 +95,19 @@ valueFromCond varIdent cond =
 -- of longer list (if cond is an alternative) ----------
 --------------------------------------------------------
 
+-- TODO: TO CHYBA JEST DO ZMIANY CALKOWITEJ
+
 applyCond :: Exp -> Trans -> VerRes [Trans]
+
+applyCond (EEq (EInt x) (EInt y)) tr@(trName, guards, updates) = do
+  if (x == y)
+    then return [tr]
+    else return []
+
+applyCond (ENe (EInt x) (EInt y)) tr@(trName, guards, updates) = do
+  if (x /= y)
+    then return [tr]
+    else return []
 
 applyCond (EEq (EVar varIdent) value) (trName, guards, updates) = do
   case deduceVarValue varIdent (trName, guards, updates) of
