@@ -55,11 +55,11 @@ verDFSStm modifyModule (SArrAss arrIdent index value) oldTrs = do
 
 verDFSStm modifyModule (SIf cond ifBlock) trs = do
   condTranss <- applyToTrList (evaluateExp modifyModule cond) trs
-  applyToTrList (updateIf modifyModule cond ifBlock) condTranss
+  applyToTrList (verDFSIf modifyModule cond ifBlock) condTranss
 
 verDFSStm modifyModule (SIfElse cond ifBlock elseBlock) trs = do
   condTranss <- applyToTrList (evaluateExp modifyModule cond) trs
-  applyToTrList (updateIfElse modifyModule cond ifBlock elseBlock) condTranss
+  applyToTrList (verDFSIfElse modifyModule cond ifBlock elseBlock) condTranss
 
 verDFSStm modifyModule (SWhile _ _) _ = do
   error $ "while loop not supported in verDFS"
@@ -131,20 +131,19 @@ addAssToUpdatesBranch varIdent value updatesBranch = do
 -- If --
 --------
 
--- updateIf
-updateIf :: ModifyModuleType -> Exp -> Stm -> Trans -> VerRes [Trans]
-updateIf modifyModule cond ifBlock tr = do
+-- verDFSIf
+verDFSIf :: ModifyModuleType -> Exp -> Stm -> Trans -> VerRes [Trans]
+verDFSIf modifyModule cond ifBlock tr = do
   let determinedCond = determineExp cond tr
 
-  posCondTranss <- applyCond determinedCond tr
-  posTranss <- verDFSStm modifyModule ifBlock posCondTranss
+  afterCondTranss <- applyCond determinedCond tr
+  afterBlockTranss <- verDFSStm modifyModule ifBlock afterCondTranss
 
-  negCondTranss <- applyCond (negateExp determinedCond) tr
+  return afterCondTranss
+  --return afterBlockTranss
 
-  return $ posTranss ++ negCondTranss
-
-updateIfElse :: ModifyModuleType -> Exp -> Stm -> Stm -> Trans -> VerRes [Trans]
-updateIfElse modifyModule cond ifBlock elseBlock tr = do
+verDFSIfElse :: ModifyModuleType -> Exp -> Stm -> Stm -> Trans -> VerRes [Trans]
+verDFSIfElse modifyModule cond ifBlock elseBlock tr = do
   let determinedCond = determineExp cond tr
 
   posCondTranss <- applyCond determinedCond tr

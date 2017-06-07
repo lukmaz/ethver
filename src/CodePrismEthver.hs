@@ -160,15 +160,24 @@ prismUpdates (h:t) =
       ("    1/" ++ (show n) ++ ": " ++ (prismUpdatesDeterm h))
       t
 
+-- TODO: Alive skasować
 prismUpdatesDeterm :: Branch -> String
 prismUpdatesDeterm (Alive (h:t)) = 
-  (prismUpdate h) ++
+  "Alive " ++
+    (prismUpdate h) ++ 
     foldl
       (\acc update -> acc ++ "\n  & " ++ (prismUpdate update))
       ""
       t
 
-prismUpdatesDeterm (Dead l) = prismUpdatesDeterm (Alive l)
+-- TODO: Dead skasować
+prismUpdatesDeterm (Dead (h:t)) = 
+  "Dead " ++
+    (prismUpdate h) ++ 
+    foldl
+      (\acc update -> acc ++ "\n  & " ++ (prismUpdate update))
+      ""
+      t
 
 prismUpdate :: (Ident, Exp) -> String
 prismUpdate (ident, exp) =
