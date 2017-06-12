@@ -127,15 +127,18 @@ addRandomAssToUpdates varIdent range updates = do
 
 -- adds a particular assignment to an updates branch
 addAssToUpdatesBranch :: Ident -> Exp -> Branch -> VerRes Branch
-addAssToUpdatesBranch varIdent value updatesBranch = do
+addAssToUpdatesBranch varIdent value (Dead branch) = 
+  return (Dead branch)
+
+addAssToUpdatesBranch varIdent value (Alive branch) = 
   let 
     deleteOld :: [(Ident, Exp)] -> [(Ident, Exp)]
     deleteOld list = filter
       (\(i, _) -> i /= varIdent)
       list
-    --TODO: Alive?
     newBranch old = (varIdent, value):(deleteOld old)
-  return $ applyToBranch newBranch updatesBranch
+  in
+    return $ applyToBranch newBranch (Alive branch)
 
 --------
 -- If --
@@ -152,9 +155,11 @@ verDFSIf modifyModule cond ifBlock tr@(trName, guards, updates) = do
 
   afterCondTranss <- applyCond cond (trName, guards, aliveUpdates)
   afterBlockTranss <- verDFSStm modifyModule ifBlock afterCondTranss
-
-  return afterCondTranss
-  --return afterBlockTranss
+  
+  -- TODO: podgląd po samym cond, bez stms
+  --return afterCondTranss
+  
+  return afterBlockTranss
 
   -- TODO: map makeAlive resultUpdates
 
