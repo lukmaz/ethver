@@ -146,16 +146,20 @@ applyCond (EEq value (EVar varIdent)) tr =
 applyCond (ENe value (EVar varIdent)) tr =
   applyCond (ENe (EVar varIdent) value) tr
 
---TODO
-{-
 applyCond (EAnd cond1 cond2) tr = do
   applyCond cond1 tr >>= applyToTrList (applyCond cond2)
 
 applyCond (EOr cond1 cond2) tr = do
-  tr1 <- applyCond cond1 tr
-  tr2 <- applyCond cond2 tr
-  return $ tr1 ++ tr2
--}
+  tr1 <- applyCond (EAnd cond1 cond2) tr
+  tr2 <- applyCond (EAnd cond1 (ENot cond2)) tr
+  tr3 <- applyCond (EAnd (ENot cond1) cond2) tr
+  return $ tr1 ++ tr2 ++ tr3
+
+applyCond (ENot (EEq e1 e2)) tr = 
+  applyCond (ENe e1 e2) tr
+
+applyCond (ENot (ENe e1 e2)) tr = 
+  applyCond (EEq e1 e2) tr
 
 applyCond cond _ = do
   error $ "This type of condition not supported by applyCond: " ++ (show cond)
