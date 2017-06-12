@@ -29,18 +29,6 @@ applyToTrList fun trs = do
 -- deduction of values --
 -------------------------
 
--- TODO: do wywalenia
-{-
--- TODO: assumption: updates is single-branch
-deduceVarValue :: Ident -> Trans -> Maybe Exp
-deduceVarValue varIdent (trName, guards, updates) = 
-  -- TODO: (head updates)
-  case deduceVarValueFromBranch varIdent (head updates) of
-    Just val -> Just val
-    _ -> case deduceVarValueFromGuards varIdent guards of
-      Just val -> Just val
-      _ -> Nothing
--}
 -- TODO: multi-branch updates
 deduceVarValueFromBranch :: Ident -> Branch -> Maybe Exp
 deduceVarValueFromBranch varIdent (Alive updatesBranch) =
@@ -100,6 +88,7 @@ valueFromCond varIdent cond =
 applyCond :: Exp -> Trans -> VerRes [Trans]
 
 -- TODO
+{-
 applyCond (EEq (EInt x) (EInt y)) tr@(trName, guards, updates) = do
   if (x == y)
     then return [tr]
@@ -110,31 +99,55 @@ applyCond (ENe (EInt x) (EInt y)) tr@(trName, guards, updates) = do
   if (x /= y)
     then return [tr]
     else return []
+-}
 
+-- NOWE
 applyCond (EEq (EVar varIdent) value) (trName, guards, updates) = do
-  case deduceVarValue varIdent (trName, guards, updates) of
-    Just oldValue ->
-      if (oldValue == value)
-        then return [(trName, guards, updates)]
-        else return []
-    Nothing ->
-      return [(trName, (EEq (EVar varIdent) value):guards, updates)]
-  
+  let deducedValues = map (deduceVarValueFromBranch varIdent) updates
+  if not $ elem Nothing deducedValues
+    -- value of varIdent determined in every branch
+    then
+      let 
+        branches = map (applyCondToBranch True (EEq (EVar varIdent) value)) $ zip updates deducedValues
+      in
+        return [(trName, guards, branches)]
+    -- value of varIdent not always determined
+    else
+      let 
+        ifGuards = applyCondToGuards (EEq (EVar varIdent) value) guards
+        elseGuards = applyCondToGuards (ENe (EVar varIdent) value) guards
+        ifBranches = map (applyCondToBranch True (EEq (EVar varIdent) value)) $ zip updates deducedValues
+        elseBranches = map (applyCondToBranch False (EEq (EVar varIdent) value)) $ zip updates deducedValues
+      in
+        return [(trName, ifGuards, ifBranches), (trName, elseGuards, elseBranches)]
+
+applyCond (ENe (EVar varIdent) value) (trName, guards, updates) = do
+  let deducedValues = map (deduceVarValueFromBranch varIdent) updates
+  if not $ elem Nothing deducedValues
+    -- value of varIdent determined in every branch
+    then
+      let 
+        branches = map (applyCondToBranch True (ENe (EVar varIdent) value)) $ zip updates deducedValues
+      in
+        return [(trName, guards, branches)]
+    -- value of varIdent not always determined
+    else
+      let 
+        ifGuards = applyCondToGuards (ENe (EVar varIdent) value) guards
+        elseGuards = applyCondToGuards (EEq (EVar varIdent) value) guards
+        ifBranches = map (applyCondToBranch True (ENe (EVar varIdent) value)) $ zip updates deducedValues
+        elseBranches = map (applyCondToBranch False (ENe (EVar varIdent) value)) $ zip updates deducedValues
+      in
+        return [(trName, ifGuards, ifBranches), (trName, elseGuards, elseBranches)]
+
 applyCond (EEq value (EVar varIdent)) tr =
   applyCond (EEq (EVar varIdent) value) tr
 
-applyCond (ENe (EVar varIdent) value) (trName, guards, updates) = do
-  case deduceVarValue varIdent (trName, guards, updates) of
-    Just oldValue ->
-      if (oldValue == value)
-        then return []
-        else return [(trName, guards, updates)]
-    Nothing ->
-      return [(trName, (ENe (EVar varIdent) value):guards, updates)]
-  
 applyCond (ENe value (EVar varIdent)) tr =
   applyCond (ENe (EVar varIdent) value) tr
 
+--TODO
+{-
 applyCond (EAnd cond1 cond2) tr = do
   applyCond cond1 tr >>= applyToTrList (applyCond cond2)
 
@@ -142,9 +155,44 @@ applyCond (EOr cond1 cond2) tr = do
   tr1 <- applyCond cond1 tr
   tr2 <- applyCond cond2 tr
   return $ tr1 ++ tr2
+-}
 
 applyCond cond _ = do
   error $ "This type of condition not supported by applyCond: " ++ (show cond)
+
+
+-- applyCondToBranch
+
+applyCondToBranch :: Bool -> Exp -> (Branch, Maybe Exp) -> Branch
+
+applyCondToBranch ifCase (EEq (EVar varIdent) value) (branch, deducedVal) =
+  case deducedVal of
+    Just v ->
+      if (v == value)
+        then branch
+        else makeDead branch
+    Nothing ->
+      if ifCase
+        then branch
+        else makeDead branch
+
+applyCondToBranch ifCase (ENe (EVar varIdent) value) (branch, deducedVal) =
+  case deducedVal of
+    Just v ->
+      if (v /= value)
+        then branch
+        else makeDead branch
+    Nothing ->
+      if ifCase
+        then branch
+        else makeDead branch
+
+
+-- applyCondToGuards
+-- TODO: da sie zoptymalizowac?
+
+applyCondToGuards :: Exp -> [Exp] -> [Exp]
+applyCondToGuards cond guards = cond:guards
 
 {-
 addRandomUpdates :: ModifyModuleType -> [[(Ident, Exp)]] -> VerRes [[(Ident, Exp)]]

@@ -45,21 +45,25 @@ verDFSStm modifyModule (SBlock (stmH:stmT)) trs = do
     verDFSStm modifyModule (SBlock stmT)
 
 verDFSStm modifyModule (SAss varIdent value) oldTrs = do
-  newTrs <- applyToTrList (evaluateExp modifyModule value) oldTrs
-  applyToTrList (addAssToTr varIdent value) newTrs
+  -- TODO: evaluateExp?
+  --newTrs <- applyToTrList (evaluateExp modifyModule value) oldTrs
+  applyToTrList (addAssToTr varIdent value) oldTrs
 
 verDFSStm modifyModule (SArrAss arrIdent index value) oldTrs = do
-  newTrs <- applyToTrList (evaluateExp modifyModule index) oldTrs >>= 
-    applyToTrList (evaluateExp modifyModule value)
-  applyToTrList (addArrAssToTr arrIdent index value) newTrs
+  -- TODO: evaluateExp?
+  --newTrs <- applyToTrList (evaluateExp modifyModule index) oldTrs >>= 
+  --  applyToTrList (evaluateExp modifyModule value)
+  applyToTrList (addArrAssToTr arrIdent index value) oldTrs
 
 verDFSStm modifyModule (SIf cond ifBlock) trs = do
-  condTranss <- applyToTrList (evaluateExp modifyModule cond) trs
-  applyToTrList (verDFSIf modifyModule cond ifBlock) condTranss
+  -- TODO: evaluateExp?
+  --condTranss <- applyToTrList (evaluateExp modifyModule cond) trs
+  applyToTrList (verDFSIf modifyModule cond ifBlock) trs
 
 verDFSStm modifyModule (SIfElse cond ifBlock elseBlock) trs = do
-  condTranss <- applyToTrList (evaluateExp modifyModule cond) trs
-  applyToTrList (verDFSIfElse modifyModule cond ifBlock elseBlock) condTranss
+  -- TODO: evaluateExp?
+  --condTranss <- applyToTrList (evaluateExp modifyModule cond) trs
+  applyToTrList (verDFSIfElse modifyModule cond ifBlock elseBlock) trs
 
 verDFSStm modifyModule (SWhile _ _) _ = do
   error $ "while loop not supported in verDFS"
@@ -75,19 +79,25 @@ verDFSStm modifyModule (SWhile _ _) _ = do
 addAssToTr :: Ident -> Exp -> Trans -> VerRes [Trans]
 
 addAssToTr varIdent value (trName, guards, updates) = do
-  let determinedValue = determineExp value (trName, guards, updates)
-  case determinedValue of
+  --TODO: determineExp?
+  --let determinedValue = determineExp value (trName, guards, updates)
+  case value of
     ERand (EInt range) -> do
       newUpdates <- addRandomAssToUpdates varIdent range updates
       return [(trName, guards, newUpdates)]
     _ -> do
-      newUpdates <- addAssToUpdates varIdent determinedValue updates
+      newUpdates <- addAssToUpdates varIdent value updates
       return [(trName, guards, newUpdates)]
 
+-- TODO: To, żeby działało, musi być jakieś determineExp. Ale nie może być z Tr.
+-- Pewnie "addArrAssToBranch"?
 -- simlarly, assumes index and value are evaluated
 addArrAssToTr :: Ident -> Exp -> Exp -> Trans -> VerRes [Trans]
 addArrAssToTr arrIdent index value tr = do
-  case determineExp (EArray arrIdent index) tr of
+  -- TODO: determineExp?
+  --case determineExp (EArray arrIdent index) tr of
+  -- Linijka poniżej jest oczywiście bez sensu.
+  case (EArray arrIdent index) of
     EVar varIdent ->
       addAssToTr varIdent value tr
     _ ->
@@ -135,11 +145,12 @@ addAssToUpdatesBranch varIdent value updatesBranch = do
 verDFSIf :: ModifyModuleType -> Exp -> Stm -> Trans -> VerRes [Trans]
 verDFSIf modifyModule cond ifBlock tr@(trName, guards, updates) = do
   let 
-    determinedCond = determineExp cond tr
+    --TODO: determineExp?
+    --determinedCond = determineExp cond tr
     -- TODO: chyba wystarczy robić makeAlive tylko na koniec
     aliveUpdates = map makeAlive updates
 
-  afterCondTranss <- applyCond determinedCond (trName, guards, aliveUpdates)
+  afterCondTranss <- applyCond cond (trName, guards, aliveUpdates)
   afterBlockTranss <- verDFSStm modifyModule ifBlock afterCondTranss
 
   return afterCondTranss
@@ -149,12 +160,13 @@ verDFSIf modifyModule cond ifBlock tr@(trName, guards, updates) = do
 
 verDFSIfElse :: ModifyModuleType -> Exp -> Stm -> Stm -> Trans -> VerRes [Trans]
 verDFSIfElse modifyModule cond ifBlock elseBlock tr = do
-  let determinedCond = determineExp cond tr
+  -- TODO: determineExp?
+  --let determinedCond = determineExp cond tr
 
-  posCondTranss <- applyCond determinedCond tr
+  posCondTranss <- applyCond cond tr
   posTranss <- verDFSStm modifyModule ifBlock posCondTranss
 
-  negCondTranss <- applyCond (negateExp determinedCond) tr
+  negCondTranss <- applyCond (negateExp cond) tr
   negTranss <- verDFSStm modifyModule elseBlock negCondTranss
 
   return $ posTranss ++ negTranss

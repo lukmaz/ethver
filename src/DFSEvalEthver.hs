@@ -19,6 +19,9 @@ import WorldPrismEthver
 -- used mainly for EArray: determineExp(tab[x]) = tab_2 for x = 2
 -- uses x value from guards
 
+-- Bez sensu: nie da się wydedukować z Transa, bo mogą być rózne wartości w różnych branchach.
+
+{-
 determineExp :: Exp -> Trans -> Exp
 
 determineExp (EOr e1 e2) tr = EOr (determineExp e1 tr) (determineExp e2 tr)
@@ -66,11 +69,13 @@ determineExp (EVar varIdent) tr =
 
 determineExp exp _ = 
   error $ "This type of expression not supported by determineExp: " ++ (show exp)
-
+-}
 -----------------
 -- evaluateExp --
 -----------------
 
+-- też BEZ SENSU
+{-
 evaluateExp :: ModifyModuleType -> Exp -> Trans -> VerRes [Trans]
 
 evaluateExp modifyModule (EOr e1 e2) tr = evaluateExp2Arg modifyModule e1 e2 tr
@@ -92,13 +97,6 @@ evaluateExp modifyModule (ENot e) tr = evaluateExp modifyModule e tr
 
 evaluateExp modifyModule (EArray (Ident arrName) index) (trName, guards, updates) = do
   case index of
-    {-
-    JAKIES STARE:
-    ESender -> do -- TODO: np. trzeba dodać sendera do varsValues
-      world <- get
-      mod <- modifyModule id
-      return $ Map.lookup (whichSender mod) (varsValues world)
-    -}
     EInt x -> do
       return [(trName, guards, updates)]
     EVar varIdent -> do 
@@ -170,12 +168,13 @@ evaluateExp modifyModule ETrue tr = do
 
 evaluateExp modifyModule EFalse tr = do
   return [tr]
-
+-}
 
 ---------------------
 -- evaluateExp aux --
 ---------------------
-
+{-
 evaluateExp2Arg :: ModifyModuleType -> Exp -> Exp -> Trans -> VerRes [Trans]
 evaluateExp2Arg modifyModule exp1 exp2 tr = do
   evaluateExp modifyModule exp1 tr >>= applyToTrList (evaluateExp modifyModule exp2)
+-}
