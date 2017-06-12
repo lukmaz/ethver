@@ -6,7 +6,6 @@ import qualified Data.Map.Strict as Map
 import AbsEthver
 import ConstantsEthver
 
-
 maxRealValueOfType :: Type -> Exp
 maxRealValueOfType (TUInt x) = EInt (x - 1)
 maxRealValueOfType (TRUInt x) = EInt (x - 1)
@@ -23,6 +22,7 @@ maxTypeValueOfType (TRUInt x) = x
 maxTypeValueOfType TBool = 1
 
 -- negate cond --
+
 negateExp :: Exp -> Exp
 
 negateExp ETrue = EFalse

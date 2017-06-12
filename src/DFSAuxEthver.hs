@@ -101,26 +101,13 @@ applyCond (ENe (EInt x) (EInt y)) tr@(trName, guards, updates) = do
     else return []
 -}
 
--- NOWE
-applyCond (EEq (EVar varIdent) value) (trName, guards, updates) = do
-  let deducedValues = map (deduceVarValueFromBranch varIdent) updates
-  if not $ elem Nothing deducedValues
-    -- value of varIdent determined in every branch
-    then
-      let 
-        branches = map (applyCondToBranch True (EEq (EVar varIdent) value)) $ zip updates deducedValues
-      in
-        return [(trName, guards, branches)]
-    -- value of varIdent not always determined
-    else
-      let 
-        ifGuards = applyCondToGuards (EEq (EVar varIdent) value) guards
-        elseGuards = applyCondToGuards (ENe (EVar varIdent) value) guards
-        ifBranches = map (applyCondToBranch True (EEq (EVar varIdent) value)) $ zip updates deducedValues
-        elseBranches = map (applyCondToBranch False (EEq (EVar varIdent) value)) $ zip updates deducedValues
-      in
-        return [(trName, ifGuards, ifBranches), (trName, elseGuards, elseBranches)]
+applyCond (EEq (EVar varIdent) value) tr =
+  applyEqOrNeCond (EEq (EVar varIdent) value) varIdent tr
 
+applyCond (ENe (EVar varIdent) value) tr =
+  applyEqOrNeCond (ENe (EVar varIdent) value) varIdent tr
+
+{-
 applyCond (ENe (EVar varIdent) value) (trName, guards, updates) = do
   let deducedValues = map (deduceVarValueFromBranch varIdent) updates
   if not $ elem Nothing deducedValues
@@ -139,6 +126,7 @@ applyCond (ENe (EVar varIdent) value) (trName, guards, updates) = do
         elseBranches = map (applyCondToBranch False (ENe (EVar varIdent) value)) $ zip updates deducedValues
       in
         return [(trName, ifGuards, ifBranches), (trName, elseGuards, elseBranches)]
+-}
 
 applyCond (EEq value (EVar varIdent)) tr =
   applyCond (EEq (EVar varIdent) value) tr
@@ -163,6 +151,29 @@ applyCond (ENot (ENe e1 e2)) tr =
 
 applyCond cond _ = do
   error $ "This type of condition not supported by applyCond: " ++ (show cond)
+
+
+-- applyEqOrNeCond
+
+applyEqOrNeCond :: Exp -> Ident -> Trans -> VerRes [Trans]
+applyEqOrNeCond cond varIdent (trName, guards, updates) = do
+  let deducedValues = map (deduceVarValueFromBranch varIdent) updates
+  if not $ elem Nothing deducedValues
+    -- value of varIdent determined in every branch
+    then
+      let 
+        branches = map (applyCondToBranch True cond) $ zip updates deducedValues
+      in
+        return [(trName, guards, branches)]
+    -- value of varIdent not always determined
+    else
+      let 
+        ifGuards = applyCondToGuards cond guards
+        elseGuards = applyCondToGuards (negateExp cond) guards
+        ifBranches = map (applyCondToBranch True cond) $ zip updates deducedValues
+        elseBranches = map (applyCondToBranch False cond) $ zip updates deducedValues
+      in
+        return [(trName, ifGuards, ifBranches), (trName, elseGuards, elseBranches)]
 
 
 -- applyCondToBranch
