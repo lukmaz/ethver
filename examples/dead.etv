@@ -63,8 +63,7 @@ communication {
   function T5() {
     x = random(2);
     if ((x == 1) || (z == 1)) {
-      //y = random(3);
-      y = 2;
+      y = random(3);
     }
   }
   /*

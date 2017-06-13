@@ -21,6 +21,30 @@ maxTypeValueOfType (TUInt x) = (x - 1)
 maxTypeValueOfType (TRUInt x) = x
 maxTypeValueOfType TBool = 1
 
+-- identFromComp
+
+identFromComp :: Exp -> Ident
+
+identFromComp (EEq (EVar i) v) = i
+identFromComp (ENe (EVar i) v) = i
+
+identFromComp e = error $ "Cannot extract ident from expression: " ++ (show e)
+
+-- isLeftComp
+isLeftComp :: Exp -> Bool
+
+isLeftComp (EEq (EVar _) _) = True
+isLeftComp (ENe (EVar _) _) = True
+isLeftComp _ = False
+
+--makeLeft
+makeLeft :: Exp -> Exp
+
+makeLeft (EEq (EVar i) v) = EEq (EVar i) v
+makeLeft (ENe (EVar i) v) = ENe (EVar i) v
+makeLeft (EEq v (EVar i)) = EEq (EVar i) v
+makeLeft (ENe v (EVar i)) = ENe (EVar i) v
+
 -- negate cond --
 
 negateExp :: Exp -> Exp
