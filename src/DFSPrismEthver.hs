@@ -150,9 +150,26 @@ verDFSIf modifyModule cond ifBlock tr@(trName, guards, updates) = do
   let 
     --TODO: determineExp?
     --determinedCond = determineExp cond tr
-
+    
+    
+    
+    
+    
+    
+    
+    
+    
     -- TODO: chyba trzeba robić zagnieżdżanie makeAlive na wypadek zagnieżdżonych ifów
     aliveUpdates = map makeAlive updates
+
+
+
+
+
+
+
+
+
 
   afterCondTranss <- applyCond cond (trName, guards, aliveUpdates)
   afterBlockTranss <- verDFSStm modifyModule ifBlock afterCondTranss
