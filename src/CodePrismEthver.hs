@@ -158,15 +158,14 @@ prismUpdates (h:t) =
       ("    1/" ++ (show n) ++ ": " ++ (prismUpdatesDeterm h))
       t
 
--- TODO: (show liv) skasować
 prismUpdatesDeterm :: Branch -> String
 prismUpdatesDeterm ((h:t), liv) = 
-  (show liv) ++
-    (prismUpdate h) ++ 
-    foldl
-      (\acc update -> acc ++ "\n  & " ++ (prismUpdate update))
-      ""
-      t
+  --(show liv) ++
+  (prismUpdate h) ++ 
+  foldl
+    (\acc update -> acc ++ "\n  & " ++ (prismUpdate update))
+    ""
+    t
 
 prismUpdate :: (Ident, Exp) -> String
 prismUpdate (ident, exp) =
