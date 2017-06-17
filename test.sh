@@ -1,1 +1,1 @@
-./MakeEthver examples/dead.etv
+./MakeEthver examples/micropayments.etv
