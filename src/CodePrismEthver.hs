@@ -145,9 +145,7 @@ prismGuards (h:t) =
 prismUpdates :: [Branch] -> String
 prismUpdates [] = ""
 
-prismUpdates [Alive []] = "    true"
-
-prismUpdates [Dead []] = "    true"
+prismUpdates [([], _)] = "    true"
 
 prismUpdates [updates] = 
   "    " ++ prismUpdatesDeterm updates
@@ -160,19 +158,10 @@ prismUpdates (h:t) =
       ("    1/" ++ (show n) ++ ": " ++ (prismUpdatesDeterm h))
       t
 
--- TODO: Alive skasować
+-- TODO: (show liv) skasować
 prismUpdatesDeterm :: Branch -> String
-prismUpdatesDeterm (Alive (h:t)) = 
-  "Alive " ++
-    (prismUpdate h) ++ 
-    foldl
-      (\acc update -> acc ++ "\n  & " ++ (prismUpdate update))
-      ""
-      t
-
--- TODO: Dead skasować
-prismUpdatesDeterm (Dead (h:t)) = 
-  "Dead " ++
+prismUpdatesDeterm ((h:t), liv) = 
+  (show liv) ++
     (prismUpdate h) ++ 
     foldl
       (\acc update -> acc ++ "\n  & " ++ (prismUpdate update))

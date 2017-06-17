@@ -38,7 +38,7 @@ verStm modifyModule (SIf cond ifBlock) = do
     ""  
     [evalCond]
     -- TODO: Alive?
-    [Alive []]
+    [([], [Alive])]
   verStm modifyModule ifBlock
   mod <- modifyModule id
   addCustomTrans
@@ -48,7 +48,7 @@ verStm modifyModule (SIf cond ifBlock) = do
     (currState mod)
     [negateExp evalCond]
     -- TODO: Alive?
-    [Alive []]
+    [([], [Alive])]
 
 verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
   evalCond <- verExp modifyModule cond
@@ -59,7 +59,7 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
     ""  
     [evalCond]
     -- TODO: Alive?
-    [Alive []]
+    [([], [Alive])]
   verStm modifyModule ifBlock
   mod <- modifyModule id
   let endIfState = currState mod 
@@ -70,7 +70,7 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
     (numStates mod + 1)
     [negateExp evalCond]
     -- TODO: Alive?
-    [Alive []]
+    [([], [Alive])]
   mod <- modifyModule id
   let newState = numStates mod + 1
   modifyModule (setCurrState newState)
@@ -84,7 +84,7 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
     endIfState
     []
     -- TODO: Alive?
-    [Alive []]
+    [([], [Alive])]
   _ <- modifyModule (setCurrState endIfState)
   return ()
 
@@ -103,7 +103,7 @@ verStm modifyModule (SWhile cond whileBlock) = do
     whileState
     []
     -- TODO: Alive?
-    [Alive []]
+    [([], [Alive])]
 
   modifyModule (setCurrState whileState)
   modifyModule (setNumStates whileState)
@@ -115,7 +115,7 @@ verStm modifyModule (SWhile cond whileBlock) = do
     ""  
     [evalCond]
     -- TODO: Alive?
-    [Alive []]
+    [([], [Alive])]
 
   verStm modifyModule whileBlock
   mod <- modifyModule id
@@ -128,7 +128,7 @@ verStm modifyModule (SWhile cond whileBlock) = do
     whileState
     []
     -- TODO: Alive?
-    [Alive []]
+    [([], [Alive])]
 
   mod <- modifyModule id
 
@@ -140,7 +140,7 @@ verStm modifyModule (SWhile cond whileBlock) = do
     (numStates mod + 1)
     [negateExp evalCond]
     -- TODO: Alive?
-    [Alive []]
+    [([], [Alive])]
 
   -- escape from breakState
   addCustomTrans
@@ -150,7 +150,7 @@ verStm modifyModule (SWhile cond whileBlock) = do
     (numStates mod + 1)
     []
     -- TODO: Alive?
-    [Alive []]
+    [([], [Alive])]
 
   mod <- modifyModule id
   let newState = numStates mod + 1
@@ -170,7 +170,7 @@ verStm modifyModule (SBreak) = do
     (head $ breakStates mod)
     []
     -- TODO: Alive?
-    [Alive []]
+    [([], [Alive])]
 
   mod <- modifyModule id
   let newState = numStates mod + 1
@@ -220,7 +220,7 @@ verStm modifyModule (SWait cond) = do
     ""
     [EOr evalCond $ EVar $ Ident sTimelocksReleased]
     -- TODO: Alive?
-    [Alive []]
+    [([], [Alive])]
 
 
 ---------
@@ -243,7 +243,7 @@ verFullAss modifyModule (SAss ident exp) = do
     ""
     guards
     -- TODO: Alive?
-    [Alive updates]
+    [(updates, [Alive])]
 
 verFullAss modifyModule (SArrAss (Ident ident) index exp) = do
   case index of
@@ -541,7 +541,7 @@ verRandom modifyModule (EInt range) = do
     []
     -- TODO: Alive?
     (foldl
-      (\acc x -> acc ++ [Alive [(Ident localVarName, EInt x)]])
+      (\acc x -> acc ++ [([(Ident localVarName, EInt x)], [Alive])])
       []
       [0..(range - 1)]
     )
@@ -595,7 +595,7 @@ verSendTAux modifyModule funName argsVals = do
       let updates0 = [[(Ident $ (unident funName) ++ sValueSuffix ++ (show $ number mod), value)]]
       let addAssignment acc (argName, argVal) = acc ++ [createAssignment (number mod) funName argName argVal]
       --TODO: Alive?
-      let updates1 = [Alive $ foldl addAssignment (head updates0) $ zip argNames expArgsVals]
+      let updates1 = [(foldl addAssignment (head updates0) $ zip argNames expArgsVals, [Alive])]
       
 
       addTransToNewState 
@@ -613,7 +613,7 @@ verSendTAux modifyModule funName argsVals = do
             (EVar iTExecuted)
         ]
         --TODO: Alive?
-        [Alive []]
+        [([], [Alive])]
 
 -----------
 -- SendC --
@@ -628,7 +628,7 @@ verSendCAux modifyModule funName expArgsVals = do
       let argNames = getArgNames fun
       let addAssignment acc (argName, argVal) = acc ++ [createAssignment (number mod) funName argName argVal]
       --TODO: Alive?
-      let updates1 = [Alive $ foldl addAssignment [] $ zip argNames expArgsVals]
+      let updates1 = [(foldl addAssignment [] $ zip argNames expArgsVals, [Alive])]
       
       addTransToNewState
         modifyModule
@@ -641,7 +641,7 @@ verSendCAux modifyModule funName expArgsVals = do
         (sCommunicatePrefix ++ (unident funName) ++ (show $ number mod))
         []
         --TODO: Alive?
-        [Alive []]
+        [([], [Alive])]
     _ -> error $ "Function " ++ (unident funName) ++ " not found in (funs world)"
 
 -- TODO: adds function name in prefix of a variable name

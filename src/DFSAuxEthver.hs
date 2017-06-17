@@ -31,17 +31,13 @@ applyToTrList fun trs = do
 
 -- TODO: multi-branch updates
 deduceVarValueFromBranch :: Ident -> Branch -> Maybe Exp
-deduceVarValueFromBranch varIdent (Alive updatesBranch) =
+deduceVarValueFromBranch varIdent (updatesBranch, _) =
   let
     filteredUpdates = filter (\(i, _) -> i == varIdent) updatesBranch
   in
     case filteredUpdates of
       ((_, value):t) -> Just value
       _ -> Nothing
-
---TODO: Alive?
-deduceVarValueFromBranch varIdent (Dead updatesBranch) =
-  deduceVarValueFromBranch varIdent (Alive updatesBranch) 
 
 deduceVarValueFromGuards :: Ident -> [Exp] -> Maybe Exp
 deduceVarValueFromGuards varIdent guards = 
@@ -138,12 +134,12 @@ applyCond cond _ = do
 applyOrCond :: Exp -> Exp -> Trans -> VerRes [Trans]
 applyOrCond cond1 cond2 (trName, guards, updates) = do
   let 
-    deadIfBothDead :: (Branch, Branch) -> Branch
-    deadIfBothDead (branch1, branch2) =
-      case (branch1, branch2) of
-        (Dead b1, Dead b2) -> Dead b1
-        (Alive b1, _) -> Alive b1
-        (_, Alive b2) -> Alive b2
+    -- assumption: branches can differ only by the head of their liveness
+    makeDeadIfBothDead :: (Branch, Branch) -> Branch
+    makeDeadIfBothDead ((br1, liv1h:liv1t), (br2, liv2h:liv2t)) =
+      if ((liv1h == Dead) && (liv2h == Dead))
+        then (br1, Dead:liv1t)
+        else (br1, Alive:liv1t)
 
     varIdent1 = identFromComp cond1
     varIdent2 = identFromComp cond2
@@ -156,15 +152,15 @@ applyOrCond cond1 cond2 (trName, guards, updates) = do
     
     posPosBranches1 = map (applyCondToBranch True cond1) $ zip updates deducedValues1
     posPosBranches2 = map (applyCondToBranch True cond2) $ zip updates deducedValues2
-    posPosBranches = map deadIfBothDead $ zip posPosBranches1 posPosBranches2
+    posPosBranches = map makeDeadIfBothDead $ zip posPosBranches1 posPosBranches2
 
     negPosBranches1 = map (applyCondToBranch False cond1) $ zip updates deducedValues1
     negPosBranches2 = map (applyCondToBranch True cond2) $ zip updates deducedValues2
-    negPosBranches = map deadIfBothDead $ zip negPosBranches1 negPosBranches2
+    negPosBranches = map makeDeadIfBothDead $ zip negPosBranches1 negPosBranches2
 
     posNegBranches1 = map (applyCondToBranch True cond1) $ zip updates deducedValues1
     posNegBranches2 = map (applyCondToBranch False cond2) $ zip updates deducedValues2
-    posNegBranches = map deadIfBothDead $ zip posNegBranches1 posNegBranches2
+    posNegBranches = map makeDeadIfBothDead $ zip posNegBranches1 posNegBranches2
       
   return [(trName, posPosGuards, posPosBranches), (trName, negPosGuards, negPosBranches),
     (trName, posNegGuards, posNegBranches)]
@@ -198,27 +194,27 @@ applyEqOrNeCond cond (trName, guards, updates) = do
 
 applyCondToBranch :: Bool -> Exp -> (Branch, Maybe Exp) -> Branch
 
-applyCondToBranch ifCase (EEq (EVar varIdent) value) (branch, deducedVal) =
+applyCondToBranch ifCase (EEq (EVar varIdent) value) ((br, liv), deducedVal) =
   case deducedVal of
     Just v ->
       if (v == value)
-        then branch
-        else makeDead branch
+        then (br, (head liv):liv)
+        else (br, Dead:liv)
     Nothing ->
       if ifCase
-        then branch
-        else makeDead branch
+        then (br, (head liv):liv)
+        else (br, Dead:liv)
 
-applyCondToBranch ifCase (ENe (EVar varIdent) value) (branch, deducedVal) =
+applyCondToBranch ifCase (ENe (EVar varIdent) value) ((br, liv), deducedVal) =
   case deducedVal of
     Just v ->
       if (v /= value)
-        then branch
-        else makeDead branch
+        then (br, (head liv):liv)
+        else (br, Dead:liv)
     Nothing ->
       if ifCase
-        then branch
-        else makeDead branch
+        then (br, (head liv):liv)
+        else (br, Dead:liv)
 
 
 -- applyCondToGuards
@@ -254,6 +250,8 @@ addRandomUpdates modifyModule oldUpdates = do
       return newUpdates
 -}
 
+{-
+DO WYWALENIA?
 makeAlive :: Branch -> Branch
 makeAlive (Alive x) = Alive x
 makeAlive (Dead x) = Alive x
@@ -261,3 +259,4 @@ makeAlive (Dead x) = Alive x
 makeDead :: Branch -> Branch
 makeDead (Alive x) = Dead x
 makeDead (Dead x) = Dead x
+-}

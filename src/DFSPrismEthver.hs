@@ -25,7 +25,7 @@ verDFSFun modifyModule (Fun funName args stms) = do
     stVar = Ident $ stateVar mod
     initGuards = [EEq (EVar stVar) (EInt $ currState mod)]
     --TODO: Alive?
-    initUpdates = [Alive [(stVar, EInt 1)]]
+    initUpdates = [([(stVar, EInt 1)], [Alive])]
   trs <- verDFSStm modifyModule (SBlock stms) [("", initGuards, initUpdates)]
   mapM_
     (\tr -> modifyModule (\mod -> mod {transs = tr:(transs mod)}))
@@ -127,10 +127,10 @@ addRandomAssToUpdates varIdent range updates = do
 
 -- adds a particular assignment to an updates branch
 addAssToUpdatesBranch :: Ident -> Exp -> Branch -> VerRes Branch
-addAssToUpdatesBranch varIdent value (Dead branch) = 
-  return (Dead branch)
+addAssToUpdatesBranch varIdent value (br, Dead:t) = 
+  return (br, Dead:t)
 
-addAssToUpdatesBranch varIdent value (Alive branch) = 
+addAssToUpdatesBranch varIdent value (br, Alive:t) = 
   let 
     deleteOld :: [(Ident, Exp)] -> [(Ident, Exp)]
     deleteOld list = filter
@@ -138,7 +138,7 @@ addAssToUpdatesBranch varIdent value (Alive branch) =
       list
     newBranch old = (varIdent, value):(deleteOld old)
   in
-    return $ applyToBranch newBranch (Alive branch)
+    return $ applyToBranch newBranch (br, Alive:t)
 
 --------
 -- If --
@@ -151,35 +151,18 @@ verDFSIf modifyModule cond ifBlock tr@(trName, guards, updates) = do
     --TODO: determineExp?
     --determinedCond = determineExp cond tr
     
-    
-    
-    
-    
-    
-    
-    
-    
-    -- TODO: chyba trzeba robić zagnieżdżanie makeAlive na wypadek zagnieżdżonych ifów
-    aliveUpdates = map makeAlive updates
-
-
-
-
-
-
-
-
-
-
-  afterCondTranss <- applyCond cond (trName, guards, aliveUpdates)
+  afterCondTranss <- applyCond cond (trName, guards, updates)
   afterBlockTranss <- verDFSStm modifyModule ifBlock afterCondTranss
   
   -- TODO: podgląd po samym cond, bez stms
   --return afterCondTranss
   
-  return afterBlockTranss
-
-  -- TODO: map makeAlive resultUpdates
+  return $ map
+    (\(trName, guards, updates) -> (trName, guards, map removeHeadLiv updates))
+    afterBlockTranss
+      where
+        removeHeadLiv :: Branch -> Branch
+        removeHeadLiv (br, liv) = (br, tail liv)
 
 verDFSIfElse :: ModifyModuleType -> Exp -> Stm -> Stm -> Trans -> VerRes [Trans]
 verDFSIfElse modifyModule cond ifBlock elseBlock tr = do

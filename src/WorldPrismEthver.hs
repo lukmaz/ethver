@@ -13,11 +13,19 @@ type VerRes a = State VerWorld a
 type Trans = (String, [Exp], [Branch])
 type ModifyModuleType = (Module -> Module) -> VerRes Module
 
-data Branch = Alive [(Ident, Exp)] | Dead [(Ident, Exp)]
+data Liveness = Alive | Dead
 
-instance Show Branch where
-  show (Alive l) = "Alive " ++ (show l)
-  show (Dead l) = "Dead " ++ (show l)
+type Branch = ([(Ident, Exp)], [Liveness])
+
+instance Show Liveness where
+  show Alive = "Alive"
+  show Dead = "Dead"
+
+instance Eq Liveness where
+  Dead == Dead = True
+  Alive == Alive = True
+  Dead == Alive = False
+  Alive == Dead = False
 
 data VerWorld = VerWorld {
   props :: String,

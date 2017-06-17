@@ -136,8 +136,7 @@ addUser (UDec name) = do
 -------------------
 
 applyToBranch :: ([(Ident, Exp)] -> [(Ident, Exp)]) -> Branch -> Branch
-applyToBranch f (Alive x) = Alive (f x)
-applyToBranch f (Dead x) = Dead (f x)
+applyToBranch f (br, liv) = (f br, liv)
 
 -----------
 -- Trans --
@@ -205,7 +204,7 @@ addCommunicateOnePlayer funName args playerNumber = do
         [(createCoArgumentName funName varName, 
           EVar $ createScenarioArgumentName funName varName playerNumber)]
   -- TODO: Alive?
-  let updates = [Alive $ foldl addAssignment (head updates0) args]
+  let updates = [(foldl addAssignment (head updates0) args, [Alive])]
 
   addCustomTrans
     modifyCommunication
@@ -237,7 +236,7 @@ setCS number (_, guards, _) =
     (ENot $ EVar iCriticalSection0)
       :(ENot $ EVar iCriticalSection1)
       :guards,
-    [Alive [(Ident $ sCriticalSection ++ (show number), ETrue)]]
+    [([(Ident $ sCriticalSection ++ (show number), ETrue)], [Alive])]
   )
 
 unsetCS :: Integer -> Trans -> Trans
@@ -278,14 +277,14 @@ setCS2 number  =
     [ENot $ EVar iCriticalSection0,
       ENot $ EVar iCriticalSection1,
       EGt (EVar $ Ident $ sStatePrefix ++ (show number)) (EInt 0)],
-    [Alive [(Ident $ sCriticalSection ++ (show number), ETrue)]]
+    [([(Ident $ sCriticalSection ++ (show number), ETrue)], [Alive])]
   ),
   (
     "",
     [EVar $ Ident $ sCriticalSection ++ (show number),
     -- one line quickfix:
       EEq (EVar iContrState) (EInt 1)],
-    [Alive [(Ident $ sCriticalSection ++ (show number), EFalse)]]
+    [([(Ident $ sCriticalSection ++ (show number), EFalse)], [Alive])]
   )]
 
 ------------------------------
@@ -343,7 +342,7 @@ generateAdvTranss modifyModule whichPrefix whichState withVal funName args maxes
           EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
         ]
         -- TODO: Alive?
-        [Alive []]
+        [([], [Alive])]
     maxValsList ->
       forM_
         maxValsList
@@ -358,7 +357,10 @@ generateAdvTranss modifyModule whichPrefix whichState withVal funName args maxes
             EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
           ]
           -- TODO: Alive?
-          (map Alive (advUpdates withVal (number mod) (Ident funName) args vals))
+          (map 
+            (\x -> (x, [Alive]))
+            (advUpdates withVal (number mod) (Ident funName) args vals)
+          )
         )
 
 
@@ -380,7 +382,7 @@ transferMoney from to maxTo value = do
     ""
     [EGe (EVar from) value, ELe (EAdd (EVar to) value) maxTo]
     -- TODO: Alive?
-    [Alive [(from, ESub (EVar from) value), (to, EAdd (EVar to) value)]]
+    [([(from, ESub (EVar from) value), (to, EAdd (EVar to) value)], [Alive])]
 
 -- TODO: one MAX_USER_BALANCE for all users
 smartTransferFromContract :: Ident -> Exp -> VerRes [[(Ident, Exp)]]
