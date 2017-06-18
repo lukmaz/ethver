@@ -97,20 +97,26 @@ applyCond (ENe (EInt x) (EInt y)) tr@(trName, guards, updates) = do
     else return []
 -}
 
+-- EEq and ENe between EVar and anything
+
 applyCond (EEq (EVar varIdent) value) tr =
   applyEqOrNeCond (EEq (EVar varIdent) value) tr
 
 applyCond (ENe (EVar varIdent) value) tr =
   applyEqOrNeCond (ENe (EVar varIdent) value) tr
 
-applyCond (EEq value (EVar varIdent)) tr =
-  applyCond (EEq (EVar varIdent) value) tr
+-- EEq and ENe between EArray and anything
 
-applyCond (ENe value (EVar varIdent)) tr =
-  applyCond (ENe (EVar varIdent) value) tr
+applyCond (EEq (EArray arrIdent index) value) tr = do
+  applyEqOrNeCond (EEq (EArray arrIdent index) value) tr
+
+applyCond (ENe (EArray arrIdent index) value) tr =
+  applyEqOrNeCond (ENe (EArray arrIdent index) value) tr
+
+-- EAnd, EOr
 
 applyCond (EAnd cond1 cond2) tr = do
-  applyCond cond1 tr >>= applyToTrList (applyCond cond2)
+  applyCond (makeLeft cond1) tr >>= applyToTrList (applyCond (makeLeft cond2))
 
 applyCond (EOr cond1 cond2) tr = do
   if (isLeftComp $ makeLeft cond1) && (isLeftComp $ makeLeft cond2)

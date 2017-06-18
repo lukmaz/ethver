@@ -147,11 +147,7 @@ addAssToUpdatesBranch varIdent value (br, Alive:t) =
 -- verDFSIf
 verDFSIf :: ModifyModuleType -> Exp -> Stm -> Trans -> VerRes [Trans]
 verDFSIf modifyModule cond ifBlock tr@(trName, guards, updates) = do
-  let 
-    --TODO: determineExp?
-    --determinedCond = determineExp cond tr
-    
-  afterCondTranss <- applyCond cond (trName, guards, updates)
+  afterCondTranss <- applyCond (makeLeft cond) (trName, guards, updates)
   afterBlockTranss <- verDFSStm modifyModule ifBlock afterCondTranss
   
   -- TODO: podgląd po samym cond, bez stms
@@ -166,9 +162,11 @@ verDFSIf modifyModule cond ifBlock tr@(trName, guards, updates) = do
 
 verDFSIfElse :: ModifyModuleType -> Exp -> Stm -> Stm -> Trans -> VerRes [Trans]
 verDFSIfElse modifyModule cond ifBlock elseBlock tr = do
-  -- TODO: determineExp?
-  --let determinedCond = determineExp cond tr
+  error $ "verDFSIfElse not implemented"
+  -- TODO
 
+  {-
+  STARE:
   posCondTranss <- applyCond cond tr
   posTranss <- verDFSStm modifyModule ifBlock posCondTranss
 
@@ -176,4 +174,5 @@ verDFSIfElse modifyModule cond ifBlock elseBlock tr = do
   negTranss <- verDFSStm modifyModule elseBlock negCondTranss
 
   return $ posTranss ++ negTranss
+  -}
 

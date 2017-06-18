@@ -44,6 +44,10 @@ makeLeft (EEq (EVar i) v) = EEq (EVar i) v
 makeLeft (ENe (EVar i) v) = ENe (EVar i) v
 makeLeft (EEq v (EVar i)) = EEq (EVar i) v
 makeLeft (ENe v (EVar i)) = ENe (EVar i) v
+makeLeft (EEq (EArray i) v) = EEq (EArray i) v
+makeLeft (ENe (EArray i) v) = ENe (EArray i) v
+makeLeft (EEq v (EArray i)) = EEq (EArray i) v
+makeLeft (ENe v (EArray i)) = ENe (EArray i) v
 
 -- negate cond --
 
