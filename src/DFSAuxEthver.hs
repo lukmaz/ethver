@@ -83,7 +83,7 @@ valueFromCond varIdent cond =
 
 applyCond :: Exp -> Trans -> VerRes [Trans]
 
--- TODO
+-- TODO (old below)
 {-
 applyCond (EEq (EInt x) (EInt y)) tr@(trName, guards, updates) = do
   if (x == y)
@@ -104,6 +104,29 @@ applyCond (EEq (EVar varIdent) value) tr =
 
 applyCond (ENe (EVar varIdent) value) tr =
   applyEqOrNeCond (ENe (EVar varIdent) value) tr
+
+
+
+
+
+
+
+-- EEq and ENe between ESender and anything
+
+applyCond (EEq ESender value) tr =
+  applySenderEqOrNeCond (EEq ESender value) tr
+
+applyCond (ENe ESender value) tr =
+  applySenderEqOrNeCond (ENe ESender value) tr
+
+
+
+
+
+
+
+
+
 
 -- EEq and ENe between EArray and anything
 
@@ -195,6 +218,16 @@ applyEqOrNeCond cond (trName, guards, updates) = do
       in
         return [(trName, ifGuards, ifBranches), (trName, elseGuards, elseBranches)]
 
+-- applySenderEqOrNeCond
+applySenderEqOrNeCond :: Exp -> Trans -> VerRes [Trans]
+applySenderEqOrNeCond cond (trName, guards, updates) =
+  let
+    ifGuards = applyCondToGuards cond guards
+    elseGuards = applyCondToGuards (negateExp cond) guards
+    ifBranches = map (\(br, liv) -> (br, (head liv):liv)) updates
+    elseBranches = map (\(br, liv) -> (br, Dead:liv)) updates
+  in
+    return [(trName, ifGuards, ifBranches), (trName, elseGuards, elseBranches)]
 
 -- applyCondToBranch
 

@@ -31,9 +31,9 @@ generateModule moduleFun moduleName pream world =
   "\n\n/////////////////////\n" ++
   "\nmodule " ++ moduleName ++ "\n" ++
   pream ++ "\n" ++
-  (prismVars (vars $ moduleFun world) (varsInitialValues $ moduleFun world)) ++
+  (prismVars (whichSender $ moduleFun world) (vars $ moduleFun world) (varsInitialValues $ moduleFun world)) ++
   "\n" ++ 
-  prismTranss (reverse $ transs $ moduleFun world) ++
+  prismTranss (whichSender $ moduleFun world) (reverse $ transs $ moduleFun world) ++
   "endmodule\n\n\n"
 
 blockchainPream :: String
@@ -101,15 +101,15 @@ generateNumStates world =
   (show $ numStates $ player1 world) ++
   ";\n\n"
 
-prismVars :: Map.Map Ident Type -> Map.Map Ident Exp -> String
-prismVars vars initialValues = 
+prismVars :: Ident -> Map.Map Ident Type -> Map.Map Ident Exp -> String
+prismVars senderIdent vars initialValues = 
   Map.foldlWithKey
     (\code ident typ -> 
       let 
         initSufix = 
           case Map.lookup ident initialValues of
             Nothing -> ""
-            Just exp -> " init " ++ prismShowExp exp
+            Just exp -> " init " ++ prismShowExp senderIdent exp
       in
         code ++ "  " ++ (unident ident)
           ++ " : " ++ (prismShowType typ) ++ initSufix ++ ";\n")
@@ -121,55 +121,56 @@ prismVars vars initialValues =
 -----------------
 
 -- generates PRISM code for all the transitions
-prismTranss :: [Trans] -> String
-prismTranss transs =
+prismTranss :: Ident -> [Trans] -> String
+prismTranss senderIdent transs =
   foldl 
-    (\acc trans -> acc ++ (prismTrans trans) ++ "\n")
+    (\acc trans -> acc ++ (prismTrans senderIdent trans) ++ "\n")
     "" 
     transs
   
-prismTrans :: Trans -> String
-prismTrans (transName, guards, updates) =
-  "  [" ++ transName ++ "]\n    " ++ (prismGuards guards) ++ "  ->\n" ++ prismUpdates updates ++ ";\n"
+prismTrans :: Ident -> Trans -> String
+prismTrans senderIdent (transName, guards, updates) =
+  "  [" ++ transName ++ "]\n    " ++ (prismGuards senderIdent guards) ++ "  ->\n" ++ 
+    prismUpdates senderIdent updates ++ ";\n"
 
-prismGuards :: [Exp] -> String
-prismGuards [] = ""
+prismGuards :: Ident -> [Exp] -> String
+prismGuards _ [] = ""
 
-prismGuards (h:t) = 
-  "(" ++ prismShowExp h ++ ")\n" ++
+prismGuards senderIdent (h:t) = 
+  "(" ++ prismShowExp senderIdent h ++ ")\n" ++
     foldl 
-      (\acc exp -> acc ++ "  & (" ++ (prismShowExp exp) ++ ")\n")
+      (\acc exp -> acc ++ "  & (" ++ (prismShowExp senderIdent exp) ++ ")\n")
       ""
       t
 
-prismUpdates :: [Branch] -> String
-prismUpdates [] = ""
+prismUpdates :: Ident -> [Branch] -> String
+prismUpdates _ [] = ""
 
-prismUpdates [([], _)] = "    true"
+prismUpdates _ [([], _)] = "    true"
 
-prismUpdates [updates] = 
-  "    " ++ prismUpdatesDeterm updates
+prismUpdates senderIdent [updates] = 
+  "    " ++ prismUpdatesDeterm senderIdent updates
 
-prismUpdates (h:t) = 
+prismUpdates senderIdent (h:t) = 
   let n = length (h:t) in
     foldl
       (\acc updates -> acc ++ " +\n    1/" ++ (show n) ++ ": " ++
-        (prismUpdatesDeterm updates))
-      ("    1/" ++ (show n) ++ ": " ++ (prismUpdatesDeterm h))
+        (prismUpdatesDeterm senderIdent updates))
+      ("    1/" ++ (show n) ++ ": " ++ (prismUpdatesDeterm senderIdent h))
       t
 
-prismUpdatesDeterm :: Branch -> String
-prismUpdatesDeterm ((h:t), liv) = 
+prismUpdatesDeterm :: Ident -> Branch -> String
+prismUpdatesDeterm senderIdent ((h:t), liv) = 
   --(show liv) ++
-  (prismUpdate h) ++ 
+  (prismUpdate senderIdent h) ++ 
   foldl
-    (\acc update -> acc ++ "\n  & " ++ (prismUpdate update))
+    (\acc update -> acc ++ "\n  & " ++ (prismUpdate senderIdent update))
     ""
     t
 
-prismUpdate :: (Ident, Exp) -> String
-prismUpdate (ident, exp) =
-  "(" ++ (unident ident) ++ "' = " ++ (prismShowExp exp) ++ ")"
+prismUpdate :: Ident -> (Ident, Exp) -> String
+prismUpdate senderIdent (ident, exp) =
+  "(" ++ (unident ident) ++ "' = " ++ (prismShowExp senderIdent exp) ++ ")"
 
 
 -- PRISM SHOW --
@@ -181,76 +182,76 @@ prismShowType TBool = "bool"
 
 -- TODO: porównanie w ver jest =, a w sol jest ==. Ale chyba będą i tak dwie różne
 -- funkcje w CompilerEth i CompilerPrism. Wspólny chcemy mieć tylko typ Exp.
-prismShowExp :: Exp -> String
+prismShowExp :: Ident -> Exp -> String
 
-prismShowExp (EEq e1 e2) = 
-  prismShowExp e1 ++ " = " ++ prismShowExp e2
+prismShowExp senderIdent (EEq e1 e2) = 
+  prismShowExp senderIdent e1 ++ " = " ++ prismShowExp senderIdent e2
 
-prismShowExp (ENe e1 e2) = 
-  prismShowExp e1 ++ " != " ++ prismShowExp e2
+prismShowExp senderIdent (ENe e1 e2) = 
+  prismShowExp senderIdent e1 ++ " != " ++ prismShowExp senderIdent e2
 
-prismShowExp (EAnd e1 e2) = 
-  "(" ++ prismShowExp e1 ++ " & " ++ prismShowExp e2 ++ ")"
+prismShowExp senderIdent (EAnd e1 e2) = 
+  "(" ++ prismShowExp senderIdent e1 ++ " & " ++ prismShowExp senderIdent e2 ++ ")"
 
-prismShowExp (EOr e1 e2) =
-  "(" ++ prismShowExp e1 ++ " | " ++ prismShowExp e2 ++ ")"
+prismShowExp senderIdent (EOr e1 e2) =
+  "(" ++ prismShowExp senderIdent e1 ++ " | " ++ prismShowExp senderIdent e2 ++ ")"
   
-prismShowExp (EGt e1 e2) = 
-  prismShowExp e1 ++ " > " ++ prismShowExp e2
+prismShowExp senderIdent (EGt e1 e2) = 
+  prismShowExp senderIdent e1 ++ " > " ++ prismShowExp senderIdent e2
 
-prismShowExp (EGe e1 e2) = 
-  prismShowExp e1 ++ " >= " ++ prismShowExp e2
+prismShowExp senderIdent (EGe e1 e2) = 
+  prismShowExp senderIdent e1 ++ " >= " ++ prismShowExp senderIdent e2
 
-prismShowExp (ELt e1 e2) = 
-  prismShowExp e1 ++ " < " ++ prismShowExp e2
+prismShowExp senderIdent (ELt e1 e2) = 
+  prismShowExp senderIdent e1 ++ " < " ++ prismShowExp senderIdent e2
 
-prismShowExp (ELe e1 e2) = 
-  prismShowExp e1 ++ " <= " ++ prismShowExp e2
+prismShowExp senderIdent (ELe e1 e2) = 
+  prismShowExp senderIdent e1 ++ " <= " ++ prismShowExp senderIdent e2
 
-prismShowExp (EAdd e1 e2) =
-  prismShowExp e1 ++ " + " ++ prismShowExp e2
+prismShowExp senderIdent (EAdd e1 e2) =
+  prismShowExp senderIdent e1 ++ " + " ++ prismShowExp senderIdent e2
 
-prismShowExp (ESub e1 e2) =
-  prismShowExp e1 ++ " - " ++ prismShowExp e2
+prismShowExp senderIdent (ESub e1 e2) =
+  prismShowExp senderIdent e1 ++ " - " ++ prismShowExp senderIdent e2
 
-prismShowExp (EMul e1 e2) =
-  prismShowExp e1 ++ " * " ++ prismShowExp e2
+prismShowExp senderIdent (EMul e1 e2) =
+  prismShowExp senderIdent e1 ++ " * " ++ prismShowExp senderIdent e2
 
-prismShowExp (EDiv e1 e2) =
-  "floor(" ++ prismShowExp e1 ++ " / " ++ prismShowExp e2 ++ ")"
+prismShowExp senderIdent (EDiv e1 e2) =
+  "floor(" ++ prismShowExp senderIdent e1 ++ " / " ++ prismShowExp senderIdent e2 ++ ")"
 
-prismShowExp (EMod e1 e2) =
-  "mod(" ++ prismShowExp e1 ++ ", " ++ prismShowExp e2 ++ ")"
+prismShowExp senderIdent (EMod e1 e2) =
+  "mod(" ++ prismShowExp senderIdent e1 ++ ", " ++ prismShowExp senderIdent e2 ++ ")"
 
-prismShowExp (ENot e1) =
-  "!" ++ prismShowExp e1
+prismShowExp senderIdent (ENot e1) =
+  "!" ++ prismShowExp senderIdent e1
 
-prismShowExp (ENeg e1) =
-  "-" ++ prismShowExp e1
+prismShowExp senderIdent (ENeg e1) =
+  "-" ++ prismShowExp senderIdent e1
 
 -- TODO: szukać dokładniej, jeśli nazwy lok/glob się przekrywają
-prismShowExp (EVar ident) =
+prismShowExp _ (EVar ident) =
   unident ident
 
-prismShowExp (EInt x) = 
+prismShowExp _ (EInt x) = 
   show x
 
-prismShowExp (EStr s) =
+prismShowExp _ (EStr s) =
   s
 
---prismShowExp ESender =
---  sSender
+prismShowExp senderIdent ESender =
+  unident senderIdent
 
-prismShowExp EValue =
+prismShowExp _ EValue =
   sValue
 
-prismShowExp ETrue = 
+prismShowExp _ ETrue = 
   "true"
 
-prismShowExp EFalse = 
+prismShowExp _ EFalse = 
   "false"
 
 -- TODO: czy to jest w ogóle używane? Robi coś dziwnego
-prismShowExp (ECall ident args) =
+prismShowExp senderIdent (ECall ident args) =
   unident ident
 

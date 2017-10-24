@@ -9,11 +9,13 @@ USER1_BALANCE_INIT = 0;
 MAX_VALUE = 5;
 
 contract RPS {
+/*
   function get_payment() {
     if ((((contract_balance > 0) && is_signed[msg.sender]) && is_opened[msg.sender]) && (randM[msg.sender] == randU[msg.sender])) {
       msg.sender.send(1);
     }
   }
+*/
 }
 
 communication {
@@ -27,11 +29,11 @@ communication {
   uint(10) products_sent;
 
   function ask_product() {
-    if (msg.sender == "U") {
+    if (msg.sender == "U") { // "U"
       product_asked = true;
     }
   }
-
+/*
   function ask_payment(random_uint(3) cmt) {
     if (!is_committed[msg.sender]) {
       commit[msg.sender] = cmt;
@@ -75,9 +77,11 @@ communication {
       product_asked = false;
     }
   }
+*/
 }
 
 scenario U {
+/*
   uint(3) rand0;
   bool endU;
   uint(3) i0;
@@ -97,6 +101,7 @@ scenario U {
     i0 = i0 + 1;
   }
   endU = true;
+*/
 }
 
 scenario M {
@@ -105,7 +110,7 @@ scenario M {
   uint(3) targetBalance;
   uint(3) i1;
   i1 = 0;
-
+/*
   while (i1 < 2) {
     rand1 = random_lazy(3);
     wait(product_asked);
@@ -131,5 +136,6 @@ scenario M {
     i1 = i1 + 1;
   }
   endM = true;
+*/
 }
 
