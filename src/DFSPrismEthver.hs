@@ -45,25 +45,26 @@ verDFSStm modifyModule (SBlock (stmH:stmT)) trs = do
     verDFSStm modifyModule (SBlock stmT)
 
 verDFSStm modifyModule (SAss varIdent value) oldTrs = do
-  -- TODO: evaluateExp?
-  --newTrs <- applyToTrList (evaluateExp modifyModule value) oldTrs
-  applyToTrList (addAssToTr varIdent value) oldTrs
+  newTrsAndVals <- applyToList (evaluateArray value) oldTrs
+  applyToList 
+    (\(tr, val) -> addAssToTr varIdent val tr) 
+    newTrsAndVals
 
 verDFSStm modifyModule (SArrAss arrIdent index value) oldTrs = do
   -- TODO: evaluateExp?
-  --newTrs <- applyToTrList (evaluateExp modifyModule index) oldTrs >>= 
-  --  applyToTrList (evaluateExp modifyModule value)
-  applyToTrList (addArrAssToTr arrIdent index value) oldTrs
+  --newTrs <- applyToList (evaluateExp modifyModule index) oldTrs >>= 
+  --  applyToList (evaluateExp modifyModule value)
+  applyToList (addArrAssToTr arrIdent index value) oldTrs
 
 verDFSStm modifyModule (SIf cond ifBlock) trs = do
   -- TODO: evaluateExp?
-  --condTranss <- applyToTrList (evaluateExp modifyModule cond) trs
-  applyToTrList (verDFSIf modifyModule cond ifBlock) trs
+  --condTranss <- applyToList (evaluateExp modifyModule cond) trs
+  applyToList (verDFSIf modifyModule cond ifBlock) trs
 
 verDFSStm modifyModule (SIfElse cond ifBlock elseBlock) trs = do
   -- TODO: evaluateExp?
-  --condTranss <- applyToTrList (evaluateExp modifyModule cond) trs
-  applyToTrList (verDFSIfElse modifyModule cond ifBlock elseBlock) trs
+  --condTranss <- applyToList (evaluateExp modifyModule cond) trs
+  applyToList (verDFSIfElse modifyModule cond ifBlock elseBlock) trs
 
 verDFSStm modifyModule (SWhile _ _) _ = do
   error $ "while loop not supported in verDFS"
@@ -149,9 +150,6 @@ verDFSIf :: ModifyModuleType -> Exp -> Stm -> Trans -> VerRes [Trans]
 verDFSIf modifyModule cond ifBlock tr@(trName, guards, updates) = do
   afterCondTranss <- applyCond (makeLeft cond) (trName, guards, updates)
   afterBlockTranss <- verDFSStm modifyModule ifBlock afterCondTranss
-  
-  -- TODO: podgląd po samym cond, bez stms
-  --return afterCondTranss
   
   return $ map
     (\(trName, guards, updates) -> (trName, guards, map removeHeadLiv updates))

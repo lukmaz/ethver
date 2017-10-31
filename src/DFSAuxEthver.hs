@@ -11,19 +11,19 @@ import CodePrismEthver
 import ConstantsEthver
 import WorldPrismEthver
 
--------------------
--- applyToTrList --
--------------------
+-----------------
+-- applyToList --
+-----------------
 
-applyToTrList :: (Trans -> VerRes [Trans]) -> [Trans] -> VerRes [Trans]
-applyToTrList fun trs = do
+applyToList :: (a -> VerRes [b]) -> [a] -> VerRes [b]
+applyToList fun trs = do
   foldM
     (\acc tr -> do
       newTrs <- fun tr
       return $ acc ++ newTrs
-    )   
-    []  
-    trs 
+    )
+    []
+    trs
 
 -------------------------
 -- deduction of values --
@@ -74,6 +74,25 @@ valueFromCond varIdent cond =
         _ -> Nothing
     _ -> Nothing
 
+-------------------------------------------------
+-- evaluateArray --------------------------------
+-- Similar to applyCond. If value is an EArray --
+-- then it expends it to a separate Trans  ------
+-- and a corresponding EVar for every index. ----
+-------------------------------------------------
+
+evaluateArray :: Exp -> Trans -> VerRes [(Trans, Exp)]
+
+evaluateArray (EArray ident (EInt intIndex)) tr =
+  return [(tr, EVar $ Ident $ (unident ident) ++ "_" ++ (show intIndex))]
+
+
+
+-- applyCondToGuards ...
+  
+
+
+
 --------------------------------------------------------
 -- applyCond -------------------------------------------
 -- applies cond to a Trans. ----------------------------
@@ -105,12 +124,6 @@ applyCond (EEq (EVar varIdent) value) tr =
 applyCond (ENe (EVar varIdent) value) tr =
   applyEqOrNeCond (ENe (EVar varIdent) value) tr
 
-
-
-
-
-
-
 -- EEq and ENe between ESender and anything
 
 applyCond (EEq ESender value) tr =
@@ -120,13 +133,7 @@ applyCond (ENe ESender value) tr =
   applySenderEqOrNeCond (ENe ESender value) tr
 
 
-
-
-
-
-
-
-
+-- TODO? (Nowy EArray)
 
 -- EEq and ENe between EArray and anything
 
@@ -136,10 +143,13 @@ applyCond (EEq (EArray arrIdent index) value) tr = do
 applyCond (ENe (EArray arrIdent index) value) tr =
   applyEqOrNeCond (ENe (EArray arrIdent index) value) tr
 
+
+
+
 -- EAnd, EOr
 
 applyCond (EAnd cond1 cond2) tr = do
-  applyCond (makeLeft cond1) tr >>= applyToTrList (applyCond (makeLeft cond2))
+  applyCond (makeLeft cond1) tr >>= applyToList (applyCond (makeLeft cond2))
 
 applyCond (EOr cond1 cond2) tr = do
   if (isLeftComp $ makeLeft cond1) && (isLeftComp $ makeLeft cond2)

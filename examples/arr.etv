@@ -1,0 +1,48 @@
+user "U";
+user "M";
+
+CONTRACT_BALANCE_MAX = 4;
+CONTRACT_BALANCE_INIT = 2;
+USER_BALANCE_MAX = 4;
+USER0_BALANCE_INIT = 0;
+USER1_BALANCE_INIT = 0;
+MAX_VALUE = 1;
+
+
+contract RPS {
+}
+
+communication {
+  
+  uint(2) x;
+  uint(2) y;
+  uint(2) tab[2];
+ 
+  
+  function T1() {
+    x = tab[1];
+  } 
+/*
+  function T2() {
+    x = tab[y];
+  }
+
+  function T3() {
+    x = tab[msg.sender];
+  }
+
+  function T4() {
+    tab[1] = x;
+  }
+
+  function T5() {
+    tab[msg.sender] = x;
+  }
+  */
+}
+
+scenario U {
+}
+
+scenario M {
+}
