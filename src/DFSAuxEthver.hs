@@ -11,6 +11,12 @@ import CodePrismEthver
 import ConstantsEthver
 import WorldPrismEthver
 
+
+---
+-- TODO: TU TEZ MOZNA WYWALIC VerRes?
+---
+
+
 -----------------
 -- applyToList --
 -----------------
@@ -87,6 +93,7 @@ valueFromCond varIdent cond =
 -- evaluateArray :: Exp -> Trans -> VerRes [(Trans, Exp)]
 
 -- TO CHYBA MA SENS:
+-- Chyba bedzie mozna wywalic VerRes, ale na razie zostaje
 evaluateArray :: Exp -> Trans -> VerRes [(Trans, [Exp])]
 evaluateArray arr@(EArray arrIdent index) tr@(trName, guards, updates) = 
   case index of

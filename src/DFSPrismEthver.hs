@@ -35,6 +35,11 @@ verDFSFun modifyModule (Fun funName args stms) = do
 -- verDFSStm --
 ---------------
 
+
+-------------
+-- TODO: Tu tez mozna wywalic VerRes? 
+-------------
+
 verDFSStm :: ModifyModuleType -> Stm -> [Trans] -> VerRes ([Trans])
 
 verDFSStm modifyModule (SBlock []) trs = do
@@ -44,15 +49,25 @@ verDFSStm modifyModule (SBlock (stmH:stmT)) trs = do
   verDFSStm modifyModule stmH trs >>= 
     verDFSStm modifyModule (SBlock stmT)
 
+----
+
+---------------------------------
+-- TODO OOOOOOOOOOOOOOOOOOOOOO --
+---------------------------------
+
+----
+
+-- For a moment it returns only single Trans (and works for only simple ass)
+
 verDFSStm modifyModule (SAss varIdent value) oldTrs = do
   newTrsAndVals <- applyToList (evaluateArray value) oldTrs
   applyToList 
-    (\(tr, vals) -> addSimpleAssesToTr 
+    (\(tr, vals) -> return [addSimpleAssesToTr 
       (map 
         (\val -> (varIdent, val))
         vals
       ) 
-      tr
+      tr]
     )
     newTrsAndVals
 
@@ -114,12 +129,17 @@ addAssToTr varIdent value (trName, guards, updates) = do
   --TODO: determineExp?
   --let determinedValue = determineExp value (trName, guards, updates)
   case value of
-    ERand (EInt range) -> do
-      newUpdates <- addRandomAssToUpdates varIdent range updates
-      return [(trName, guards, newUpdates)]
-    _ -> do
-      newUpdates <- addAssToUpdates varIdent value updates
-      return [(trName, guards, newUpdates)]
+    ERand (EInt range) ->
+      let newUpdates = addRandomAssToUpdates varIdent range updates
+      in return [(trName, guards, newUpdates)]
+    _ -> 
+      let newUpdates = addAssToUpdates varIdent value updates
+      in return [(trName, guards, newUpdates)]
+
+-----------------
+-- TODO: TO CHYBA TEZ DO WYWALENIA:
+-------------------------------
+
 
 -- TODO: To, żeby działało, musi być jakieś determineExp. Ale nie może być z Tr.
 -- Pewnie "addArrAssToBranch"?
@@ -136,31 +156,31 @@ addArrAssToTr arrIdent index value tr = do
       error $ "Cannot determine var name from array name after evaluation: " ++ (show $ EArray arrIdent index)
 
 -- adds a non-random assignment to updates
-addAssToUpdates :: Ident -> Exp -> [Branch] -> VerRes [Branch]
+addAssToUpdates :: Ident -> Exp -> [Branch] -> [Branch]
 addAssToUpdates varIdent value updates = do
-  foldM
-    (\acc branch -> do
-      partialBranch <- addAssToUpdatesBranch varIdent value branch
-      return $ partialBranch:acc
+  foldl
+    (\acc branch ->
+      let partialBranch = addAssToUpdatesBranch varIdent value branch
+      in partialBranch:acc
     )
     []
     updates
 
 -- adds a random assignment to updates
-addRandomAssToUpdates :: Ident -> Integer -> [Branch] -> VerRes [Branch]
-addRandomAssToUpdates varIdent range updates = do
-  foldM
-    (\acc val -> do
-      partialBranches <- addAssToUpdates varIdent (EInt val) updates
-      return $ partialBranches ++ acc
+addRandomAssToUpdates :: Ident -> Integer -> [Branch] -> [Branch]
+addRandomAssToUpdates varIdent range updates =
+  foldl
+    (\acc val ->
+      let partialBranches = addAssToUpdates varIdent (EInt val) updates
+      in partialBranches ++ acc
     )
     []
     [0..(range - 1)]
 
 -- adds a particular assignment to an updates branch
-addAssToUpdatesBranch :: Ident -> Exp -> Branch -> VerRes Branch
+addAssToUpdatesBranch :: Ident -> Exp -> Branch -> Branch
 addAssToUpdatesBranch varIdent value (br, Dead:t) = 
-  return (br, Dead:t)
+  (br, Dead:t)
 
 addAssToUpdatesBranch varIdent value (br, Alive:t) = 
   let 
@@ -170,7 +190,7 @@ addAssToUpdatesBranch varIdent value (br, Alive:t) =
       list
     newBranch old = (varIdent, value):(deleteOld old)
   in
-    return $ applyToBranch newBranch (br, Alive:t)
+    applyToBranch newBranch (br, Alive:t)
 
 --------
 -- If --
