@@ -47,7 +47,13 @@ verDFSStm modifyModule (SBlock (stmH:stmT)) trs = do
 verDFSStm modifyModule (SAss varIdent value) oldTrs = do
   newTrsAndVals <- applyToList (evaluateArray value) oldTrs
   applyToList 
-    (\(tr, val) -> addAssToTr varIdent val tr) 
+    (\(tr, vals) -> addSimpleAssesToTr 
+      (map 
+        (\val -> (varIdent, val))
+        vals
+      ) 
+      tr
+    )
     newTrsAndVals
 
 verDFSStm modifyModule (SArrAss arrIdent index value) oldTrs = do
@@ -73,6 +79,31 @@ verDFSStm modifyModule (SWhile _ _) _ = do
 ---------
 -- Ass --
 ---------
+
+-- TODO: Nie wiem, czy problemu z wieloma transami nie rozwiaze poziom wyzej
+-- W zwiazku z tym na tym poziomie robilbym tylko addAssToBranch
+
+-- given a list of assignment of the same size as number of branches in trans
+-- adds the assignments to the corresponding branches
+
+-- TODO:
+--addAssesToTr :: [(Ident, Exp)] -> Trans -> VerRes [Trans]
+
+
+-- adds a list of assignments to a Trans
+-- Assumption 1: #list = #branches in Trans
+-- Assumption 2: simple asses <=> no need for multi-branches/multi-transes
+addSimpleAssesToTr :: [(Ident, Exp)] -> Trans -> Trans
+addSimpleAssesToTr asses tr@(trName, guards, updates) = 
+  (trName, guards, map
+    (\((varName, value), branch) -> addAssToUpdatesBranch varName value branch)
+    (zip asses updates)
+  )
+
+-- TODO: TO JEST CHYBA DO WYWALENIA
+-------------------------------------
+
+-- Bo moze byc inny ass w kazdym branchu. Zamiast tego addAssesToTr
 
 -- adds an assignment to a single transition
 -- assumes value is evaluated

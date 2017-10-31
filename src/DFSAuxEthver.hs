@@ -79,14 +79,36 @@ valueFromCond varIdent cond =
 -- Similar to applyCond. If value is an EArray --
 -- then it expends it to a separate Trans  ------
 -- and a corresponding EVar for every index. ----
+-- Size of resulting list of varIdents is equal -
+-- to number of branches in each trans. ---------
 -------------------------------------------------
 
-evaluateArray :: Exp -> Trans -> VerRes [(Trans, Exp)]
+-- BEZ SENSU: Dla różnych branchy może wynikać różny varIdent
+-- evaluateArray :: Exp -> Trans -> VerRes [(Trans, Exp)]
 
-evaluateArray (EArray ident (EInt intIndex)) tr =
-  return [(tr, EVar $ Ident $ (unident ident) ++ "_" ++ (show intIndex))]
+-- TO CHYBA MA SENS:
+evaluateArray :: Exp -> Trans -> VerRes [(Trans, [Exp])]
+evaluateArray arr@(EArray arrIdent index) tr@(trName, guards, updates) = 
+  case index of
+    EInt intIndex ->
+      let newIndex = EVar $ Ident $ (unident arrIdent) ++ "_" ++ (show intIndex)
+      in return [(tr, map (\_ -> newIndex) updates)]
+    {-
+    EVar indIdent -> do
+      deducedValues = map (deduceVarValueFromBranch varIdent) updates
+      if not $ elem Nothing deducedValues
+        then -- value of indIdent determined in every branch
+          let
+            branches
+      -}    
 
 
+
+    _ ->
+      error $ "This type of array not supported in evaluateArray: " ++ (show arr)
+
+evaluateArray (EInt x) tr@(_, _, updates) = 
+  return [(tr, map (\_ -> EInt x) updates)]
 
 -- applyCondToGuards ...
   
@@ -101,20 +123,6 @@ evaluateArray (EArray ident (EInt intIndex)) tr =
 --------------------------------------------------------
 
 applyCond :: Exp -> Trans -> VerRes [Trans]
-
--- TODO (old below)
-{-
-applyCond (EEq (EInt x) (EInt y)) tr@(trName, guards, updates) = do
-  if (x == y)
-    then return [tr]
-    else return []
-
--- TODO
-applyCond (ENe (EInt x) (EInt y)) tr@(trName, guards, updates) = do
-  if (x /= y)
-    then return [tr]
-    else return []
--}
 
 -- EEq and ENe between EVar and anything
 
