@@ -82,35 +82,24 @@ valueFromCond varIdent cond =
 
 -------------------------------------------------
 -- evaluateArray --------------------------------
+-- TODO: not implemented yet. -------------------
+
 -- Similar to applyCond. If value is an EArray --
--- then it expends it to a separate Trans  ------
+-- then it expands it to a separate Trans  ------
 -- and a corresponding EVar for every index. ----
 -- Size of resulting list of varIdents is equal -
 -- to number of branches in each trans. ---------
 -------------------------------------------------
 
--- BEZ SENSU: Dla różnych branchy może wynikać różny varIdent
+-- BEZ SENSU (?): Dla różnych branchy może wynikać różny varIdent
 -- evaluateArray :: Exp -> Trans -> VerRes [(Trans, Exp)]
 
--- TO CHYBA MA SENS:
--- Chyba bedzie mozna wywalic VerRes, ale na razie zostaje
 evaluateArray :: Exp -> Trans -> VerRes [(Trans, [Exp])]
 evaluateArray arr@(EArray arrIdent index) tr@(trName, guards, updates) = 
   case index of
     EInt intIndex ->
-      let newIndex = EVar $ Ident $ (unident arrIdent) ++ "_" ++ (show intIndex)
-      in return [(tr, map (\_ -> newIndex) updates)]
-    {-
-    EVar indIdent -> do
-      deducedValues = map (deduceVarValueFromBranch varIdent) updates
-      if not $ elem Nothing deducedValues
-        then -- value of indIdent determined in every branch
-          let
-            branches
-      -}    
-
-
-
+      let newIdent = EVar $ Ident $ (unident arrIdent) ++ "_" ++ (show intIndex)
+      in return [(tr, map (\_ -> newIdent) updates)]
     _ ->
       error $ "This type of array not supported in evaluateArray: " ++ (show arr)
 

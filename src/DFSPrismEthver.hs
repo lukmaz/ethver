@@ -37,7 +37,7 @@ verDFSFun modifyModule (Fun funName args stms) = do
 
 
 -------------
--- TODO: Tu tez mozna wywalic VerRes? 
+-- TODO: Tu VerRes musi zostać, zeby dedukować typ zmiennej
 -------------
 
 verDFSStm :: ModifyModuleType -> Stm -> [Trans] -> VerRes ([Trans])
@@ -51,9 +51,9 @@ verDFSStm modifyModule (SBlock (stmH:stmT)) trs = do
 
 ----
 
----------------------------------
--- TODO OOOOOOOOOOOOOOOOOOOOOO --
----------------------------------
+---------------------------------------------
+-- TODO OOOOOOOOOOOOOOOOOOOOOO (dlaczego?) --
+---------------------------------------------
 
 ----
 
@@ -146,14 +146,16 @@ addAssToTr varIdent value (trName, guards, updates) = do
 -- simlarly, assumes index and value are evaluated
 addArrAssToTr :: Ident -> Exp -> Exp -> Trans -> VerRes [Trans]
 addArrAssToTr arrIdent index value tr = do
+  error $ "addArrAssToTr: Arrays not supported.\n"
   -- TODO: determineExp?
   --case determineExp (EArray arrIdent index) tr of
   -- Linijka poniżej jest oczywiście bez sensu.
-  case (EArray arrIdent index) of
+  {-case (EArray arrIdent index) of
     EVar varIdent ->
       addAssToTr varIdent value tr
     _ ->
       error $ "Cannot determine var name from array name after evaluation: " ++ (show $ EArray arrIdent index)
+  -}
 
 -- adds a non-random assignment to updates
 addAssToUpdates :: Ident -> Exp -> [Branch] -> [Branch]
