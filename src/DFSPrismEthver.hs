@@ -35,10 +35,7 @@ verDFSFun modifyModule (Fun funName args stms) = do
 ---------------
 
 
--------------
--- TODO: Tu VerRes musi zostać, zeby dedukować typ zmiennej
--------------
-
+-- Tu VerRes musi zostać, zeby dedukować typ zmiennej
 verDFSStm :: ModifyModuleType -> Stm -> [Trans] -> VerRes [Trans]
 
 verDFSStm modifyModule (SBlock []) trs = do
