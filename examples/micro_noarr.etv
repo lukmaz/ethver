@@ -52,12 +52,6 @@ communication {
 */
 
   function ask_payment(random_uint(3) cmt) {
-    // TODO: sztuczne:
-    products_sent = 1;
-
-
-
-
 /*
     if (msg.sender == 0) {
       if (!is_committed0) {

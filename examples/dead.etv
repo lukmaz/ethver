@@ -10,6 +10,9 @@ MAX_VALUE = 1;
 
 
 contract RPS {
+ function get_payment() {
+   0.send(1);
+ }
 }
 
 communication {
