@@ -18,7 +18,6 @@ communication {
   uint(3) y;
   uint(2) z;
  
-  
   // TUTAJ MOZNA ZOPTYMALIZOWAC GUARDSY
   function T1() {
     y = random(3);
@@ -32,7 +31,6 @@ communication {
       z = 2;
   }
   
-   
   function T2() {
     x = random(2);
     if (x == 1)
@@ -60,7 +58,6 @@ communication {
       z = 1;
   }
   
-  
   function T5() {
     x = random(2);
     if ((x == 1) || (z == 1)) {
@@ -77,8 +74,7 @@ communication {
       }
     }
   }
-  
-  
+
   function T7() {
     x = random(2);
     if (x == 1) {
@@ -99,7 +95,6 @@ communication {
       y = 2; 
     }
   }
- 
 }
 
 scenario U {

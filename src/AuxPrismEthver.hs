@@ -58,6 +58,9 @@ makeLeft (ENe v (EArray i e)) = ENe (EArray i e) v
 makeLeft (ENot exp) = ENot (makeLeft exp)
 
 makeLeft (EArray ident index) = EArray ident index
+
+makeLeft (EOr e1 e2) = EOr (makeLeft e1) (makeLeft e2)
+makeLeft (EAnd e1 e2) = EAnd (makeLeft e1) (makeLeft e2)
 -- negate cond --
 
 negateExp :: Exp -> Exp

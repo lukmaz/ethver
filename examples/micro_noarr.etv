@@ -9,18 +9,20 @@ USER1_BALANCE_INIT = 0;
 MAX_VALUE = 5;
 
 contract RPS {
-
   function get_payment() {
-    if (msg.sender == 0) {
-      if ((((contract_balance > 0) && is_signed0) && is_opened0) && (randM0 == randU0)) {
+    //if (msg.sender == 0) {
+    //  if ((((contract_balance > 0) && is_signed0) && is_opened0) && (randM0 == randU0)) {
         0.send(1);
-      }
-    }
+    //  }
+    //}
+
+    /*
     if (msg.sender == 1) {
       if ((((contract_balance > 0) && is_signed1) && is_opened1) && (randM1 == randU1)) {
         1.send(1);
       }
     }
+    */
   }
 
 }
@@ -41,13 +43,22 @@ communication {
   uint(3) randU1;
   uint(10) products_sent;
 
+/*
   function ask_product() {
-    if (msg.sender == "U") {
+    if (msg.sender == 0) {
       product_asked = true;
     }
   }
-  
+*/
+
   function ask_payment(random_uint(3) cmt) {
+    // TODO: sztuczne:
+    products_sent = 1;
+
+
+
+
+/*
     if (msg.sender == 0) {
       if (!is_committed0) {
         commit0 = cmt;
@@ -68,8 +79,10 @@ communication {
     if ((msg.sender == 1) && (products_sent + 1 < 10)) {
       products_sent = products_sent + 1;
     }
+*/
   }
-  
+
+/*
   function send_ticket(uint(2) merchant, uint(3) r) {
     if (msg.sender == 0) {
       if (merchant == 0) {
@@ -127,6 +140,7 @@ communication {
       }
     }
   }
+  */
 }
 
 scenario U {
@@ -135,7 +149,7 @@ scenario U {
   bool endU;
   uint(3) i0;
   i0 = 0;
-
+/*
   while (i0 < 2) {
     wait(!product_asked);
     ask_product.sendCommunication();
@@ -150,7 +164,7 @@ scenario U {
     i0 = i0 + 1;
   }
   endU = true;
-
+*/
 }
 
 scenario M {
@@ -160,6 +174,7 @@ scenario M {
   uint(3) i1;
   i1 = 0;
 
+/*
   while (i1 < 2) {
     rand1 = random_lazy(3);
     wait(product_asked);
@@ -185,6 +200,6 @@ scenario M {
     i1 = i1 + 1;
   }
   endM = true;
-
+*/
 }
 

@@ -40,7 +40,7 @@ verDFSFun modifyModule (Fun funName args stms) = do
 -- TODO: Tu VerRes musi zostać, zeby dedukować typ zmiennej
 -------------
 
-verDFSStm :: ModifyModuleType -> Stm -> [Trans] -> VerRes ([Trans])
+verDFSStm :: ModifyModuleType -> Stm -> [Trans] -> VerRes [Trans]
 
 verDFSStm modifyModule (SBlock []) trs = do
   return trs
@@ -59,7 +59,8 @@ verDFSStm modifyModule (SBlock (stmH:stmT)) trs = do
 
 -- For a moment it returns only single Trans (and works for only simple ass)
 
-verDFSStm modifyModule (SAss varIdent value) oldTrs = do
+-- OLD: wersja z evaluateArray:
+{-verDFSStm modifyModule (SAss varIdent value) oldTrs = do
   newTrsAndVals <- applyToList (evaluateArray value) oldTrs
   applyToList 
     (\(tr, vals) -> return [addSimpleAssesToTr 
@@ -70,6 +71,17 @@ verDFSStm modifyModule (SAss varIdent value) oldTrs = do
       tr]
     )
     newTrsAndVals
+-}
+
+-- nowe TODO: prawdopodobnie nie obsługuje bardziej skomplikowanych assow
+verDFSStm modifyModule (SAss varIdent value) oldTrs = do
+  --TODO: tak powinno być, ale nie działa z randomami
+  {-applyToList 
+    (\tr -> return [addSimpleAssesToTr [(varIdent, value)] tr]) 
+    oldTrs
+  -}
+  -- TODO: tak działa z randomami
+  applyToList (addAssToTr varIdent value) oldTrs
 
 verDFSStm modifyModule (SArrAss arrIdent index value) oldTrs = do
   -- TODO: evaluateExp?
@@ -90,109 +102,12 @@ verDFSStm modifyModule (SIfElse cond ifBlock elseBlock) trs = do
 verDFSStm modifyModule (SWhile _ _) _ = do
   error $ "while loop not supported in verDFS"
 
+verDFSStm modifyModule (SSend receiver amount) trs = do
+  case receiver of
+    EInt receiverNumber -> do
+      let receiverBalance = Ident $ sBalancePrefix ++ (show receiverNumber)
+      applyToList (dfsTransferFromContract receiverBalance amount) trs
   
----------
--- Ass --
----------
-
--- TODO: Nie wiem, czy problemu z wieloma transami nie rozwiaze poziom wyzej
--- W zwiazku z tym na tym poziomie robilbym tylko addAssToBranch
-
--- given a list of assignment of the same size as number of branches in trans
--- adds the assignments to the corresponding branches
-
--- TODO:
---addAssesToTr :: [(Ident, Exp)] -> Trans -> VerRes [Trans]
-
-
--- adds a list of assignments to a Trans
--- Assumption 1: #list = #branches in Trans
--- Assumption 2: simple asses <=> no need for multi-branches/multi-transes
-addSimpleAssesToTr :: [(Ident, Exp)] -> Trans -> Trans
-addSimpleAssesToTr asses tr@(trName, guards, updates) = 
-  (trName, guards, map
-    (\((varName, value), branch) -> addAssToUpdatesBranch varName value branch)
-    (zip asses updates)
-  )
-
--- TODO: TO JEST CHYBA DO WYWALENIA
--------------------------------------
-
--- Bo moze byc inny ass w kazdym branchu. Zamiast tego addAssesToTr
-
--- adds an assignment to a single transition
--- assumes value is evaluated
--- male TODO: to jest sztuczne, że zwraca [Trans], a nie Trans
-addAssToTr :: Ident -> Exp -> Trans -> VerRes [Trans]
-
-addAssToTr varIdent value (trName, guards, updates) = do
-  --TODO: determineExp?
-  --let determinedValue = determineExp value (trName, guards, updates)
-  case value of
-    ERand (EInt range) ->
-      let newUpdates = addRandomAssToUpdates varIdent range updates
-      in return [(trName, guards, newUpdates)]
-    _ -> 
-      let newUpdates = addAssToUpdates varIdent value updates
-      in return [(trName, guards, newUpdates)]
-
------------------
--- TODO: TO CHYBA TEZ DO WYWALENIA:
--------------------------------
-
-
--- TODO: To, żeby działało, musi być jakieś determineExp. Ale nie może być z Tr.
--- Pewnie "addArrAssToBranch"?
--- simlarly, assumes index and value are evaluated
-addArrAssToTr :: Ident -> Exp -> Exp -> Trans -> VerRes [Trans]
-addArrAssToTr arrIdent index value tr = do
-  error $ "addArrAssToTr: Arrays not supported.\n"
-  -- TODO: determineExp?
-  --case determineExp (EArray arrIdent index) tr of
-  -- Linijka poniżej jest oczywiście bez sensu.
-  {-case (EArray arrIdent index) of
-    EVar varIdent ->
-      addAssToTr varIdent value tr
-    _ ->
-      error $ "Cannot determine var name from array name after evaluation: " ++ (show $ EArray arrIdent index)
-  -}
-
--- adds a non-random assignment to updates
-addAssToUpdates :: Ident -> Exp -> [Branch] -> [Branch]
-addAssToUpdates varIdent value updates = do
-  foldl
-    (\acc branch ->
-      let partialBranch = addAssToUpdatesBranch varIdent value branch
-      in partialBranch:acc
-    )
-    []
-    updates
-
--- adds a random assignment to updates
-addRandomAssToUpdates :: Ident -> Integer -> [Branch] -> [Branch]
-addRandomAssToUpdates varIdent range updates =
-  foldl
-    (\acc val ->
-      let partialBranches = addAssToUpdates varIdent (EInt val) updates
-      in partialBranches ++ acc
-    )
-    []
-    [0..(range - 1)]
-
--- adds a particular assignment to an updates branch
-addAssToUpdatesBranch :: Ident -> Exp -> Branch -> Branch
-addAssToUpdatesBranch varIdent value (br, Dead:t) = 
-  (br, Dead:t)
-
-addAssToUpdatesBranch varIdent value (br, Alive:t) = 
-  let 
-    deleteOld :: [(Ident, Exp)] -> [(Ident, Exp)]
-    deleteOld list = filter
-      (\(i, _) -> i /= varIdent)
-      list
-    newBranch old = (varIdent, value):(deleteOld old)
-  in
-    applyToBranch newBranch (br, Alive:t)
 
 --------
 -- If --

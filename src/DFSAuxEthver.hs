@@ -313,3 +313,127 @@ makeDead :: Branch -> Branch
 makeDead (Alive x) = Dead x
 makeDead (Dead x) = Dead x
 -}
+
+---------------
+-- transfers --
+---------------
+
+dfsTransferFromContract :: Ident -> Exp -> Trans -> VerRes [Trans]
+dfsTransferFromContract receiverAddress amount tr =
+  dfsTransferMoney iContractBalance receiverAddress (EVar iMaxUserBalance) amount tr
+
+dfsTransferMoney :: Ident -> Ident -> Exp -> Exp -> Trans -> VerRes [Trans]
+dfsTransferMoney from to maxTo amount tr@(trName, guards, updates) = do
+  let 
+    newGuards1 = applyCondToGuards (EGe (EVar from) amount) guards
+    newGuards2 = applyCondToGuards (ELe (EAdd (EVar to) amount) maxTo) newGuards1
+  -- TODO: czy wystarczy addSimpleAssesToTr? (cf. zalozenia przed def. f. addSimple...)
+    tr1 = addSimpleAssesToTr [(from, ESub (EVar from) amount)] tr
+    tr2 = addSimpleAssesToTr [(to, EAdd (EVar to) amount)] tr1
+  return [tr2]
+
+---------
+-- Ass --
+---------
+
+-- TODO: Nie wiem, czy problemu z wieloma transami nie rozwiaze poziom wyzej
+-- W zwiazku z tym na tym poziomie robilbym tylko addAssToBranch
+
+-- given a list of assignment of the same size as number of branches in trans
+-- adds the assignments to the corresponding branches
+
+-- TODO:
+--addAssesToTr :: [(Ident, Exp)] -> Trans -> VerRes [Trans]
+
+
+-- nowe TODO: czy jest potrzebna obsluga wielow assow naraz? To bylo na potrzeby evaluateArray
+-- adds a list of assignments to a Trans
+-- Assumption 1: |list| = #branches in Trans
+-- Assumption 2: simple asses <=> no need for multi-branches/multi-transes
+addSimpleAssesToTr :: [(Ident, Exp)] -> Trans -> Trans
+addSimpleAssesToTr asses tr@(trName, guards, updates) = 
+  (trName, guards, map 
+    (\((varName, value), branch) -> addAssToUpdatesBranch varName value branch)
+    (zip asses updates)
+  )
+
+-- TODO: TO JEST CHYBA DO WYWALENIA
+-------------------------------------
+
+-- Bo moze byc inny ass w kazdym branchu. Zamiast tego addAssesToTr
+
+-- adds an assignment to a single transition
+-- assumes value is evaluated
+-- male TODO: to jest sztuczne, że zwraca [Trans], a nie Trans
+addAssToTr :: Ident -> Exp -> Trans -> VerRes [Trans]
+
+addAssToTr varIdent value (trName, guards, updates) = do
+  --TODO: determineExp?
+  --let determinedValue = determineExp value (trName, guards, updates)
+  case value of
+    ERand (EInt range) ->
+      let newUpdates = addRandomAssToUpdates varIdent range updates
+      in return [(trName, guards, newUpdates)]
+    _ ->
+      let newUpdates = addAssToUpdates varIdent value updates
+      in return [(trName, guards, newUpdates)]
+
+-----------------
+-- TODO: TO CHYBA TEZ DO WYWALENIA:
+-------------------------------
+
+
+-- TODO: To, żeby działało, musi być jakieś determineExp. Ale nie może być z Tr.
+-- Pewnie "addArrAssToBranch"?
+-- simlarly, assumes index and value are evaluated
+addArrAssToTr :: Ident -> Exp -> Exp -> Trans -> VerRes [Trans]
+addArrAssToTr arrIdent index value tr = do
+  error $ "addArrAssToTr: Arrays not supported.\n"
+  -- TODO: determineExp?
+  --case determineExp (EArray arrIdent index) tr of
+  -- Linijka poniżej jest oczywiście bez sensu.
+  {-case (EArray arrIdent index) of
+    EVar varIdent ->
+      addAssToTr varIdent value tr
+    _ ->
+      error $ "Cannot determine var name from array name after evaluation: " ++ (show $ EArray arrIdent index)
+  -}
+
+-- adds a non-random assignment to updates
+addAssToUpdates :: Ident -> Exp -> [Branch] -> [Branch]
+addAssToUpdates varIdent value updates = do
+  foldl
+    (\acc branch ->
+      let partialBranch = addAssToUpdatesBranch varIdent value branch
+      in partialBranch:acc
+    )
+    []
+    updates
+
+-- adds a random assignment to updates
+addRandomAssToUpdates :: Ident -> Integer -> [Branch] -> [Branch]
+addRandomAssToUpdates varIdent range updates =
+  foldl
+    (\acc val ->
+      let partialBranches = addAssToUpdates varIdent (EInt val) updates
+      in partialBranches ++ acc
+    )
+    []
+    [0..(range - 1)]
+
+-- adds a particular assignment to an updates branch
+addAssToUpdatesBranch :: Ident -> Exp -> Branch -> Branch
+addAssToUpdatesBranch varIdent value (br, Dead:t) =
+  (br, Dead:t)
+
+addAssToUpdatesBranch varIdent value (br, Alive:t) =
+  let
+    deleteOld :: [(Ident, Exp)] -> [(Ident, Exp)]
+    deleteOld list = filter
+      (\(i, _) -> i /= varIdent)
+      list
+    newBranch old = (varIdent, value):(deleteOld old)
+  in
+    applyToBranch newBranch (br, Alive:t)
+
+
