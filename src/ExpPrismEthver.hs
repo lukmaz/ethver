@@ -1,3 +1,6 @@
+-- This file was previously used in both Contract and scenarios
+-- now it is used only in Scenarios and it's not optimized in DFS way
+
 module ExpPrismEthver where
 
 import Control.Monad.State

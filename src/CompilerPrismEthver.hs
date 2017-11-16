@@ -71,11 +71,6 @@ verContract (Contr name _ funs) = do
 
   -- adds to contract module  all commands generated from a particular function definition
   
-  -- OLD:
-  -- mapM_ verFunContract funs
-  -- SMART: (~one command for each valuation of variables)
-  --mapM_ verSmartFunContract funs
-  -- DFS:
   mapM_ verDFSFunContract funs
 -------------------
 -- COMMUNICATION --
@@ -86,11 +81,6 @@ verCommunication :: Communication -> VerRes ()
 verCommunication (Comm _ funs) = do
   -- adds to communication module all commands generated from a particular function definition
   
-  -- OLD:
-  --mapM_ verFunCommunication funs
-  -- SMART: (~one command for each valuation of variables)
-  -- mapM_ verSmartFunCommunication funs
-  -- DFS:
   mapM_ verDFSFunCommunication funs
 
 ----------
@@ -215,26 +205,10 @@ verExecTransaction modifyModule = do
       ], [Alive])
     ]
 
----------------------------------------
--- verSmartFunContract/Communication --
----------------------------------------
-
--- SMART: (~ one command for each valuation)
-{-verSmartFunContractOrCommunication :: ModifyModuleType -> (Function -> VerRes ()) -> Function -> VerRes ()
-verSmartFunContractOrCommunication modifyModule commonFun (Fun funName args stms) = do
-  commonFun (Fun funName args stms)
-
-  mapM_ (collectCondVars modifyModule) stms
-  
-  createSmartTranss modifyModule (Fun funName args stms)
-
-  clearCondVarsAndArrays
--}
 -------------------------------------
 -- verDFSContract/Communication --
 -------------------------------------
 
--- DFS
 verDFSFunContractOrCommunication :: ModifyModuleType -> (Function -> VerRes ()) -> Function -> VerRes ()
 verDFSFunContractOrCommunication modifyModule commonFun fun = do
   commonFun fun
@@ -277,33 +251,6 @@ commonVerFunContract (Fun name args stms) = do
 
   return ()
 
--- (OLD) adds to contract module  all commands generated from a particular function definition
-verFunContract :: Function -> VerRes ()
--- TODO: bez V nie potrzebne value
-verFunContract (FunV name args stms) = 
-  verFunContract (Fun name args stms) 
-
-verFunContract (Fun name args stms) = do
-  commonVerFunContract (Fun name args stms)
-
-  -- verifying all statements
-  mapM_ (verStm modifyContract) stms
-
-  mod <- modifyContract id
-  -- final command
-  addCustomTrans
-    modifyContract
-    ""
-    (currState mod)
-    1
-    []
-    -- TODO: Alive?
-    [([], [Alive])]
-
--- SMART
-{-verSmartFunContract :: Function -> VerRes ()
-verSmartFunContract fun = verSmartFunContractOrCommunication modifyContract commonVerFunContract fun
--}
 -- DFS
 verDFSFunContract :: Function -> VerRes ()
 verDFSFunContract fun = verDFSFunContractOrCommunication modifyContract commonVerFunContract fun
@@ -330,31 +277,6 @@ commonVerFunCommunication (Fun funName args stms) = do
 
   return ()
 
-
--- OLD:
-verFunCommunication :: Function -> VerRes ()
--- TODO: sprawdzać, że nikt nie wykonuje FunV
-verFunCommunication (Fun funName args stms) = do
-  commonVerFunCommunication (Fun funName args stms)
-
-  -- veryfing all statements
-  mapM_ (verStm modifyCommunication) stms
-
-  mod <- modifyCommunication id
-  -- final command
-  addCustomTrans
-    modifyCommunication
-    ""
-    (currState mod)
-    1
-    []
-    -- TODO: Alive?
-    [([], [Alive])]
-
--- SMART
-{-verSmartFunCommunication :: Function -> VerRes ()
-verSmartFunCommunication fun = verSmartFunContractOrCommunication modifyCommunication commonVerFunCommunication fun
--}
 -- DFS
 verDFSFunCommunication :: Function -> VerRes ()
 verDFSFunCommunication fun = verDFSFunContractOrCommunication modifyCommunication commonVerFunCommunication fun

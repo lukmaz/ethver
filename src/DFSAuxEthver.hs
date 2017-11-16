@@ -80,36 +80,6 @@ valueFromCond varIdent cond =
         _ -> Nothing
     _ -> Nothing
 
--------------------------------------------------
--- evaluateArray --------------------------------
--- TODO: not implemented yet. -------------------
-
--- Similar to applyCond. If value is an EArray --
--- then it expands it to a separate Trans  ------
--- and a corresponding EVar for every index. ----
--- Size of resulting list of varIdents is equal -
--- to number of branches in each trans. ---------
--------------------------------------------------
-
--- BEZ SENSU (?): Dla różnych branchy może wynikać różny varIdent
--- evaluateArray :: Exp -> Trans -> VerRes [(Trans, Exp)]
-
-evaluateArray :: Exp -> Trans -> VerRes [(Trans, [Exp])]
-evaluateArray arr@(EArray arrIdent index) tr@(trName, guards, updates) = 
-  case index of
-    EInt intIndex ->
-      let newIdent = EVar $ Ident $ (unident arrIdent) ++ "_" ++ (show intIndex)
-      in return [(tr, map (\_ -> newIdent) updates)]
-    _ ->
-      error $ "This type of array not supported in evaluateArray: " ++ (show arr)
-
-evaluateArray (EInt x) tr@(_, _, updates) = 
-  return [(tr, map (\_ -> EInt x) updates)]
-
--- applyCondToGuards ...
-  
-
-
 
 --------------------------------------------------------
 -- applyCond -------------------------------------------
@@ -135,19 +105,6 @@ applyCond (EEq ESender value) tr =
 
 applyCond (ENe ESender value) tr =
   applySenderEqOrNeCond (ENe ESender value) tr
-
-
--- TODO? (Nowy EArray)
-
--- EEq and ENe between EArray and anything
-
-applyCond (EEq (EArray arrIdent index) value) tr = do
-  applyEqOrNeCond (EEq (EArray arrIdent index) value) tr
-
-applyCond (ENe (EArray arrIdent index) value) tr =
-  applyEqOrNeCond (ENe (EArray arrIdent index) value) tr
-
-
 
 
 -- EAnd, EOr
@@ -276,44 +233,6 @@ applyCondToBranch ifCase (ENe (EVar varIdent) value) ((br, liv), deducedVal) =
 applyCondToGuards :: Exp -> [Exp] -> [Exp]
 applyCondToGuards cond guards = cond:guards
 
-{-
-addRandomUpdates :: ModifyModuleType -> [[(Ident, Exp)]] -> VerRes [[(Ident, Exp)]]
-addRandomUpdates modifyModule oldUpdates = do
-  world <- get
-  let
-    randomVarsList = Set.toList $ condRandoms world
-    randomArraysList = arraysAsList $ condRandomArrays world
-
-  case (randomVarsList, randomArraysList) of
-    ([], []) -> return oldUpdates
-    _ -> do
-      types <- typesFromVarsAndArrays randomVarsList randomArraysList
-      
-      let
-        maxVals = map maxRealValueOfType types
-        valuations = generateAllVals maxVals
-
-      randomArraysAsVars <- mapM (arrayToVar modifyModule) randomArraysList
-      
-      let 
-        newUpdates = map
-          (\vals -> (zip (randomVarsList ++ randomArraysAsVars) vals) ++ (head oldUpdates))
-          valuations
-
-      return newUpdates
--}
-
-{-
-DO WYWALENIA?
-makeAlive :: Branch -> Branch
-makeAlive (Alive x) = Alive x
-makeAlive (Dead x) = Alive x
-
-makeDead :: Branch -> Branch
-makeDead (Alive x) = Dead x
-makeDead (Dead x) = Dead x
--}
-
 ---------------
 -- transfers --
 ---------------
@@ -328,48 +247,18 @@ dfsTransferMoney from to maxTo amount tr@(trName, guards, updates) = do
     newGuards1 = applyCondToGuards (EGe (EVar from) amount) guards
     newGuards2 = applyCondToGuards (ELe (EAdd (EVar to) amount) maxTo) newGuards1
   -- TODO: czy wystarczy addSimpleAssesToTr? (cf. zalozenia przed def. f. addSimple...)
-    tr1 = addSimpleAssesToTr [(from, ESub (EVar from) amount)] tr
-    tr2 = addSimpleAssesToTr [(to, EAdd (EVar to) amount)] tr1
-  return [tr2]
+    updates1 = addAssToUpdates from (ESub (EVar from) amount) updates
+    updates2 = addAssToUpdates to (EAdd (EVar to) amount) updates1
+  return [(trName, newGuards2, updates2)]
 
 ---------
 -- Ass --
 ---------
-
--- TODO: Nie wiem, czy problemu z wieloma transami nie rozwiaze poziom wyzej
--- W zwiazku z tym na tym poziomie robilbym tylko addAssToBranch
-
--- given a list of assignment of the same size as number of branches in trans
--- adds the assignments to the corresponding branches
-
--- TODO:
---addAssesToTr :: [(Ident, Exp)] -> Trans -> VerRes [Trans]
-
-
--- nowe TODO: czy jest potrzebna obsluga wielow assow naraz? To bylo na potrzeby evaluateArray
--- adds a list of assignments to a Trans
--- Assumption 1: |list| = #branches in Trans
--- Assumption 2: simple asses <=> no need for multi-branches/multi-transes
-addSimpleAssesToTr :: [(Ident, Exp)] -> Trans -> Trans
-addSimpleAssesToTr asses tr@(trName, guards, updates) = 
-  (trName, guards, map 
-    (\((varName, value), branch) -> addAssToUpdatesBranch varName value branch)
-    (zip asses updates)
-  )
-
--- TODO: TO JEST CHYBA DO WYWALENIA
--------------------------------------
-
--- Bo moze byc inny ass w kazdym branchu. Zamiast tego addAssesToTr
-
 -- adds an assignment to a single transition
--- assumes value is evaluated
 -- male TODO: to jest sztuczne, że zwraca [Trans], a nie Trans
 addAssToTr :: Ident -> Exp -> Trans -> VerRes [Trans]
 
 addAssToTr varIdent value (trName, guards, updates) = do
-  --TODO: determineExp?
-  --let determinedValue = determineExp value (trName, guards, updates)
   case value of
     ERand (EInt range) ->
       let newUpdates = addRandomAssToUpdates varIdent range updates
@@ -377,27 +266,6 @@ addAssToTr varIdent value (trName, guards, updates) = do
     _ ->
       let newUpdates = addAssToUpdates varIdent value updates
       in return [(trName, guards, newUpdates)]
-
------------------
--- TODO: TO CHYBA TEZ DO WYWALENIA:
--------------------------------
-
-
--- TODO: To, żeby działało, musi być jakieś determineExp. Ale nie może być z Tr.
--- Pewnie "addArrAssToBranch"?
--- simlarly, assumes index and value are evaluated
-addArrAssToTr :: Ident -> Exp -> Exp -> Trans -> VerRes [Trans]
-addArrAssToTr arrIdent index value tr = do
-  error $ "addArrAssToTr: Arrays not supported.\n"
-  -- TODO: determineExp?
-  --case determineExp (EArray arrIdent index) tr of
-  -- Linijka poniżej jest oczywiście bez sensu.
-  {-case (EArray arrIdent index) of
-    EVar varIdent ->
-      addAssToTr varIdent value tr
-    _ ->
-      error $ "Cannot determine var name from array name after evaluation: " ++ (show $ EArray arrIdent index)
-  -}
 
 -- adds a non-random assignment to updates
 addAssToUpdates :: Ident -> Exp -> [Branch] -> [Branch]

@@ -10,7 +10,6 @@ import AuxWorldPrismEthver
 import CodePrismEthver
 import ConstantsEthver
 import DFSAuxEthver
-import DFSEvalEthver
 import WorldPrismEthver
 
 ---------------
@@ -49,30 +48,7 @@ verDFSStm modifyModule (SBlock (stmH:stmT)) trs = do
   verDFSStm modifyModule stmH trs >>= 
     verDFSStm modifyModule (SBlock stmT)
 
-----
-
----------------------------------------------
--- TODO OOOOOOOOOOOOOOOOOOOOOO (dlaczego?) --
----------------------------------------------
-
-----
-
 -- For a moment it returns only single Trans (and works for only simple ass)
-
--- OLD: wersja z evaluateArray:
-{-verDFSStm modifyModule (SAss varIdent value) oldTrs = do
-  newTrsAndVals <- applyToList (evaluateArray value) oldTrs
-  applyToList 
-    (\(tr, vals) -> return [addSimpleAssesToTr 
-      (map 
-        (\val -> (varIdent, val))
-        vals
-      ) 
-      tr]
-    )
-    newTrsAndVals
--}
-
 -- nowe TODO: prawdopodobnie nie obsługuje bardziej skomplikowanych assow
 verDFSStm modifyModule (SAss varIdent value) oldTrs = do
   --TODO: tak powinno być, ale nie działa z randomami
@@ -83,20 +59,10 @@ verDFSStm modifyModule (SAss varIdent value) oldTrs = do
   -- TODO: tak działa z randomami
   applyToList (addAssToTr varIdent value) oldTrs
 
-verDFSStm modifyModule (SArrAss arrIdent index value) oldTrs = do
-  -- TODO: evaluateExp?
-  --newTrs <- applyToList (evaluateExp modifyModule index) oldTrs >>= 
-  --  applyToList (evaluateExp modifyModule value)
-  applyToList (addArrAssToTr arrIdent index value) oldTrs
-
 verDFSStm modifyModule (SIf cond ifBlock) trs = do
-  -- TODO: evaluateExp?
-  --condTranss <- applyToList (evaluateExp modifyModule cond) trs
   applyToList (verDFSIf modifyModule cond ifBlock) trs
 
 verDFSStm modifyModule (SIfElse cond ifBlock elseBlock) trs = do
-  -- TODO: evaluateExp?
-  --condTranss <- applyToList (evaluateExp modifyModule cond) trs
   applyToList (verDFSIfElse modifyModule cond ifBlock elseBlock) trs
 
 verDFSStm modifyModule (SWhile _ _) _ = do
@@ -130,15 +96,4 @@ verDFSIfElse :: ModifyModuleType -> Exp -> Stm -> Stm -> Trans -> VerRes [Trans]
 verDFSIfElse modifyModule cond ifBlock elseBlock tr = do
   error $ "verDFSIfElse not implemented"
   -- TODO
-
-  {-
-  STARE:
-  posCondTranss <- applyCond cond tr
-  posTranss <- verDFSStm modifyModule ifBlock posCondTranss
-
-  negCondTranss <- applyCond (negateExp cond) tr
-  negTranss <- verDFSStm modifyModule elseBlock negCondTranss
-
-  return $ posTranss ++ negTranss
-  -}
 
