@@ -119,25 +119,29 @@ applyCond cond@(ELt (EVar varIdent) value) tr =
 applyCond cond@(ELe (EVar varIdent) value) tr =
   applyEqOrIneqCond cond tr
 
+applyCond (ENot (EEq e1 e2)) tr = 
+  applyCond (ENe e1 e2) tr
+
+applyCond (ENot (ENe e1 e2)) tr = 
+  applyCond (EEq e1 e2) tr
+
 -- EAnd, EOr
 
--- TODO: Zoptymalizować, żeby były po dwie gałęzie w get_payment
+-- TODO: Sztuczne. Może dla wszystkich powinno iść najpierw default?
 applyCond cond@(EAnd cond1 cond2) tr = do
-  applyAndCond cond tr
-  --applyCond (makeLeft cond1) tr >>= applyToList (applyCond (makeLeft cond2))
+  applyDefaultCond cond tr
 
+-- TODO: sztuczne. Może dla wszystkich powinno iść najpierw default?
+applyCond cond@(ENot exp) tr = do
+  applyDefaultCond cond tr
+
+-- TODO: Or został stary, może pójść w stronę AND? Zobaczyć, jak z optymalnością
 applyCond (EOr cond1 cond2) tr = do
   if (isLeftComp $ makeLeft cond1) && (isLeftComp $ makeLeft cond2)
     then
       applyOrCond (makeLeft cond1) (makeLeft cond2) tr
     else
       error $ "This type of alternative not supported in applyCond: " ++ (show (EOr cond1 cond2))
-
-applyCond (ENot (EEq e1 e2)) tr = 
-  applyCond (ENe e1 e2) tr
-
-applyCond (ENot (ENe e1 e2)) tr = 
-  applyCond (EEq e1 e2) tr
 
 applyCond cond _ = do
   error $ "This type of condition not supported by applyCond: " ++ (show cond)
@@ -179,16 +183,14 @@ applyOrCond cond1 cond2 (trName, guards, updates) = do
   return [(trName, posPosGuards, posPosBranches), (trName, negPosGuards, negPosBranches),
     (trName, posNegGuards, posNegBranches)]
 
--- applyAndCond
-applyAndCond :: Exp -> Trans -> VerRes [Trans]
-applyAndCond cond (trName, guards, updates) =
+-- applyDefaultCond
+applyDefaultCond :: Exp -> Trans -> VerRes [Trans]
+applyDefaultCond cond (trName, guards, updates) =
   let 
     ifGuards = applyCondToGuards cond guards
-    elseGuards = applyCondToGuards (negateExp cond) guards
     ifBranches = map (applyCondToBranch True cond) updates
-    elseBranches = map (applyCondToBranch False cond) updates 
   in
-    return [(trName, ifGuards, ifBranches), (trName, elseGuards, elseBranches)]
+    return [(trName, ifGuards, ifBranches)]
 
 
 -- applyEqOrNeCond
@@ -209,22 +211,18 @@ applyEqOrIneqCond cond (trName, guards, updates) = do
     else
       let 
         ifGuards = applyCondToGuards cond guards
-        elseGuards = applyCondToGuards (negateExp cond) guards
         ifBranches = map (applyCondToBranchAndDeduced True cond) $ zip updates deducedValues
-        elseBranches = map (applyCondToBranchAndDeduced False cond) $ zip updates deducedValues
       in
-        return [(trName, ifGuards, ifBranches), (trName, elseGuards, elseBranches)]
+        return [(trName, ifGuards, ifBranches)]
 
 -- applySenderEqOrNeCond
 applySenderEqOrNeCond :: Exp -> Trans -> VerRes [Trans]
 applySenderEqOrNeCond cond (trName, guards, updates) =
   let
     ifGuards = applyCondToGuards cond guards
-    elseGuards = applyCondToGuards (negateExp cond) guards
     ifBranches = map (\(br, liv) -> (br, (head liv):liv)) updates
-    elseBranches = map (\(br, liv) -> (br, Dead:liv)) updates
   in
-    return [(trName, ifGuards, ifBranches), (trName, elseGuards, elseBranches)]
+    return [(trName, ifGuards, ifBranches)]
 
 -- applyCondToBranch
 

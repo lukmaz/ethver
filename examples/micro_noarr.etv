@@ -16,7 +16,7 @@ contract RPS {
       }
     }
 
-    if (msg.sender == 1) {
+    else {
       if ((((contract_balance > 0) && is_signed1 == true) && is_opened1 == true) && (randM1 == randU1)) {
         1.send(1);
       }

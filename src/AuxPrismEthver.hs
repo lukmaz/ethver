@@ -92,6 +92,8 @@ negateExp (ELe e1 e2) = (EGt e1 e2)
 negateExp (EGt e1 e2) = (ELe e1 e2)
 negateExp (EGe e1 e2) = (ELt e1 e2)
 
+negateExp (ENot exp) = exp
+
 negateExp exp = ENot exp
 
 

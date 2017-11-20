@@ -77,20 +77,21 @@ verDFSStm modifyModule (SSend receiver amount) trs = do
 --------
 
 -- verDFSIf
-verDFSIf :: ModifyModuleType -> Exp -> Stm -> Trans -> VerRes [Trans]
-verDFSIf modifyModule cond ifBlock tr@(trName, guards, updates) = do
+verDFSIfElse :: ModifyModuleType -> Exp -> Stm -> Stm -> Trans -> VerRes [Trans]
+verDFSIfElse modifyModule cond ifBlock elseBlock tr@(trName, guards, updates) = do
   afterCondTranss <- applyCond (makeLeft cond) (trName, guards, updates)
+  afterNegCondTranss <- applyCond (negateExp (makeLeft cond)) (trName, guards, updates)
   afterBlockTranss <- verDFSStm modifyModule ifBlock afterCondTranss
+  afterNegBlockTranss <- verDFSStm modifyModule elseBlock afterNegCondTranss
   
   return $ map
     (\(trName, guards, updates) -> (trName, guards, map removeHeadLiv updates))
-    afterBlockTranss
+    (afterBlockTranss ++ afterNegBlockTranss)
       where
         removeHeadLiv :: Branch -> Branch
         removeHeadLiv (br, liv) = (br, tail liv)
 
-verDFSIfElse :: ModifyModuleType -> Exp -> Stm -> Stm -> Trans -> VerRes [Trans]
-verDFSIfElse modifyModule cond ifBlock elseBlock tr = do
-  error $ "verDFSIfElse not implemented"
-  -- TODO
+verDFSIf :: ModifyModuleType -> Exp -> Stm -> Trans -> VerRes [Trans]
+verDFSIf modifyModule cond ifBlock tr = 
+  verDFSIfElse modifyModule cond ifBlock (SBlock []) tr
 
