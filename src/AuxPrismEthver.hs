@@ -92,9 +92,6 @@ negateExp (ELe e1 e2) = (EGt e1 e2)
 negateExp (EGt e1 e2) = (ELe e1 e2)
 negateExp (EGe e1 e2) = (ELt e1 e2)
 
-negateExp (EAnd e1 e2) = EOr (negateExp e1) (negateExp e2)
-negateExp (EOr e1 e2) = EAnd (negateExp e1) (negateExp e2)
-
 negateExp exp = ENot exp
 
 

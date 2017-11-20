@@ -122,8 +122,9 @@ applyCond cond@(ELe (EVar varIdent) value) tr =
 -- EAnd, EOr
 
 -- TODO: Zoptymalizować, żeby były po dwie gałęzie w get_payment
-applyCond (EAnd cond1 cond2) tr = do
-  applyCond (makeLeft cond1) tr >>= applyToList (applyCond (makeLeft cond2))
+applyCond cond@(EAnd cond1 cond2) tr = do
+  applyAndCond cond tr
+  --applyCond (makeLeft cond1) tr >>= applyToList (applyCond (makeLeft cond2))
 
 applyCond (EOr cond1 cond2) tr = do
   if (isLeftComp $ makeLeft cond1) && (isLeftComp $ makeLeft cond2)
@@ -163,20 +164,32 @@ applyOrCond cond1 cond2 (trName, guards, updates) = do
     negPosGuards = applyCondToGuards (negateExp cond1) $ applyCondToGuards cond2 guards
     posNegGuards = applyCondToGuards cond1 $ applyCondToGuards (negateExp cond2) guards
     
-    posPosBranches1 = map (applyCondToBranch True cond1) $ zip updates deducedValues1
-    posPosBranches2 = map (applyCondToBranch True cond2) $ zip updates deducedValues2
+    posPosBranches1 = map (applyCondToBranchAndDeduced True cond1) $ zip updates deducedValues1
+    posPosBranches2 = map (applyCondToBranchAndDeduced True cond2) $ zip updates deducedValues2
     posPosBranches = map makeDeadIfBothDead $ zip posPosBranches1 posPosBranches2
 
-    negPosBranches1 = map (applyCondToBranch False cond1) $ zip updates deducedValues1
-    negPosBranches2 = map (applyCondToBranch True cond2) $ zip updates deducedValues2
+    negPosBranches1 = map (applyCondToBranchAndDeduced False cond1) $ zip updates deducedValues1
+    negPosBranches2 = map (applyCondToBranchAndDeduced True cond2) $ zip updates deducedValues2
     negPosBranches = map makeDeadIfBothDead $ zip negPosBranches1 negPosBranches2
 
-    posNegBranches1 = map (applyCondToBranch True cond1) $ zip updates deducedValues1
-    posNegBranches2 = map (applyCondToBranch False cond2) $ zip updates deducedValues2
+    posNegBranches1 = map (applyCondToBranchAndDeduced True cond1) $ zip updates deducedValues1
+    posNegBranches2 = map (applyCondToBranchAndDeduced False cond2) $ zip updates deducedValues2
     posNegBranches = map makeDeadIfBothDead $ zip posNegBranches1 posNegBranches2
       
   return [(trName, posPosGuards, posPosBranches), (trName, negPosGuards, negPosBranches),
     (trName, posNegGuards, posNegBranches)]
+
+-- applyAndCond
+applyAndCond :: Exp -> Trans -> VerRes [Trans]
+applyAndCond cond (trName, guards, updates) =
+  let 
+    ifGuards = applyCondToGuards cond guards
+    elseGuards = applyCondToGuards (negateExp cond) guards
+    ifBranches = map (applyCondToBranch True cond) updates
+    elseBranches = map (applyCondToBranch False cond) updates 
+  in
+    return [(trName, ifGuards, ifBranches), (trName, elseGuards, elseBranches)]
+
 
 -- applyEqOrNeCond
 
@@ -189,7 +202,7 @@ applyEqOrIneqCond cond (trName, guards, updates) = do
     -- value of varIdent determined in every branch
     then
       let 
-        branches = map (applyCondToBranch True cond) $ zip updates deducedValues
+        branches = map (applyCondToBranchAndDeduced True cond) $ zip updates deducedValues
       in
         return [(trName, guards, branches)]
     -- value of varIdent not always determined
@@ -197,8 +210,8 @@ applyEqOrIneqCond cond (trName, guards, updates) = do
       let 
         ifGuards = applyCondToGuards cond guards
         elseGuards = applyCondToGuards (negateExp cond) guards
-        ifBranches = map (applyCondToBranch True cond) $ zip updates deducedValues
-        elseBranches = map (applyCondToBranch False cond) $ zip updates deducedValues
+        ifBranches = map (applyCondToBranchAndDeduced True cond) $ zip updates deducedValues
+        elseBranches = map (applyCondToBranchAndDeduced False cond) $ zip updates deducedValues
       in
         return [(trName, ifGuards, ifBranches), (trName, elseGuards, elseBranches)]
 
@@ -215,28 +228,36 @@ applySenderEqOrNeCond cond (trName, guards, updates) =
 
 -- applyCondToBranch
 
-applyCondToBranch :: Bool -> Exp -> (Branch, Maybe Exp) -> Branch
+applyCondToBranch :: Bool -> Exp -> Branch -> Branch
 
-applyCondToBranch ifCase (EEq (EVar varIdent) value) ((br, liv), deducedVal) =
-  applyCondToBranchAux ifCase (\v -> v == value) ((br, liv), deducedVal)
+applyCondToBranch ifCase _ (br, liv) =
+  if ifCase
+    then (br, (head liv):liv)
+    else (br, Dead:liv)
 
-applyCondToBranch ifCase (ENe (EVar varIdent) value) ((br, liv), deducedVal) =
-  applyCondToBranchAux ifCase (\v -> v /= value) ((br, liv), deducedVal)
 
-applyCondToBranch ifCase (EGt (EVar varIdent) value) ((br, liv), deducedVal) =
-  applyCondToBranchAux ifCase (\v -> v > value) ((br, liv), deducedVal)
+applyCondToBranchAndDeduced :: Bool -> Exp -> (Branch, Maybe Exp) -> Branch
 
-applyCondToBranch ifCase (EGe (EVar varIdent) value) ((br, liv), deducedVal) =
-  applyCondToBranchAux ifCase (\v -> v >= value) ((br, liv), deducedVal)
+applyCondToBranchAndDeduced ifCase (EEq (EVar varIdent) value) ((br, liv), deducedVal) =
+  applyCondToBranchAndDeducedAux ifCase (\v -> v == value) ((br, liv), deducedVal)
 
-applyCondToBranch ifCase (ELt (EVar varIdent) value) ((br, liv), deducedVal) =
-  applyCondToBranchAux ifCase (\v -> v < value) ((br, liv), deducedVal)
+applyCondToBranchAndDeduced ifCase (ENe (EVar varIdent) value) ((br, liv), deducedVal) =
+  applyCondToBranchAndDeducedAux ifCase (\v -> v /= value) ((br, liv), deducedVal)
 
-applyCondToBranch ifCase (ELe (EVar varIdent) value) ((br, liv), deducedVal) =
-  applyCondToBranchAux ifCase (\v -> v <= value) ((br, liv), deducedVal)
+applyCondToBranchAndDeduced ifCase (EGt (EVar varIdent) value) ((br, liv), deducedVal) =
+  applyCondToBranchAndDeducedAux ifCase (\v -> v > value) ((br, liv), deducedVal)
 
-applyCondToBranchAux :: Bool -> (Exp -> Bool) -> (Branch, Maybe Exp) -> Branch
-applyCondToBranchAux ifCase compFun ((br, liv), deducedVal) =
+applyCondToBranchAndDeduced ifCase (EGe (EVar varIdent) value) ((br, liv), deducedVal) =
+  applyCondToBranchAndDeducedAux ifCase (\v -> v >= value) ((br, liv), deducedVal)
+
+applyCondToBranchAndDeduced ifCase (ELt (EVar varIdent) value) ((br, liv), deducedVal) =
+  applyCondToBranchAndDeducedAux ifCase (\v -> v < value) ((br, liv), deducedVal)
+
+applyCondToBranchAndDeduced ifCase (ELe (EVar varIdent) value) ((br, liv), deducedVal) =
+  applyCondToBranchAndDeducedAux ifCase (\v -> v <= value) ((br, liv), deducedVal)
+
+applyCondToBranchAndDeducedAux :: Bool -> (Exp -> Bool) -> (Branch, Maybe Exp) -> Branch
+applyCondToBranchAndDeducedAux ifCase compFun ((br, liv), deducedVal) =
   case deducedVal of
     Just v ->
       if compFun v
