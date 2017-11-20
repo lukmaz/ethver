@@ -27,6 +27,10 @@ identFromComp :: Exp -> Ident
 
 identFromComp (EEq (EVar i) v) = i
 identFromComp (ENe (EVar i) v) = i
+identFromComp (EGt (EVar i) v) = i
+identFromComp (EGe (EVar i) v) = i
+identFromComp (ELt (EVar i) v) = i
+identFromComp (ELe (EVar i) v) = i
 
 identFromComp e = error $ "Cannot extract ident from expression: " ++ (show e)
 
@@ -37,9 +41,13 @@ isLeftComp (EEq (EVar _) _) = True
 isLeftComp (ENe (EVar _) _) = True
 isLeftComp _ = False
 
---makeLeft
+-------------
+--makeLeft --
+-------------
+
 makeLeft :: Exp -> Exp
 
+-- EEq, ENe
 makeLeft (EEq (EVar i) v) = EEq (EVar i) v
 makeLeft (ENe (EVar i) v) = ENe (EVar i) v
 makeLeft (EEq v (EVar i)) = EEq (EVar i) v
@@ -55,14 +63,23 @@ makeLeft (ENe (EArray i e) v) = ENe (EArray i e) v
 makeLeft (EEq v (EArray i e)) = EEq (EArray i e) v
 makeLeft (ENe v (EArray i e)) = ENe (EArray i e) v
 
+-- EGt, EGe, ELt, ELe
+makeLeft exp@(EGt _ _) = exp
+makeLeft exp@(EGe _ _) = exp
+makeLeft exp@(ELt _ _) = exp
+makeLeft exp@(ELe _ _) = exp
+
+-- ENot, EOr, EAnd
 makeLeft (ENot exp) = ENot (makeLeft exp)
-
-makeLeft (EArray ident index) = EArray ident index
-
 makeLeft (EOr e1 e2) = EOr (makeLeft e1) (makeLeft e2)
 makeLeft (EAnd e1 e2) = EAnd (makeLeft e1) (makeLeft e2)
--- negate cond --
 
+-- EVar
+makeLeft exp@(EVar _) = exp
+
+-----------------
+-- negate cond --
+-----------------
 negateExp :: Exp -> Exp
 
 negateExp ETrue = EFalse

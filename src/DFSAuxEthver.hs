@@ -92,23 +92,36 @@ applyCond :: Exp -> Trans -> VerRes [Trans]
 
 -- EEq and ENe between EVar and anything
 
-applyCond (EEq (EVar varIdent) value) tr =
-  applyEqOrNeCond (EEq (EVar varIdent) value) tr
+applyCond cond@(EEq (EVar varIdent) value) tr =
+  applyEqOrIneqCond cond tr
 
-applyCond (ENe (EVar varIdent) value) tr =
-  applyEqOrNeCond (ENe (EVar varIdent) value) tr
+applyCond cond@(ENe (EVar varIdent) value) tr =
+  applyEqOrIneqCond cond tr
 
 -- EEq and ENe between ESender and anything
 
-applyCond (EEq ESender value) tr =
-  applySenderEqOrNeCond (EEq ESender value) tr
+applyCond cond@(EEq ESender value) tr =
+  applySenderEqOrNeCond cond tr
 
-applyCond (ENe ESender value) tr =
-  applySenderEqOrNeCond (ENe ESender value) tr
+applyCond cond@(ENe ESender value) tr =
+  applySenderEqOrNeCond cond tr
 
+-- inequality between EVar and anything
+applyCond cond@(EGt (EVar varIdent) value) tr =
+  applyEqOrIneqCond cond tr
+
+applyCond cond@(EGe (EVar varIdent) value) tr =
+  applyEqOrIneqCond cond tr
+
+applyCond cond@(ELt (EVar varIdent) value) tr =
+  applyEqOrIneqCond cond tr
+
+applyCond cond@(ELe (EVar varIdent) value) tr =
+  applyEqOrIneqCond cond tr
 
 -- EAnd, EOr
 
+-- TODO: Zoptymalizować, żeby były po dwie gałęzie w get_payment
 applyCond (EAnd cond1 cond2) tr = do
   applyCond (makeLeft cond1) tr >>= applyToList (applyCond (makeLeft cond2))
 
@@ -167,8 +180,8 @@ applyOrCond cond1 cond2 (trName, guards, updates) = do
 
 -- applyEqOrNeCond
 
-applyEqOrNeCond :: Exp -> Trans -> VerRes [Trans]
-applyEqOrNeCond cond (trName, guards, updates) = do
+applyEqOrIneqCond :: Exp -> Trans -> VerRes [Trans]
+applyEqOrIneqCond cond (trName, guards, updates) = do
   let 
     varIdent = identFromComp cond
     deducedValues = map (deduceVarValueFromBranch varIdent) updates
@@ -205,27 +218,34 @@ applySenderEqOrNeCond cond (trName, guards, updates) =
 applyCondToBranch :: Bool -> Exp -> (Branch, Maybe Exp) -> Branch
 
 applyCondToBranch ifCase (EEq (EVar varIdent) value) ((br, liv), deducedVal) =
-  case deducedVal of
-    Just v ->
-      if (v == value)
-        then (br, (head liv):liv)
-        else (br, Dead:liv)
-    Nothing ->
-      if ifCase
-        then (br, (head liv):liv)
-        else (br, Dead:liv)
+  applyCondToBranchAux ifCase (\v -> v == value) ((br, liv), deducedVal)
 
 applyCondToBranch ifCase (ENe (EVar varIdent) value) ((br, liv), deducedVal) =
+  applyCondToBranchAux ifCase (\v -> v /= value) ((br, liv), deducedVal)
+
+applyCondToBranch ifCase (EGt (EVar varIdent) value) ((br, liv), deducedVal) =
+  applyCondToBranchAux ifCase (\v -> v > value) ((br, liv), deducedVal)
+
+applyCondToBranch ifCase (EGe (EVar varIdent) value) ((br, liv), deducedVal) =
+  applyCondToBranchAux ifCase (\v -> v >= value) ((br, liv), deducedVal)
+
+applyCondToBranch ifCase (ELt (EVar varIdent) value) ((br, liv), deducedVal) =
+  applyCondToBranchAux ifCase (\v -> v < value) ((br, liv), deducedVal)
+
+applyCondToBranch ifCase (ELe (EVar varIdent) value) ((br, liv), deducedVal) =
+  applyCondToBranchAux ifCase (\v -> v <= value) ((br, liv), deducedVal)
+
+applyCondToBranchAux :: Bool -> (Exp -> Bool) -> (Branch, Maybe Exp) -> Branch
+applyCondToBranchAux ifCase compFun ((br, liv), deducedVal) =
   case deducedVal of
     Just v ->
-      if (v /= value)
+      if compFun v
         then (br, (head liv):liv)
         else (br, Dead:liv)
     Nothing ->
       if ifCase
         then (br, (head liv):liv)
         else (br, Dead:liv)
-
 
 -- applyCondToGuards
 -- TODO: da sie zoptymalizowac?

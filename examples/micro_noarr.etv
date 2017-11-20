@@ -10,19 +10,19 @@ MAX_VALUE = 5;
 
 contract RPS {
   function get_payment() {
-    //if (msg.sender == 0) {
-    //  if ((((contract_balance > 0) && is_signed0) && is_opened0) && (randM0 == randU0)) {
-        0.send(1);
-    //  }
-    //}
+    if (msg.sender == 0) {
+      if ((contract_balance > 0) && is_signed0 == true) {
+        if ((is_opened0 == true) && (randM0 == randU0)) {
+          0.send(1);
+        }
+      }
+    }
 
-    /*
     if (msg.sender == 1) {
-      if ((((contract_balance > 0) && is_signed1) && is_opened1) && (randM1 == randU1)) {
+      if ((((contract_balance > 0) && is_signed1 == true) && is_opened1 == true) && (randM1 == randU1)) {
         1.send(1);
       }
     }
-    */
   }
 
 }
