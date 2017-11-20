@@ -41,50 +41,44 @@ communication {
   uint(3) randU1;
   uint(10) products_sent;
 
-/*
   function ask_product() {
     if (msg.sender == 0) {
       product_asked = true;
     }
   }
-*/
 
   function ask_payment(random_uint(3) cmt) {
-/*
     if (msg.sender == 0) {
-      if (!is_committed0) {
+      if (is_committed0 == false) {
         commit0 = cmt;
         is_committed0 = true;
         is_opened0 = false;
         is_signed0 = false;
       }
     }
-    if (msg.sender == 1) {
-      if (!is_committed1) {
+    else {
+      if (is_committed1 == false) {
         commit1 = cmt;
         is_committed1 = true;
         is_opened1 = false;
         is_signed1 = false;
       }
+      if (products_sent + 1 < 10) {
+        products_sent = products_sent + 1;
+      }
     }
-
-    if ((msg.sender == 1) && (products_sent + 1 < 10)) {
-      products_sent = products_sent + 1;
-    }
-*/
   }
 
-/*
   function send_ticket(uint(2) merchant, uint(3) r) {
     if (msg.sender == 0) {
       if (merchant == 0) {
-        if ((is_committed0) && (!is_opened0) && (!is_signed0)) {
+        if ((is_committed0 == true) && (is_opened0 == false) && (is_signed0 == false)) {
           randU0 = r;
           is_signed0 = true;
         }
       }
-      if (merchant == 1) {
-        if ((is_committed1) && (!is_opened1) && (!is_signed1)) {
+      else {
+        if ((is_committed1 == true) && (is_opened1 == false) && (is_signed1 == false)) {
           randU1 = r;
           is_signed1 = true;
         }
@@ -94,7 +88,7 @@ communication {
 
   function open() {
     if (msg.sender == 0) {
-      if (is_signed0 && !is_opened0) {
+      if (is_signed0 == true && is_opened0 == false) {
         if (commit0 == 3) {
           randM0 = random(3);
           is_opened0 = true;
@@ -105,8 +99,8 @@ communication {
         }
       }
     }
-    if (msg.sender == 1) {
-      if (is_signed1 && !is_opened1) {
+    else {
+      if (is_signed1 == true && is_opened1 == false) {
         if (commit1 == 3) {
           randM1 = random(3);
           is_opened1 = true;
@@ -132,7 +126,6 @@ communication {
       }
     }
   }
-  */
 }
 
 scenario U {
@@ -141,7 +134,7 @@ scenario U {
   bool endU;
   uint(3) i0;
   i0 = 0;
-/*
+
   while (i0 < 2) {
     wait(!product_asked);
     ask_product.sendCommunication();
@@ -156,7 +149,7 @@ scenario U {
     i0 = i0 + 1;
   }
   endU = true;
-*/
+
 }
 
 scenario M {
@@ -166,7 +159,7 @@ scenario M {
   uint(3) i1;
   i1 = 0;
 
-/*
+
   while (i1 < 2) {
     rand1 = random_lazy(3);
     wait(product_asked);
@@ -192,6 +185,6 @@ scenario M {
     i1 = i1 + 1;
   }
   endM = true;
-*/
+
 }
 

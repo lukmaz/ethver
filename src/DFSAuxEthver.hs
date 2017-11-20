@@ -127,14 +127,6 @@ applyCond (ENot (ENe e1 e2)) tr =
 
 -- EAnd, EOr
 
--- TODO: Sztuczne. Może dla wszystkich powinno iść najpierw default?
-applyCond cond@(EAnd cond1 cond2) tr = do
-  applyDefaultCond cond tr
-
--- TODO: sztuczne. Może dla wszystkich powinno iść najpierw default?
-applyCond cond@(ENot exp) tr = do
-  applyDefaultCond cond tr
-
 -- TODO: Or został stary, może pójść w stronę AND? Zobaczyć, jak z optymalnością
 applyCond (EOr cond1 cond2) tr = do
   if (isLeftComp $ makeLeft cond1) && (isLeftComp $ makeLeft cond2)
@@ -143,9 +135,9 @@ applyCond (EOr cond1 cond2) tr = do
     else
       error $ "This type of alternative not supported in applyCond: " ++ (show (EOr cond1 cond2))
 
-applyCond cond _ = do
-  error $ "This type of condition not supported by applyCond: " ++ (show cond)
 
+applyCond cond tr = do
+  applyDefaultCond cond tr
 
 -- applyOrCond
 
