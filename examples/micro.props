@@ -8,11 +8,11 @@ Pmax=? [ F endM ]
 
 E [ F "deadlock" ]
 
-Pmax=? [ F endM&products_sent=1&balance1=0 ]
+Pmax=? [ F endM&products_sent<=1 ]
 
-Pmax=? [ F endM&products_sent=2&balance1=0 ]
+Pmax=? [ F endM&products_sent=2 ]
 
-Pmax=? [ F endM&products_sent=1&balance1=1 ]
+Pmin=? [ F endM&products_sent=2 ]
 
 Pmin=? [ F endM&products_sent=1&balance1=0 ]
 
@@ -26,7 +26,13 @@ Pmax=? [ F endU&products_sent=1&balance1=1 ]
 
 Pmin=? [ F endU&products_sent=1&balance1=0 ]
 
-Pmin=? [ F endU&products_sent=1&balance1=1 ]
+Pmin=? [ F endM ]
 
 R{"income"}min=? [ F endM ]
+
+R{"income"}max=? [ F endM ]
+
+Pmax=? [ F endM ]
+
+A [ F endM ]
 

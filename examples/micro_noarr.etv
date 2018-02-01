@@ -47,7 +47,8 @@ communication {
     }
   }
 
-  function ask_payment(random_uint(3) cmt) {
+  // send product, commit and ask payment
+  function send_product_commit_and_ask_payment(random_uint(3) cmt) {
     if (msg.sender == 0) {
       if (is_committed0 == false) {
         commit0 = cmt;
@@ -69,7 +70,7 @@ communication {
     }
   }
 
-  function send_ticket(uint(2) merchant, uint(3) r) {
+  function send_ticket_to_sign(uint(2) merchant, uint(3) r) {
     if (msg.sender == 0) {
       if (merchant == 0) {
         if ((is_committed0 == true) && (is_opened0 == false) && (is_signed0 == false)) {
@@ -122,6 +123,17 @@ communication {
         is_committed0 = false;
         is_opened0 = false;
         is_signed0 = false;
+        //product_asked = false; // tylko M to zwalnia?
+      }
+    }
+    else {
+      if (is_signed1 && is_opened1) {
+        commit1 = 0;
+        randU1 = 0;
+        randM1 = 0;
+        is_committed1 = false;
+        is_opened1 = false;
+        is_signed1 = false;
         product_asked = false;
       }
     }
@@ -136,17 +148,23 @@ scenario U {
   i0 = 0;
 
   while (i0 < 2) {
-    wait(!product_asked);
-    ask_product.sendCommunication();
-    wait(is_committed1);
-    if (is_committed1) {
-      rand0 = random(3);
-      send_ticket.sendCommunication(1, rand0);
+    wait(!product_asked); // po co to?
+    if (!product_asked) { // Dodalem 07.12.2017
+      ask_product.sendCommunication();
+      wait(is_committed1);
+      if (is_committed1) {
+        rand0 = random(3);
+        send_ticket_to_sign.sendCommunication(1, rand0);
+      }
+      else {
+        break;
+      }
+      i0 = i0 + 1;
     }
     else {
       break;
     }
-    i0 = i0 + 1;
+    //reset.sendCommunication(); // dopisane
   }
   endU = true;
 
@@ -160,11 +178,11 @@ scenario M {
   i1 = 0;
 
 
-  while (i1 < 2) {
+  while (i1 < 1) {
     rand1 = random_lazy(3);
     wait(product_asked);
     if (product_asked && contract_balance > 0) {
-      ask_payment.sendCommunication(rand1);
+      send_product_commit_and_ask_payment.sendCommunication(rand1);
       wait(is_signed1);
       if (is_signed1) {
         open.sendCommunication();
@@ -172,6 +190,9 @@ scenario M {
           targetBalance = contract_balance - 1;
           get_payment.sendTransaction({from: "M", value: 0});
           wait(contract_balance == targetBalance);
+          if (contract_balance != targetBalance) {
+            break;
+          }
         }
         reset.sendCommunication();
       }
