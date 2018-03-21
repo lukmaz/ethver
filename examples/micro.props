@@ -28,10 +28,6 @@ Pmin=? [ F endU&products_sent=1&balance1=0 ]
 
 Pmin=? [ F endM ]
 
-R{"income"}min=? [ F endM ]
-
-R{"income"}max=? [ F endM ]
-
 Pmax=? [ F endM ]
 
 A [ F endM ]

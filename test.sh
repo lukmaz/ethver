@@ -1,1 +1,1 @@
-./MakeEthver examples/micropayments.etv
+./MakeEthver examples/micro_noarr.etv
