@@ -31,6 +31,7 @@ communication {
   bool is_opened0;
   bool is_opened1;
   bool is_signed0;
+  bool is_signed1;
   uint(3) randM0;
   uint(3) randM1;
   uint(3) randU0;
@@ -53,15 +54,19 @@ communication {
   }
 
   function payment_issuance(uint(3) r) {
-    if ((is_committed1 == true)) {
+    if (msg.sender == 0) {
       randU0 = r;
       is_signed0 = true;
+    }
+    if (msg.sender == 1) {
+      randU1 = r;
+      is_signed1 = true;
     }
   }
 
   function open() {
     if (msg.sender == 1) {
-      if (is_commited1 == true && is_opened1 == false) {
+      if (is_committed1 == true && is_opened1 == false) {
         if (commit1 == 3) {
           randM1 = random(3);
           is_opened1 = true;
