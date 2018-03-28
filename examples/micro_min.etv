@@ -82,7 +82,7 @@ scenario U {
   wait(is_committed1);
   if (is_committed1) {
     rand0 = random(3);
-    payment_issuance(1, rand0);
+    payment_issuance.sendCommunication(rand0);
   }
   endU = true;
 }
@@ -92,9 +92,9 @@ scenario M {
   bool endM;
 
   rand1 = random_lazy(3);
-  payment_request(rand1);
+  payment_request.sendCommunication(rand1);
   wait(is_signed0);
-  if (is_signed0 {
+  if (is_signed0) {
     open.sendCommunication();
     if (randU1 == randM1) {
       release.sendTransaction({from: "M", value: 0});
