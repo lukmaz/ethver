@@ -1,0 +1,104 @@
+user "U";
+user "M";
+
+CONTRACT_BALANCE_MAX = 4;
+CONTRACT_BALANCE_INIT = 2;
+USER_BALANCE_MAX = 4;
+USER0_BALANCE_INIT = 0;
+USER1_BALANCE_INIT = 0;
+MAX_VALUE = 5;
+
+contract RPS {
+  function release() {
+    if (msg.sender == 0) {
+      if ((contract_balance > 0) && (is_signed0 == true) && (is_opened0 == true) && (randM0 == randU0)) {
+        0.send(1);
+      }
+    }
+    else {
+      if ((contract_balance > 0) && (is_signed1 == true) && (is_opened1 == true) && (randM1 == randU1)) {
+        1.send(1);
+      }
+    }
+  }
+}
+
+communication {
+  random_uint(3) commit0;
+  random_uint(3) commit1;
+  bool is_committed0;
+  bool is_committed1;
+  bool is_opened0;
+  bool is_opened1;
+  bool is_signed0;
+  uint(3) randM0;
+  uint(3) randM1;
+  uint(3) randU0;
+  uint(3) randU1;
+
+  // commit and ask payment
+  function payment_request(random_uint(3) cmt) {
+    if (msg.sender == 0) {
+      if (is_committed0 == false) {
+        commit0 = cmt;
+        is_committed0 = true;
+      }
+    }
+    else {
+      if (is_committed1 == false) {
+        commit1 = cmt;
+        is_committed1 = true;
+      }
+    }
+  }
+
+  function payment_issuance(uint(3) r) {
+    if ((is_committed1 == true)) {
+      randU0 = r;
+      is_signed0 = true;
+    }
+  }
+
+  function open() {
+    if (msg.sender == 1) {
+      if (is_commited1 == true && is_opened1 == false) {
+        if (commit1 == 3) {
+          randM1 = random(3);
+          is_opened1 = true;
+        }
+        else {
+          randM1 = commit1;
+          is_opened1 = true;
+        }
+      }
+    }
+  }
+}
+
+scenario U {
+  uint(3) rand0;
+  bool endU;
+
+  wait(is_committed1);
+  if (is_committed1) {
+    rand0 = random(3);
+    payment_issuance(1, rand0);
+  }
+  endU = true;
+}
+
+scenario M {
+  random_uint(3) rand1;
+  bool endM;
+
+  rand1 = random_lazy(3);
+  payment_request(rand1);
+  wait(is_signed0);
+  if (is_signed0 {
+    open.sendCommunication();
+    if (randU1 == randM1) {
+      release.sendTransaction({from: "M", value: 0});
+    }
+  }
+  endM = true;
+}
