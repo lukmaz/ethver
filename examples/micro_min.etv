@@ -1,110 +1,97 @@
 user "U";
 user "M";
 
-CONTRACT_BALANCE_MAX = 4;
-CONTRACT_BALANCE_INIT = 2;
-USER_BALANCE_MAX = 4;
+CONTRACT_BALANCE_MAX = 1;
+CONTRACT_BALANCE_INIT = 1;
+USER_BALANCE_MAX = 1;
 USER0_BALANCE_INIT = 0;
 USER1_BALANCE_INIT = 0;
-MAX_VALUE = 5;
+MAX_VALUE = 1;
+
+// c1, r1 - values in honest mode, recipient = 1
+// c0, r0 - values in adversarial mode, recipient = 0
+// rM - values from Merchant role of the protocol
+// rU - values from User role of the protocol
 
 contract RPS {
-  function release() {
-    /*if (msg.sender == 0) {
-      if ((contract_balance > 0) && (is_signed1 == true) && (is_opened0 == true) && (randM0 == randU0)) {
+  function release(uint(2) rM, uint(2) rU, uint(2) c, uint(2) s) {
+    if (msg.sender == 0) {
+      if ((contract_balance > 0) && ((rM + s) % 2 == c) && (c == signed_c0) && (rU == signed_r0) && (rM == rU)) {
         0.send(1);
       }
-    }*/
-    if (msg.sender == 1) {
-      if ((contract_balance > 0) && (is_signed0 == true) && (is_opened1 == true) && (randM == randU)) {
+    }
+    else {
+      if ((contract_balance > 0) && ((rM + s) % 2 == c) && (c == signed_c1) && (rU == signed_r1) && (rM == rU)) {
         1.send(1);
       }
     }
   }
-}
+}    
 
 communication {
-  //random_uint(3) commit0;
-  random_uint(3) commit1;
-  //bool is_committed0;
-  bool is_committed1;
-  //bool is_opened0;
-  bool is_opened1;
-  bool is_signed0;
-  //bool is_signed1;
-  uint(3) randM;
-  uint(3) randU;
+  uint(2) commitmentM;
+  bool is_committedM;
+  bool is_signedU;
+  uint(2) randM;
+  uint(2) saltM;
+  uint(2) signed_r0;
+  uint(2) signed_c0;
+  uint(2) signed_r1;
+  uint(2) signed_c1;
 
-  // commit and ask payment
-  function payment_request(random_uint(3) cmt) {
-    //ten if jest chyba potrzebny, żeby zrealizować atak
-    /* 
-    if (msg.sender == 0) {
-      if (is_committed0 == false) {
-        commit0 = cmt;
-        is_committed0 = true;
-      }
-    }
-    else {
-    */
-      if (is_committed1 == false) {
-        commit1 = cmt;
-        is_committed1 = true;
-      }
-    //}
-  }
-
-  function payment_issuance(uint(3) r) {
-    if (msg.sender == 0) {
-      randU = r;
-      is_signed0 = true;
-    }
-    /*if (msg.sender == 1) {
-      randU1 = r;
-      is_signed1 = true;
-    }
-    */
-  }
-
-  function open() {
+  function payment_request() {
     if (msg.sender == 1) {
-      if (is_committed1 == true && is_opened1 == false) {
-        if (commit1 == 3) {
-          randM = random(3);
-          is_opened1 = true;
-        }
-        else {
-          randM = commit1;
-          is_opened1 = true;
-        }
+      commitmentM = random(2);
+      is_committedM = true;
+    }
+  }
+
+  function payment_issuance(uint(2) cmt, uint(2) r, uint(2) recipient) {
+    if (msg.sender == 0) {
+      if (recipient == 0) {
+        signed_c0 = cmt;
+        signed_r0 = r;
       }
+      else {
+        signed_c1 = cmt;
+        signed_r1 = r;
+      }
+      is_signedU = true;
+    }
+  }
+  // cannot do random inside a function, because it does not propagate to saltM
+  // (DFS compilation issue)
+  function open(uint(2) randOpen) {
+    if (msg.sender == 1) {
+      randM = randOpen;
+      saltM = (commitmentM - randOpen + 2) % 2;
     }
   }
 }
 
 scenario U {
-  uint(3) rand0;
+  uint(2) rand0;
   bool endU;
 
-  wait(is_committed1);
-  if (is_committed1) {
-    rand0 = random(3);
-    payment_issuance.sendCommunication(rand0);
+  wait(is_committedM);
+  if (is_committedM) {
+    rand0 = random(2);
+    payment_issuance.sendCommunication(commitmentM, rand0, 1);
   }
   endU = true;
 }
 
 scenario M {
-  random_uint(3) rand1;
+  uint(2) rand1;
   bool endM;
 
-  rand1 = random_lazy(3);
-  payment_request.sendCommunication(rand1);
-  wait(is_signed0);
-  if (is_signed0) {
-    open.sendCommunication();
-    if (randU == randM) {
-      release.sendTransaction({from: "M", value: 0});
+  payment_request.sendCommunication();
+  wait(is_signedU);
+  if (is_signedU) {
+    if (signed_c1 == commitmentM) {
+      rand1 = random(2);
+      open.sendCommunication(rand1);
+      release.sendTransaction(randM, signed_r1, commitmentM, saltM, {from: "M", value: 0});
     }
   }
   endM = true;
