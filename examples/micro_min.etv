@@ -14,16 +14,27 @@ MAX_VALUE = 1;
 // rU - values from User role of the protocol
 
 contract RPS {
-  function release(uint(2) rM, uint(2) rU, uint(2) c, uint(2) s) {
+  function release() {
     if (msg.sender == 0) {
-      if ((contract_balance > 0) && ((rM + s) % 2 == c) && (c == signed_c0) && (rU == signed_r0) && (rM == rU)) {
+      if ((contract_balance > 0) && ((randM + saltM) % 2 == commitmentM) && (randM == randU)) {
         0.send(1);
       }
     }
     else {
-      if ((contract_balance > 0) && ((rM + s) % 2 == c) && (c == signed_c1) && (rU == signed_r1) && (rM == rU)) {
+      if ((contract_balance > 0) && ((randM + saltM) % 2 == commitmentM) && (randM == randU)) {
         1.send(1);
       }
+    }
+  }
+
+  function burn() {
+    // if (committedM == committedU)
+    //  null_send(2);
+  }
+
+  function spend_penalty() {
+    if (time_elapsed >= 2) {
+      0.send(2);
     }
   }
 }    
@@ -34,10 +45,7 @@ communication {
   bool is_signedU;
   uint(2) randM;
   uint(2) saltM;
-  uint(2) signed_r0;
-  uint(2) signed_c0;
-  uint(2) signed_r1;
-  uint(2) signed_c1;
+  uint(2) randU;
 
   function payment_request() {
     if (msg.sender == 1) {
@@ -46,16 +54,9 @@ communication {
     }
   }
 
-  function payment_issuance(uint(2) cmt, uint(2) r, uint(2) recipient) {
+  function payment_issuance(uint(2) r, uint(2) recipient) {
     if (msg.sender == 0) {
-      if (recipient == 0) {
-        signed_c0 = cmt;
-        signed_r0 = r;
-      }
-      else {
-        signed_c1 = cmt;
-        signed_r1 = r;
-      }
+      randU = r;
       is_signedU = true;
     }
   }
@@ -73,10 +74,10 @@ scenario U {
   uint(2) rand0;
   bool endU;
 
-  wait(is_committedM);
+  wait(is_committedM, 1);
   if (is_committedM) {
     rand0 = random(2);
-    payment_issuance.sendCommunication(commitmentM, rand0, 1);
+    payment_issuance.sendCommunication(rand0, 1);
   }
   endU = true;
 }
@@ -86,12 +87,16 @@ scenario M {
   bool endM;
 
   payment_request.sendCommunication();
-  wait(is_signedU);
+  wait(is_signedU, 1);
   if (is_signedU) {
-    if (signed_c1 == commitmentM) {
-      rand1 = random(2);
-      open.sendCommunication(rand1);
-      release.sendTransaction(randM, signed_r1, commitmentM, saltM, {from: "M", value: 0});
+    rand1 = random(2);
+    open.sendCommunication(rand1);
+    if (randM == randU) {
+      release.sendTransaction({from: "M", value: 0});
+      wait(balance1 >= 1, 1);
+      if (balance1 < 1) {
+        burn.sendTransaction({from: "M", value: 0});
+      }
     }
   }
   endM = true;

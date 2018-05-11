@@ -1,5 +1,3 @@
-A [ F endM ]
-
 Pmin=? [ F endU&endM&balance1=1 ]
 
 Pmax=? [ F endM&balance0=1 ]
