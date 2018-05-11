@@ -329,9 +329,9 @@ verScenario modifyModule decls stms = do
   -- two transitions for ability for adversary to interrupt the protocol
   addCustomTrans
     modifyModule
-    (sReleaseTimelocks ++ (show $ number mod))
+    (sTimelockStep ++ (show $ number mod))
     (-1)
-    (-2)
+    (-1)
     [EEq (EVar iContrState) (EInt 1),
       EEq (EVar iCommState) (EInt 1)]
     -- TODO: Alive?
@@ -341,9 +341,9 @@ verScenario modifyModule decls stms = do
 
   addTransNoState
     modifyBlockchain
-    (sReleaseTimelocks ++ (show $ number mod))
+    (sTimelockStep ++ (show $ number mod))
     (
-      (EEq (EVar $ Ident $ sTimelocksReleased) EFalse)
+      (ELt (EVar $ Ident $ sTimelocksReleased) (EVar $ Ident $ sMaxTime))
         : (Map.elems $ Map.map
             (\fun -> ENe
               (EVar $ Ident $ (nameOfFunction fun) ++ sStatusSuffix ++ "0")
@@ -360,4 +360,4 @@ verScenario modifyModule decls stms = do
           )
     )
     -- TODO: Alive?
-    [([(Ident sTimelocksReleased, ETrue)], [Alive])]
+    [([(Ident sTimeElapsed, EAdd (EVar $ Ident sTimeElapsed) (EInt 1))], [Alive])]

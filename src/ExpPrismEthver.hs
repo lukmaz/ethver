@@ -216,12 +216,12 @@ verStm modifyModule (SSendT funIdent args) = do
 verStm modifyModule (SSendC funIdent args) = do
   verSendCAux modifyModule funIdent args
 
-verStm modifyModule (SWait cond) = do
+verStm modifyModule (SWait cond time) = do
   evalCond <- verExp modifyModule cond
   addTransToNewState
     modifyModule
     ""
-    [EOr evalCond $ EVar $ Ident sTimelocksReleased]
+    [EOr evalCond $ EGt (EVar $ Ident sTimelocksReleased) time]
     -- TODO: Alive?
     [([], [Alive])]
 

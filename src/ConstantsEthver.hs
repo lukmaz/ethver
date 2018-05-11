@@ -11,8 +11,8 @@ nWrongExp = 43
 nInitContractState = 1
 nInitCommState = 1
 
-nMinP0State = -2
-nMinP1State = -2
+nMinP0State = -1
+nMinP1State = -1
 nInitP0State = 0
 nInitP1State = 0
 nInitContrState = 1
@@ -42,6 +42,7 @@ sInitContractBalance = "CONTRACT_BALANCE_INIT"
 sInitUser0Balance = "USER0_BALANCE_INIT"
 sInitUser1Balance = "USER1_BALANCE_INIT"
 sMaxValue = "MAX_VALUE"
+sMaxTime = "MAX_TIME"
 
 sContrState = "contrstate"
 sCommState = "commstate"
@@ -50,10 +51,9 @@ sP0State = "state0"
 sP1State = "state1"
 sStatePrefix = "state"
 sStatusSuffix = "_status"
-sEmptyState = "emptyState"
-sEmptySender = "emptySender"
-sReleaseTimelocks = "releaseTimelocks"
-sTimelocksReleased = "timelocksReleased"
+sEmptyState = "empty_state"
+sEmptySender = "empty_sender"
+sTimeElapsed = "time_elapsed"
 sNextState = "next_state"
 
 sEmptyModule = "emptyModule"
