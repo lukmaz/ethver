@@ -37,7 +37,7 @@ verProgram (Prog users constants contract communication scenarios) = do
   verScenarios scenarios
   addAdversarialContrTranss contract
   addAdversarialCommTranss communication
-
+  addAdversarialBlockchainTranss
 
 verContractDecl :: Contract -> VerRes ()
 verContractDecl (Contr _ decls _) = do
@@ -327,7 +327,8 @@ verScenario modifyModule decls stms = do
     [([], [Alive])]
 
   -- two transitions for ability for adversary to interrupt the protocol
-  addCustomTrans
+  -- this one not needed anymore, since the timeStep is called in blockchain module
+  {- addCustomTrans
     modifyModule
     (sTimelockStep ++ (show $ number mod))
     (-1)
@@ -336,14 +337,15 @@ verScenario modifyModule decls stms = do
       EEq (EVar iCommState) (EInt 1)]
     -- TODO: Alive?
     [([], [Alive])]
-  
-  world <- get
+  -}
 
-  addTransNoState
+  -- moved to addAdversarialBlockchainTranss in AuxWorldPrismEthver.hs
+  -- world <- get
+  {-addTransNoState
     modifyBlockchain
     (sTimelockStep ++ (show $ number mod))
     (
-      (ELt (EVar $ Ident $ sTimelocksReleased) (EVar $ Ident $ sMaxTime))
+      (ELt (EVar $ Ident $ sTimeElapsed) (EVar $ Ident $ sMaxTime))
         : (Map.elems $ Map.map
             (\fun -> ENe
               (EVar $ Ident $ (nameOfFunction fun) ++ sStatusSuffix ++ "0")
@@ -361,3 +363,4 @@ verScenario modifyModule decls stms = do
     )
     -- TODO: Alive?
     [([(Ident sTimeElapsed, EAdd (EVar $ Ident sTimeElapsed) (EInt 1))], [Alive])]
+    -}

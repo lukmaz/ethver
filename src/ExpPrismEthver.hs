@@ -218,12 +218,21 @@ verStm modifyModule (SSendC funIdent args) = do
 
 verStm modifyModule (SWait cond time) = do
   evalCond <- verExp modifyModule cond
+  mod <- modifyModule id
+  let playerNumber = number mod
   addTransToNewState
     modifyModule
     ""
-    [EOr evalCond $ EGt (EVar $ Ident sTimelocksReleased) time]
+    []
     -- TODO: Alive?
-    [([], [Alive])]
+    [([(Ident $ sWaits ++ (show playerNumber), ETrue)], [Alive])]
+
+  addTransToNewState
+    modifyModule
+    ""
+    [EOr evalCond $ EGt (EVar $ Ident sTimeElapsed) time]
+    -- TODO: Alive?
+    [([(Ident $ sWaits ++ (show playerNumber), EFalse)], [Alive])]
 
 
 ---------

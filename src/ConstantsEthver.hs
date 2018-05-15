@@ -54,7 +54,9 @@ sStatusSuffix = "_status"
 sEmptyState = "empty_state"
 sEmptySender = "empty_sender"
 sTimeElapsed = "time_elapsed"
+sTimelockStep = "timelock_step"
 sNextState = "next_state"
+sWaits = "waits"
 
 sEmptyModule = "emptyModule"
 

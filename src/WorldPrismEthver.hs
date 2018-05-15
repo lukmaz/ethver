@@ -114,7 +114,7 @@ addAutoVars = do
     Nothing -> error $ sMaxValue ++ " constant definition not found in the source file.\n"
     Just maxValue -> addVar modifyBlockchain (TUInt (maxValue + 1)) iValue
   -- TODO: hard-fixed MAX_TIME for 2
-  addVar modifyBlockchain (TUInt 2) (Ident sTimeElapsed)
+  addVar modifyBlockchain (TUInt 3) (Ident sTimeElapsed)
   addInitialValue modifyBlockchain (Ident sTimeElapsed) (EInt 0)
 
   -- contract:
@@ -128,6 +128,13 @@ addAutoVars = do
         _ -> error $ sInitContractBalance ++ "not found in (constants world)"
     _ -> error $ sMaxContractBalance ++ " not found in (constants world)"
   
+  -- scenarios
+  addVar modifyPlayer0 TBool (Ident $ sWaits ++ "0")
+  addInitialValue modifyPlayer0 (Ident $ sWaits ++ "0") EFalse
+
+  addVar modifyPlayer1 TBool (Ident $ sWaits ++ "1")
+  addInitialValue modifyPlayer1 (Ident $ sWaits ++ "1") EFalse
+
   -- TODO: move rest of variables from contractPream etc. to here.
 
   -- communication:

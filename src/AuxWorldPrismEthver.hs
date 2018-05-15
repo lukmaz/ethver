@@ -301,6 +301,40 @@ advUpdates withVal number funName args valList =
           (zip varNames valList)
       ]   
 
+-- moved from verScenarios
+addAdversarialBlockchainTranss :: VerRes()
+addAdversarialBlockchainTranss = do
+  world <- get
+  addTransNoState
+    modifyBlockchain
+    (sTimelockStep)
+    (   
+      (EOr 
+          --(EAnd (EVar $ Ident $ sWaits ++ "0") (EVar $ Ident $ sWaits ++ "1")) 
+          --(EOr 
+            (EAnd (EVar $ Ident $ sWaits ++ "0") (EEq (EVar $ Ident $ sAdversaryFlag) (EInt 1)))
+            (EAnd (EVar $ Ident $ sWaits ++ "1") (EEq (EVar $ Ident $ sAdversaryFlag) (EInt 0)))
+          --)
+      )
+        : (ELt (EVar $ Ident $ sTimeElapsed) (EVar $ Ident $ sMaxTime))
+        : (Map.elems $ Map.map
+            (\fun -> ENe 
+              (EVar $ Ident $ (nameOfFunction fun) ++ sStatusSuffix ++ "0")
+              (EVar iTBroadcast)
+            )   
+            (contractFuns world)
+          )   
+        ++ (Map.elems $ Map.map
+            (\fun -> ENe 
+              (EVar $ Ident $ (nameOfFunction fun) ++ sStatusSuffix ++ "1")
+              (EVar iTBroadcast)
+            )   
+            (contractFuns world)
+          )   
+    )   
+    -- TODO: Alive?
+    [([(Ident sTimeElapsed, EAdd (EVar $ Ident sTimeElapsed) (EInt 1))], [Alive])]
+
 addAdversarialContrTranss :: Contract -> VerRes ()
 addAdversarialContrTranss (Contr _ _ funs) =
   addAdversarialTranss funs sBroadcastPrefix iContrState

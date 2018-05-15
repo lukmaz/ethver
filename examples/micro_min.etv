@@ -33,7 +33,7 @@ contract RPS {
     //  null_send(2);
   }
 
-  function spend_penalty() {
+  function release_deposit() {
     if (time_elapsed >= 2) {
       0.send(2);
     }
@@ -80,6 +80,9 @@ scenario U {
     rand0 = random(2);
     payment_issuance.sendCommunication(rand0, 1);
   }
+  wait(false, 2);
+  release_deposit.sendTransaction({from: "U", value: 0});
+
   endU = true;
 }
 
@@ -95,7 +98,7 @@ scenario M {
     if (randM == randU) {
       release.sendTransaction({from: "M", value: 0});
       wait(balance1 >= 1, 1);
-      if (balance1 < 1) {
+      if (balance1 < 1) { // TU BRAKUJE SPRAWDZENIA CZY SĄ DWA SPRZECZNE TICKETY WYGRYWAJACE
         burn.sendTransaction({from: "M", value: 0});
       }
     }

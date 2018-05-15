@@ -52,7 +52,7 @@ SReturn. Stm ::= "return" Exp  ";" ;
 SSend.   Stm ::= Exp "." "send" "(" Exp ")" ";" ;
 SSendT.  Stm ::= Ident "." "sendTransaction" "(" [CallArg] ")" ";" ;
 SSendC.  Stm ::= Ident "." "sendCommunication" "(" [Exp] ")" ";" ;
-SWait.   Stm ::= "wait" "(" Exp ")" ";" ;
+SWait.   Stm ::= "wait" "(" Exp "," Exp ")" ";" ;
 SBreak.  Stm ::= "break" ";" ;
 
 terminator Stm "" ;
