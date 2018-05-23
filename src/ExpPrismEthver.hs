@@ -203,9 +203,13 @@ verStm modifyModule (SSend receiverExp arg) = do
           (SSend (EInt 1) arg)
         )
     EStr receiverAddress -> do
-      receiverNumber <- getPlayerNumber receiverAddress
-      let receiverBalance = Ident $ sBalancePrefix ++ (show receiverNumber) 
-      transferFromContract receiverBalance val
+      if receiverAddress == sNull
+        then do
+          burnMoney val
+        else do
+          receiverNumber <- getPlayerNumber receiverAddress
+          let receiverBalance = Ident $ sBalancePrefix ++ (show receiverNumber) 
+          transferFromContract receiverBalance val
     EInt receiverNumber -> do
       let receiverBalance = Ident $ sBalancePrefix ++ (show receiverNumber)
       transferFromContract receiverBalance val

@@ -15,22 +15,33 @@ MAX_TIME = 2;
 // rU - values from User role of the protocol
 
 contract RPS {
+  uint(3) winning_tickets;
+  uint(2) pot = 1;
+  uint(3) deposit = 2;
+
   function release() {
     if (msg.sender == 0) {
-      if ((contract_balance > 0) && ((randM + saltM) % 2 == commitmentM) && (randM == randU)) {
+      if ((pot > 0) && ((randM + saltM) % 2 == commitmentM) && (randM == randU)) {
+        if (winning_tickets < 2)
+          winning_tickets = winning_tickets + 1;
         0.send(1);
+        pot = pot - 1;
       }
     }
     else {
-      if ((contract_balance > 0) && ((randM + saltM) % 2 == commitmentM) && (randM == randU)) {
+      if ((pot > 0) && ((randM + saltM) % 2 == commitmentM) && (randM == randU)) {
+        if (winning_tickets < 2)
+          winning_tickets = winning_tickets + 1;
         1.send(1);
+        pot = pot - 1;
       }
     }
   }
 
   function burn() {
-    // if (committedM == committedU)
-    //  null_send(2);
+    if ((winning_tickets >= 2) && (deposit >= 2))
+      "null".send(2);
+      deposit = deposit - 2;
   }
 
   function release_deposit() {
@@ -98,7 +109,7 @@ scenario M {
     if (randM == randU) {
       release.sendTransaction({from: "M", value: 0});
       wait(balance1 >= 1, 1);
-      if (balance1 < 1) { // TU BRAKUJE SPRAWDZENIA CZY SĄ DWA SPRZECZNE TICKETY WYGRYWAJACE
+      if ((balance1 < 1) && (winning_tickets >= 2)) {
         burn.sendTransaction({from: "M", value: 0});
       }
     }

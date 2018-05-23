@@ -282,6 +282,13 @@ dfsTransferMoney from to maxTo amount tr@(trName, guards, updates) = do
     updates2 = addAssToUpdates to (EAdd (EVar to) amount) updates1
   return [(trName, newGuards2, updates2)]
 
+dfsBurnMoney :: Exp -> Trans -> VerRes [Trans]
+dfsBurnMoney amount tr@(trName, guards, updates) = do
+  let
+    newGuards = applyCondToGuards (EGe (EVar iContractBalance) amount) guards
+    newUpdates = addAssToUpdates iContractBalance (ESub (EVar iContractBalance) amount) updates
+  return [(trName, newGuards, newUpdates)]
+
 ---------
 -- Ass --
 ---------

@@ -67,6 +67,10 @@ verDFSStm modifyModule (SWhile _ _) _ = do
 
 verDFSStm modifyModule (SSend receiver amount) trs = do
   case receiver of
+    EStr str -> do
+      if (str == sNull)
+        then applyToList (dfsBurnMoney amount) trs
+        else error ".send can be applied only to 'null' or to an int"
     EInt receiverNumber -> do
       let receiverBalance = Ident $ sBalancePrefix ++ (show receiverNumber)
       applyToList (dfsTransferFromContract receiverBalance amount) trs

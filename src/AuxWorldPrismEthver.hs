@@ -407,6 +407,14 @@ transferFromContract :: Ident -> Exp -> VerRes ()
 transferFromContract to value = do
   transferMoney iContractBalance to (EVar iMaxUserBalance) value
   
+burnMoney :: Exp -> VerRes ()
+burnMoney value = do
+  addTransToNewState
+    modifyContract
+    ""
+    [EGe (EVar iContractBalance) value]
+    [([(iContractBalance, ESub (EVar iContractBalance) value)], [Alive])]
+
 
 transferMoney :: Ident -> Ident -> Exp -> Exp -> VerRes ()
 transferMoney from to maxTo value = do

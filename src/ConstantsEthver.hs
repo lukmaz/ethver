@@ -85,6 +85,8 @@ sContrSender = "contr_sender"
 sCommSender = "comm_sender"
 sValue = "value"
 
+sNull = "null"
+
 -- transaction states
 sTNone = "T_NONE"
 sTBroadcast = "T_BROADCAST"

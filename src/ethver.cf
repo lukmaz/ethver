@@ -19,6 +19,7 @@ Const.  ConstantDecl ::= Ident "=" Integer ;
 
 Contr.    Contract ::= "contract" Ident "{" [Decl] [Function] "}" ;
 Dec.      Decl     ::= Type Ident ;
+DecInit.  Decl     ::= Type Ident "=" Exp ;
 ArrDec.   Decl     ::= Type Ident "[" Integer "]" ;
 
 terminator Decl ";" ;

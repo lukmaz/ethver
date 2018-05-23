@@ -91,7 +91,11 @@ verDecl :: ModifyModuleType -> Decl -> VerRes ()
 
 verDecl modifyModule (Dec typ ident) = do
   addVar modifyModule typ ident
-  assignVarValue ident $ defaultValueOfType typ
+  --assignVarValue ident $ defaultValueOfType typ
+
+verDecl modifyModule (DecInit typ ident value) = do
+  addVar modifyModule typ ident
+  addInitialValue modifyModule ident value
 
 -- TODO: size inne niż 2
 verDecl modifyModule (ArrDec typ (Ident ident) size) = do
