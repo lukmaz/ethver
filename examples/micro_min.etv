@@ -21,7 +21,7 @@ contract RPS {
 
   function release() {
     if (msg.sender == 0) {
-      if ((pot > 0) && ((randM + saltM) % 2 == commitmentM) && (randM == randU)) {
+      if ((pot > 0) && is_signedU && ((randM + saltM) % 2 == commitmentM) && (randM == randU)) {
         if (winning_tickets < 2)
           winning_tickets = winning_tickets + 1;
         0.send(1);
@@ -29,7 +29,7 @@ contract RPS {
       }
     }
     else {
-      if ((pot > 0) && ((randM + saltM) % 2 == commitmentM) && (randM == randU)) {
+      if ((pot > 0) && is_signedU && ((randM + saltM) % 2 == commitmentM) && (randM == randU)) {
         if (winning_tickets < 2)
           winning_tickets = winning_tickets + 1;
         1.send(1);
@@ -39,9 +39,10 @@ contract RPS {
   }
 
   function burn() {
-    if ((winning_tickets >= 2) && (deposit >= 2))
+    if ((winning_tickets >= 2) && (deposit >= 2)) {
       "null".send(2);
       deposit = deposit - 2;
+    }
   }
 
   function release_deposit() {
@@ -60,7 +61,7 @@ communication {
   uint(2) randU;
 
   function payment_request() {
-    if (msg.sender == 1) {
+    if (msg.sender == 1 && !is_signedU) {
       commitmentM = random(2);
       is_committedM = true;
     }
