@@ -74,12 +74,10 @@ communication {
       is_signedU = true;
     }
   }
-  // cannot do random inside a function, because it does not propagate to saltM
-  // (DFS compilation issue)
-  function open(uint(2) randOpen) {
+  function open() {
     if (msg.sender == 1) {
-      randM = randOpen;
-      saltM = (commitmentM - randOpen + 2) % 2;
+      randM = random(2);
+      saltM = (commitmentM - randM + 2) % 2;
     }
   }
 }
@@ -100,14 +98,12 @@ scenario U {
 }
 
 scenario M {
-  uint(2) rand1;
   bool endM;
 
   payment_request.sendCommunication();
   wait(is_signedU, 1);
   if (is_signedU) {
-    rand1 = random(2);
-    open.sendCommunication(rand1);
+    open.sendCommunication();
     if (randM == randU) {
       release.sendTransaction({from: "M", value: 0});
       wait(balance1 >= 1, 1);
