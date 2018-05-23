@@ -71,7 +71,9 @@ verContract (Contr name _ funs) = do
 
   -- adds to contract module  all commands generated from a particular function definition
   
-  mapM_ verDFSFunContract funs
+  --mapM_ verDFSFunContract funs
+  mapM_ verOldFunContract funs
+
 -------------------
 -- COMMUNICATION --
 -------------------
@@ -81,7 +83,8 @@ verCommunication :: Communication -> VerRes ()
 verCommunication (Comm _ funs) = do
   -- adds to communication module all commands generated from a particular function definition
   
-  mapM_ verDFSFunCommunication funs
+  --mapM_ verDFSFunCommunication funs
+  mapM_ verOldFunCommunication funs
 
 ----------
 -- Decl --
@@ -218,6 +221,26 @@ verDFSFunContractOrCommunication modifyModule commonFun fun = do
   commonFun fun
   verDFSFun modifyModule fun
 
+-------------------------------------
+-- verOldContract/Communication --
+-------------------------------------
+
+verOldFunContractOrCommunication :: ModifyModuleType -> (Function -> VerRes ()) -> Function -> VerRes ()
+verOldFunContractOrCommunication modifyModule commonFun fun@(Fun name args stms) = do
+  commonFun fun
+
+  mapM_ (verStm modifyModule) stms
+
+  -- final command
+  mod <- modifyModule id
+  addCustomTrans
+    modifyModule
+    ""
+    (currState mod)
+    1
+    []
+    [([], [Alive])]
+
 -----------------
 -- verFunContract
 -----------------
@@ -259,6 +282,9 @@ commonVerFunContract (Fun name args stms) = do
 verDFSFunContract :: Function -> VerRes ()
 verDFSFunContract fun = verDFSFunContractOrCommunication modifyContract commonVerFunContract fun
 
+verOldFunContract :: Function -> VerRes ()
+verOldFunContract fun = verOldFunContractOrCommunication modifyContract commonVerFunContract fun
+
 -------------------------
 -- verFunCommunication --
 -------------------------
@@ -284,6 +310,9 @@ commonVerFunCommunication (Fun funName args stms) = do
 -- DFS
 verDFSFunCommunication :: Function -> VerRes ()
 verDFSFunCommunication fun = verDFSFunContractOrCommunication modifyCommunication commonVerFunCommunication fun
+
+verOldFunCommunication :: Function -> VerRes ()
+verOldFunCommunication fun = verOldFunContractOrCommunication modifyCommunication commonVerFunCommunication fun
 
 --------------
 -- SCENARIO --
@@ -347,42 +376,3 @@ verScenario modifyModule decls stms = do
     (-1)
     []
     [([], [Alive])]
-
-  -- two transitions for ability for adversary to interrupt the protocol
-  -- this one not needed anymore, since the timeStep is called in blockchain module
-  {- addCustomTrans
-    modifyModule
-    (sTimelockStep ++ (show $ number mod))
-    (-1)
-    (-1)
-    [EEq (EVar iContrState) (EInt 1),
-      EEq (EVar iCommState) (EInt 1)]
-    -- TODO: Alive?
-    [([], [Alive])]
-  -}
-
-  -- moved to addAdversarialBlockchainTranss in AuxWorldPrismEthver.hs
-  -- world <- get
-  {-addTransNoState
-    modifyBlockchain
-    (sTimelockStep ++ (show $ number mod))
-    (
-      (ELt (EVar $ Ident $ sTimeElapsed) (EVar $ Ident $ sMaxTime))
-        : (Map.elems $ Map.map
-            (\fun -> ENe
-              (EVar $ Ident $ (nameOfFunction fun) ++ sStatusSuffix ++ "0")
-              (EVar iTBroadcast)
-            )
-            (contractFuns world)
-          )
-        ++ (Map.elems $ Map.map
-            (\fun -> ENe
-              (EVar $ Ident $ (nameOfFunction fun) ++ sStatusSuffix ++ "1")
-              (EVar iTBroadcast)
-            )
-            (contractFuns world)
-          )
-    )
-    -- TODO: Alive?
-    [([(Ident sTimeElapsed, EAdd (EVar $ Ident sTimeElapsed) (EInt 1))], [Alive])]
-    -}

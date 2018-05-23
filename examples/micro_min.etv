@@ -48,6 +48,7 @@ contract RPS {
   function release_deposit() {
     if (time_elapsed >= 2) {
       0.send(2);
+      deposit = deposit - 2;
     }
   }
 }    
