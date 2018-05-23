@@ -296,9 +296,18 @@ verScenario modifyModule decls stms = do
   mod <- modifyModule id
 
   mapM_ (verDecl modifyModule) decls
-
   mapM_ (verStm modifyModule) stms
 
+  -- allow time elapse after scenario finish
+  mod <- modifyModule id
+
+  addCustomTrans
+    modifyModule
+    sTimelockStep
+    (currState mod)
+    (currState mod)
+    []
+    [([], [Alive])]
 
   --------------------------------------------------
   -- TUTAJ ZAKOMENTOWAĆ, ŻEBY NIE BYŁO CRIT. SEC. --
@@ -324,6 +333,15 @@ verScenario modifyModule decls stms = do
     (-1)
     [EEq (EVar iAdversaryFlag) (EInt $ number mod)]
     -- TODO: Alive?
+    [([], [Alive])]
+
+  -- allow ADV to push the timelock at any time
+  addCustomTrans
+    modifyModule
+    (sTimelockStep)
+    (-1)
+    (-1)
+    []
     [([], [Alive])]
 
   -- two transitions for ability for adversary to interrupt the protocol

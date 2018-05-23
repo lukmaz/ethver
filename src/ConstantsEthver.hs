@@ -56,7 +56,6 @@ sEmptySender = "empty_sender"
 sTimeElapsed = "time_elapsed"
 sTimelockStep = "timelock_step"
 sNextState = "next_state"
-sWaits = "waits"
 
 sEmptyModule = "emptyModule"
 
@@ -132,3 +131,5 @@ iSendCommunication = Ident sSendCommunication
 iCall = Ident sCall
 iRandom = Ident sRandom
 iRandomLazy = Ident sRandomLazy
+
+iTimeElapsed = Ident sTimeElapsed

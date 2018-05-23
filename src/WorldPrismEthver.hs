@@ -129,12 +129,12 @@ addAutoVars = do
     _ -> error $ sMaxContractBalance ++ " not found in (constants world)"
   
   -- scenarios
-  addVar modifyPlayer0 TBool (Ident $ sWaits ++ "0")
+  {-addVar modifyPlayer0 TBool (Ident $ sWaits ++ "0")
   addInitialValue modifyPlayer0 (Ident $ sWaits ++ "0") EFalse
 
   addVar modifyPlayer1 TBool (Ident $ sWaits ++ "1")
   addInitialValue modifyPlayer1 (Ident $ sWaits ++ "1") EFalse
-
+  -}
   -- TODO: move rest of variables from contractPream etc. to here.
 
   -- communication:

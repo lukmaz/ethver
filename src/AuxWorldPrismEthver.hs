@@ -309,14 +309,14 @@ addAdversarialBlockchainTranss = do
     modifyBlockchain
     (sTimelockStep)
     (   
-      (EOr 
-          --(EAnd (EVar $ Ident $ sWaits ++ "0") (EVar $ Ident $ sWaits ++ "1")) 
-          --(EOr 
-            (EAnd (EVar $ Ident $ sWaits ++ "0") (EEq (EVar $ Ident $ sAdversaryFlag) (EInt 1)))
-            (EAnd (EVar $ Ident $ sWaits ++ "1") (EEq (EVar $ Ident $ sAdversaryFlag) (EInt 0)))
-          --)
-      )
-        : (ELt (EVar $ Ident $ sTimeElapsed) (EVar $ Ident $ sMaxTime))
+      {-(EOr 
+        (EAnd (EVar $ Ident $ sWaits ++ "0") (EVar $ Ident $ sWaits ++ "1")) 
+        (EOr 
+          (EAnd (EVar $ Ident $ sWaits ++ "0") (EEq (EVar $ Ident $ sAdversaryFlag) (EInt 1)))
+          (EAnd (EVar $ Ident $ sWaits ++ "1") (EEq (EVar $ Ident $ sAdversaryFlag) (EInt 0)))
+        )
+      ) : -} 
+        (ELt (EVar $ Ident $ sTimeElapsed) (EVar $ Ident $ sMaxTime))
         : (Map.elems $ Map.map
             (\fun -> ENe 
               (EVar $ Ident $ (nameOfFunction fun) ++ sStatusSuffix ++ "0")
