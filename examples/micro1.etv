@@ -5,9 +5,9 @@
 user "U";
 user "M";
 
-CONTRACT_BALANCE_MAX = 3;
-CONTRACT_BALANCE_INIT = 3;
-USER_BALANCE_MAX = 3;
+CONTRACT_BALANCE_MAX = 1;
+CONTRACT_BALANCE_INIT = 1;
+USER_BALANCE_MAX = 1;
 USER0_BALANCE_INIT = 0;
 USER1_BALANCE_INIT = 0;
 MAX_VALUE = 1;
@@ -19,13 +19,9 @@ MAX_TIME = 2;
 // rU - values from User role of the protocol
 
 contract RPS {
-  uint(3) winning_tickets;
   uint(2) pot = 1;
-  uint(3) deposit = 2;
 
   function release() {
-    if (winning_tickets < 2)
-      winning_tickets = winning_tickets + 1;
     if (msg.sender == 0) {
       if ((pot > 0) && is_signedU && is_openedM && ((randM + saltM) % 2 == commitmentM) && (randM == signed_randU)) {
         0.send(1);
@@ -37,20 +33,6 @@ contract RPS {
         1.send(1);
         pot = pot - 1;
       }
-    }
-  }
-
-  function burn() {
-    if ((winning_tickets >= 2) && (deposit >= 2)) {
-      "null".send(2);
-      deposit = deposit - 2;
-    }
-  }
-
-  function release_deposit() {
-    if (time_elapsed >= 2) {
-      0.send(2);
-      deposit = deposit - 2;
     }
   }
 }    
@@ -97,8 +79,6 @@ scenario U {
     rand0 = random(2);
     payment_issuance.sendCommunication(rand0, 1);
   }
-  wait(false, 2);
-  release_deposit.sendTransaction({from: "U", value: 0});
 
   endU = true;
 }
@@ -112,10 +92,6 @@ scenario M {
     open.sendCommunication();
     if (randM == signed_randU) {
       release.sendTransaction({from: "M", value: 0});
-      wait(balance1 >= 1, 1);
-      if ((balance1 < 1) && (winning_tickets >= 2)) {
-        burn.sendTransaction({from: "M", value: 0});
-      }
     }
   }
   endM = true;
