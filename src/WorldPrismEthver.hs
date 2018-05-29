@@ -113,9 +113,9 @@ addAutoVars = do
   case Map.lookup iMaxValue (constants world) of
     Nothing -> error $ sMaxValue ++ " constant definition not found in the source file.\n"
     Just maxValue -> addVar modifyBlockchain (TUInt (maxValue + 1)) iValue
-  -- TODO: hard-fixed MAX_TIME for 2
-  addVar modifyBlockchain (TUInt 3) (Ident sTimeElapsed)
-  addInitialValue modifyBlockchain (Ident sTimeElapsed) (EInt 0)
+  -- moved to blockchainPream in CodePrismEthver.hs
+  -- addVar modifyBlockchain (TUInt 3) (Ident sTimeElapsed)
+  -- addInitialValue modifyBlockchain (Ident sTimeElapsed) (EInt 0)
 
   -- contract:
 

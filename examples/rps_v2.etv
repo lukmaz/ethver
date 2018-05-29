@@ -7,7 +7,7 @@ USER_BALANCE_MAX = 2;
 USER0_BALANCE_INIT = 1;
 USER1_BALANCE_INIT = 1;
 MAX_VALUE = 1;
-MAX_TIME = 10;
+MAX_TIME = 2;
 
 contract RPS {
 
@@ -24,17 +24,17 @@ contract RPS {
   bool finalized;
   bool completed_honestly;
 
-  function_with_value send_commit(random_uint(3) commit) {
+  function send_commit(random_uint(3) c) {
     if (finalized) {
       msg.sender.send(msg.value);
     }
     else if (msg.value == 1) {
       if ((msg.sender == "A") && (!committed0)) {
-        commit0 = commit;
+        commit0 = c;
         committed0 = true;
       }
       if ((msg.sender == "B") && (!committed1)){
-        commit1 = commit;
+        commit1 = c;
         committed1 = true;
       }
     }
@@ -87,7 +87,7 @@ contract RPS {
   }
 
   function withdraw() {
-    if (timelocksReleased && !finalized) {
+    if (time_elapsed > 0 && !finalized) {
       if ((!input0_set) || (!input1_set)) {
         if (input0_set) {
           "A".send(2);
@@ -120,10 +120,10 @@ scenario A {
   random_uint(3) inputA;
   inputA = random_lazy(3);  //sets special value
   send_commit.sendTransaction(inputA, {from: "A", value: 1});
-  wait(committed1);
+  wait(committed1, 1);
   if (committed1) {
     send_open.sendTransaction({from: "A", value: 0});
-    wait(input1_set);
+    wait(input1_set, 1);
     if (input1_set) {
       finalize.sendTransaction({from: "A", value: 0});
     }
@@ -142,10 +142,10 @@ scenario B {
   random_uint(3) inputB;
   inputB = random_lazy(3);  //sets special value
   send_commit.sendTransaction(inputB, {from: "B", value: 1});
-  wait(committed0);
+  wait(committed0, 1);
   if (committed0) {
     send_open.sendTransaction({from: "B", value: 0});
-    wait(input0_set);
+    wait(input0_set, 1);
     if (input0_set) {
       finalize.sendTransaction({from: "B", value: 0});
     }

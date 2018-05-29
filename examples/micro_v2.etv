@@ -73,7 +73,7 @@ communication {
   }
 
   function payment_issuance(uint(2) r, uint(2) recipient) {
-    if (msg.sender == 0 && is_committedM) {
+    if (msg.sender == 0 && is_committedM && !is_signedU) {
       randU = r;
       is_signedU = true;
     }

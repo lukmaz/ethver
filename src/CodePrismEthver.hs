@@ -37,11 +37,12 @@ generateModule moduleFun moduleName pream world =
   "endmodule\n\n\n"
 
 blockchainPream :: String
-blockchainPream = "";
+blockchainPream = 
   --"  " ++ sContrSender ++ " : [0..1];\n" ++
   -- TODO: skąd wziąć zakres val?
   --"  " ++ sValue ++ " : [0.." ++ sMaxValue ++ "];\n" ++
   --"  " ++ sTimelocksReleased ++ " : bool init false;"
+  "  " ++ sTimeElapsed ++ " : [0.." ++ sMaxTime ++ "] init 0;\n"
 
 contractPream :: String
 contractPream =
