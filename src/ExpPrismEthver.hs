@@ -224,13 +224,6 @@ verStm modifyModule (SWait cond time) = do
   evalCond <- verExp modifyModule cond
   mod <- modifyModule id
   let playerNumber = number mod
-  {-addTransToNewState
-    modifyModule
-    ""
-    []
-    -- TODO: Alive?
-    [([(Ident $ sWaits ++ (show playerNumber), ETrue)], [Alive])]
-  -}
   
   -- if blocked, allow to step the timelock
   addCustomTrans
@@ -238,7 +231,7 @@ verStm modifyModule (SWait cond time) = do
     sTimelockStep
     (currState mod)
     (currState mod)
-    [ENot evalCond]
+    [ENot evalCond, ELt (EVar $ Ident sTimeElapsed) time]
     [([], [Alive])]
 
   -- if not blocked or timelock passed, go ahead

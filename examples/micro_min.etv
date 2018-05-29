@@ -20,18 +20,16 @@ contract RPS {
   uint(3) deposit = 2;
 
   function release() {
+    if (winning_tickets < 2)
+      winning_tickets = winning_tickets + 1;
     if (msg.sender == 0) {
-      if ((pot > 0) && is_signedU && ((randM + saltM) % 2 == commitmentM) && (randM == randU)) {
-        if (winning_tickets < 2)
-          winning_tickets = winning_tickets + 1;
+      if ((pot > 0) && is_signedU && is_openedM && ((randM + saltM) % 2 == commitmentM) && (randM == signed_randU)) {
         0.send(1);
         pot = pot - 1;
       }
     }
     else {
-      if ((pot > 0) && is_signedU && ((randM + saltM) % 2 == commitmentM) && (randM == randU)) {
-        if (winning_tickets < 2)
-          winning_tickets = winning_tickets + 1;
+      if ((pot > 0) && is_signedU && is_openedM && ((randM + saltM) % 2 == commitmentM) && (randM == signed_randU)) {
         1.send(1);
         pot = pot - 1;
       }
@@ -56,10 +54,12 @@ contract RPS {
 communication {
   uint(2) commitmentM;
   bool is_committedM;
+  bool is_openedM;
   bool is_signedU;
   uint(2) randM;
   uint(2) saltM;
   uint(2) randU;
+  uint(2) signed_randU;
 
   function payment_request() {
     if (msg.sender == 1 && !is_signedU) {
@@ -69,15 +69,17 @@ communication {
   }
 
   function payment_issuance(uint(2) r, uint(2) recipient) {
-    if (msg.sender == 0) {
+    if (msg.sender == 0 && is_committedM) {
       randU = r;
       is_signedU = true;
     }
   }
   function open() {
-    if (msg.sender == 1) {
+    if (msg.sender == 1 && !is_openedM) {
       randM = random(2);
+      signed_randU = randU;
       saltM = (commitmentM - randM + 2) % 2;
+      is_openedM = true;
     }
   }
 }
@@ -102,9 +104,9 @@ scenario M {
 
   payment_request.sendCommunication();
   wait(is_signedU, 1);
-  if (is_signedU) {
+  if (is_signedU && time_elapsed < 1) {
     open.sendCommunication();
-    if (randM == randU) {
+    if (randM == signed_randU) {
       release.sendTransaction({from: "M", value: 0});
       wait(balance1 >= 1, 1);
       if ((balance1 < 1) && (winning_tickets >= 2)) {
