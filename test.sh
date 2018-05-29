@@ -1,1 +1,1 @@
-./MakeEthver examples/micro_min.etv
+./MakeEthver examples/micro2.etv

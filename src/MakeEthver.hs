@@ -53,11 +53,11 @@ run v p f s = let ts = myLLexer s in case p ts of
                           writeFile
                             (verFileName f)
                             ver
-                          putStrLn ("Writing file " ++ (propsFileName f))
+                          {-putStrLn ("Writing file " ++ (propsFileName f))
                           writeFile
                             (propsFileName f)
                             props
-                          exitSuccess
+                          exitSuccess-}
 
 contrFileName :: String -> String
 contrFileName = (++ "sol") . reverse . drop 3 . reverse
