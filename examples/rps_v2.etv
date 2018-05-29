@@ -25,7 +25,7 @@ contract RPS {
   bool completed_honestly;
 
   function send_commit(random_uint(3) c) {
-    if (finalized) {
+    if (finalized && msg.value > 0) {
       msg.sender.send(msg.value);
     }
     else if (msg.value == 1) {
@@ -68,21 +68,19 @@ contract RPS {
 	}
 
 	function finalize() {
-    if (!finalized) {
-      if (input0_set && input1_set) {
-        if ((((3 + input0) - input1)%3) == 1) {
-          "A".send(2*1);
-        }
-        if ((((3 + input0) - input1)%3) == 2) {
-          "B".send(2*1);
-        }
-        if ((((3 + input0) - input1)%3) == 0) {
-          "A".send(1);
-          "B".send(1);
-        }
-        finalized = true;
-        completed_honestly = true;
+    if (!finalized && input0_set && input1_set) {
+      if ((((3 + input0) - input1)%3) == 1) {
+        "A".send(2*1);
       }
+      if ((((3 + input0) - input1)%3) == 2) {
+        "B".send(2*1);
+      }
+      if ((((3 + input0) - input1)%3) == 0) {
+        "A".send(1);
+        "B".send(1);
+      }
+      finalized = true;
+      completed_honestly = true;
     }
   }
 
@@ -105,8 +103,8 @@ contract RPS {
             }
           }
         }
-        finalized = true;
       }
+      finalized = true;
     }
   }
 }
