@@ -15,6 +15,9 @@ contract RPS {
 	random_uint(3) commit1;
   bool committed0;
   bool committed1;
+  bool finished0;
+  bool finished1;
+
 
 	uint(3) input0;
 	uint(3) input1;
@@ -24,17 +27,17 @@ contract RPS {
   bool finalized;
   bool completed_honestly;
 
-  function_with_value send_commit(random_uint(3) c) {
+  function_with_value send_commit() {
     if (finalized && msg.value > 0) {
       msg.sender.send(msg.value);
     }
     else if (msg.value == 1) {
       if ((msg.sender == "A") && (!committed0)) {
-        commit0 = c;
+        commit0 = random_lazy(3);
         committed0 = true;
       }
       if ((msg.sender == "B") && (!committed1)){
-        commit1 = c;
+        commit1 = random_lazy(3);
         committed1 = true;
       }
     }
@@ -86,25 +89,18 @@ contract RPS {
 
   function withdraw() {
     if (time_elapsed > 0 && !finalized) {
-      if ((!input0_set) || (!input1_set)) {
-        if (input0_set) {
-          "A".send(2);
-        }
-        else {
-          if (input1_set) {
-            "B".send(2);
-          }
-          else {
-            if (committed0) {
-              "A".send(1);
-            }
-            if (committed1) {
-              "B".send(1);
-            }
-          }
+      if (msg.sender == 0) {
+        if (!finished0) {
+          0.send(1);
+          finished0 = false;
         }
       }
-      finalized = true;
+      else {
+        if (!finished1) {
+          1.send(1);
+          finished1 = false;
+        }
+      }
     }
   }
 }
@@ -116,8 +112,7 @@ communication {
 scenario A {
   bool endA;
   random_uint(3) inputA;
-  inputA = random_lazy(3);  //sets special value
-  send_commit.sendTransaction(inputA, {from: "A", value: 1});
+  send_commit.sendTransaction({from: "A", value: 1});
   wait(committed1, 1);
   if (committed1) {
     send_open.sendTransaction({from: "A", value: 0});
@@ -138,8 +133,7 @@ scenario A {
 scenario B {
   bool endB;
   random_uint(3) inputB;
-  inputB = random_lazy(3);  //sets special value
-  send_commit.sendTransaction(inputB, {from: "B", value: 1});
+  send_commit.sendTransaction({from: "B", value: 1});
   wait(committed0, 1);
   if (committed0) {
     send_open.sendTransaction({from: "B", value: 0});
