@@ -293,7 +293,7 @@ setCS2 number  =
 
 advUpdates :: Bool -> Integer -> Ident -> [Arg] -> [Exp] -> [[(Ident, Exp)]]
 advUpdates withVal number funName args valList =
-  let prefix = if withVal then (sValue:) else id in
+  let prefix = if withVal then ((unident funName ++ "_" ++ sValue):) else id in
     let varNames = prefix (map (\(Ar _ (Ident ident)) -> ident) args) in
       [   
         map 
@@ -351,7 +351,7 @@ addAdversarialTranss funs whichPrefix whichState = do
 addAdversarialTranssToPlayer :: ModifyModuleType -> String -> Ident -> Function -> VerRes ()
 addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunV (Ident funName) args _) = do
   mod <- modifyModule id  
-  let valName = Ident $ funName ++ sValueSuffix ++ (show $ number mod)
+  let valName = Ident $ funName  ++ sValueSuffix ++ (show $ number mod)
   maxValVal <- maxRealValue valName
   let maxValsList = generateValsList maxValVal args
   generateAdvTranss modifyModule whichPrefix whichState True funName args maxValsList

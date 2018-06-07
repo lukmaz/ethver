@@ -226,6 +226,9 @@ verDFSFunContractOrCommunication modifyModule commonFun fun = do
 -------------------------------------
 
 verOldFunContractOrCommunication :: ModifyModuleType -> (Function -> VerRes ()) -> Function -> VerRes ()
+verOldFunContractOrCommunication modifyModule commonfun (FunV name args stm) =
+  verOldFunContractOrCommunication modifyModule commonfun (Fun name args stm)
+
 verOldFunContractOrCommunication modifyModule commonFun fun@(Fun name args stms) = do
   commonFun fun
 

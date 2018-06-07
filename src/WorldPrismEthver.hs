@@ -112,10 +112,8 @@ addAutoVars = do
   -- ODP: Z (constants world). A tam wczytać z kodu źródłowego
   case Map.lookup iMaxValue (constants world) of
     Nothing -> error $ sMaxValue ++ " constant definition not found in the source file.\n"
-    Just maxValue -> addVar modifyBlockchain (TUInt (maxValue + 1)) iValue
-  -- moved to blockchainPream in CodePrismEthver.hs
-  -- addVar modifyBlockchain (TUInt 3) (Ident sTimeElapsed)
-  -- addInitialValue modifyBlockchain (Ident sTimeElapsed) (EInt 0)
+    Just maxValue -> do
+      addVar modifyBlockchain (TUInt (maxValue + 1)) iValue
 
   -- contract:
 
@@ -129,12 +127,6 @@ addAutoVars = do
     _ -> error $ sMaxContractBalance ++ " not found in (constants world)"
   
   -- scenarios
-  {-addVar modifyPlayer0 TBool (Ident $ sWaits ++ "0")
-  addInitialValue modifyPlayer0 (Ident $ sWaits ++ "0") EFalse
-
-  addVar modifyPlayer1 TBool (Ident $ sWaits ++ "1")
-  addInitialValue modifyPlayer1 (Ident $ sWaits ++ "1") EFalse
-  -}
   -- TODO: move rest of variables from contractPream etc. to here.
 
   -- communication:

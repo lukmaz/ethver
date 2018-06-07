@@ -24,7 +24,7 @@ contract RPS {
   bool finalized;
   bool completed_honestly;
 
-  function send_commit(random_uint(3) c) {
+  function_with_value send_commit(random_uint(3) c) {
     if (finalized && msg.value > 0) {
       msg.sender.send(msg.value);
     }
