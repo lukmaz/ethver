@@ -46,26 +46,14 @@ contract RPS {
 	function send_open() {
     if (msg.sender == "A") {
       if (committed0 && (!input0_set)) {
-        if (commit0 == random_lazy(3)) {  //special value
-          input0 = random(3);
-          input0_set = true;
-        }
-        if (commit0 != random_lazy(3)) {  //special value
-          input0 = commit0;
-          input0_set = true;
-        }
+        input0 = commit0; // here the coin toss happen
+        input0_set = true;
       }
     }
     if (msg.sender == "B") {
       if (committed1 && (!input1_set)) {
-        if (commit1 == random_lazy(3)) {  //special value
-          input1 = random(3);
-          input1_set = true;
-        }
-        else {  //special value
-          input1 = commit1;
-          input1_set = true;
-        }
+        input1 = commit1; // here the coin toss happen
+        input1_set = true;
       }
     }
 	}
