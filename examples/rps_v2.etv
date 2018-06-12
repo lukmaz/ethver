@@ -33,11 +33,11 @@ contract RPS {
     }
     else if (msg.value == 1) {
       if ((msg.sender == "A") && (!committed0)) {
-        commit0 = random_lazy(3);
+        //commit0 = random_lazy(3);
         committed0 = true;
       }
       if ((msg.sender == "B") && (!committed1)){
-        commit1 = random_lazy(3);
+        //commit1 = random_lazy(3);
         committed1 = true;
       }
     }
@@ -46,13 +46,15 @@ contract RPS {
 	function send_open() {
     if (msg.sender == "A") {
       if (committed0 && (!input0_set)) {
-        input0 = commit0; // here the coin toss happen
+        //input0 = commit0; // here the coin toss happen
+        input0 = random(3);
         input0_set = true;
       }
     }
     if (msg.sender == "B") {
       if (committed1 && (!input1_set)) {
-        input1 = commit1; // here the coin toss happen
+        // input1 = commit1; // here the coin toss happen
+        input1 = random(3);
         input1_set = true;
       }
     }
