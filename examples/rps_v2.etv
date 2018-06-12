@@ -15,28 +15,27 @@ contract RPS {
 	random_uint(3) commit1;
   bool committed0;
   bool committed1;
-  bool finished0;
-  bool finished1;
+  bool withdraw0;
+  bool withdraw1;
 
 
 	uint(3) input0;
 	uint(3) input1;
-  bool input0_set;
-  bool input1_set;
+  bool reveal0;
+  bool reveal1;
 
   bool finalized;
-  bool completed_honestly;
 
   function_with_value send_commit() {
     if (finalized && msg.value > 0) {
       msg.sender.send(msg.value);
     }
     else if (msg.value == 1) {
-      if ((msg.sender == "A") && (!committed0)) {
+      if (msg.sender == "A" && !committed0 && !withdraw0) {
         //commit0 = random_lazy(3);
         committed0 = true;
       }
-      if ((msg.sender == "B") && (!committed1)){
+      if (msg.sender == "B" && !committed1 && !withdraw1){
         //commit1 = random_lazy(3);
         committed1 = true;
       }
@@ -45,54 +44,68 @@ contract RPS {
 
 	function send_open() {
     if (msg.sender == "A") {
-      if (committed0 && (!input0_set)) {
-        //input0 = commit0; // here the coin toss happen
+      if (committed0 && !reveal0) {
         input0 = random(3);
-        input0_set = true;
+        reveal0 = true;
       }
     }
     if (msg.sender == "B") {
-      if (committed1 && (!input1_set)) {
-        // input1 = commit1; // here the coin toss happen
+      if (committed1 && !reveal1) {
         input1 = random(3);
-        input1_set = true;
+        reveal1 = true;
       }
     }
 	}
 
 	function finalize() {
-    if (!finalized && input0_set && input1_set) {
+    if (!finalized && reveal0 && reveal1) {
       if ((((3 + input0) - input1)%3) == 1) {
-        "A".send(2*1);
+        "A".send(2);
       }
       if ((((3 + input0) - input1)%3) == 2) {
-        "B".send(2*1);
+        "B".send(2);
       }
       if ((((3 + input0) - input1)%3) == 0) {
         "A".send(1);
         "B".send(1);
       }
       finalized = true;
-      completed_honestly = true;
+    }
+    if (!finalized && committed0 && !committed1 && time_elapsed > 0) {
+      "A".send(contract_balance);
+      finalized = true;
+    }
+    if (!finalized && !committed0 && committed1 && time_elapsed > 0) {
+      "B".send(contract_balance);
+      finalized = true;
+    }
+    if (!finalized && reveal0 && !reveal1 && time_elapsed > 1) {
+      "A".send(contract_balance);
+      finalized = true;
+    }
+    if (!finalized && !reveal0 && reveal1 && time_elapsed > 1) {
+      "B".send(contract_balance);
+      finalized = true;
     }
   }
-
+  /*
   function withdraw() {
     if (time_elapsed > 0 && !finalized) {
       if (msg.sender == 0) {
-        if (!finished0) {
+        if (!withdraw0 && !reveal) {
           0.send(1);
-          finished0 = false;
+          withdraw0 = true;
         }
       }
       else {
-        if (!finished1) {
+        if (!withdraw1 && !input0_set) {
           1.send(1);
-          finished1 = false;
+          withdraw1 = true;
         }
       }
     }
   }
+  */
 }
 
 communication {
@@ -104,18 +117,13 @@ scenario A {
   random_uint(3) inputA;
   send_commit.sendTransaction({from: "A", value: 1});
   wait(committed1, 1);
+  if (!committed1) {
+    finalize.sendTransaction({from: "A", value: 0});
+  }
   if (committed1) {
     send_open.sendTransaction({from: "A", value: 0});
-    wait(input1_set, 1);
-    if (input1_set) {
-      finalize.sendTransaction({from: "A", value: 0});
-    }
-    else {
-      withdraw.sendTransaction({from: "A", value: 0});
-    }
-  }
-  else {
-    withdraw.sendTransaction({from: "A", value: 0});
+    wait(reveal1, 2);
+    finalize.sendTransaction({from: "A", value: 0});
   }
   endA = true;
 }
@@ -125,18 +133,13 @@ scenario B {
   random_uint(3) inputB;
   send_commit.sendTransaction({from: "B", value: 1});
   wait(committed0, 1);
+  if (!committed0) {
+    finalize.sendTransaction({from: "B", value: 0});
+  }
   if (committed0) {
     send_open.sendTransaction({from: "B", value: 0});
-    wait(input0_set, 1);
-    if (input0_set) {
-      finalize.sendTransaction({from: "B", value: 0});
-    }
-    else {
-      withdraw.sendTransaction({from: "B", value: 0});
-    }
-  }
-  else {
-    withdraw.sendTransaction({from: "B", value: 0});
+    wait(reveal0, 2);
+    finalize.sendTransaction({from: "B", value: 0});
   }
   endB = true;
 }
