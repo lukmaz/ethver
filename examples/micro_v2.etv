@@ -24,7 +24,7 @@ contract RPS {
   uint(3) deposit = 2;
 
   function release() {
-    if (winning_tickets < 2)
+    if (winning_tickets < 2 && randM == signed_randU)
       winning_tickets = winning_tickets + 1;
     if (msg.sender == 0) {
       if ((pot > 0) && is_signedU && is_openedM && ((randM + saltM) % 2 == commitmentM) && (randM == signed_randU)) {

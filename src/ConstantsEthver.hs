@@ -15,7 +15,6 @@ nMinP0State = -1
 nMinP1State = -1
 nInitP0State = 0
 nInitP1State = 0
-nInitContrState = 1
 
 -- transaction states
 nTNone = 0

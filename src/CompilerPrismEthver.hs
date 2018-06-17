@@ -123,7 +123,8 @@ verFunBroadcast modifyModule (Fun name args stms) = do
     modifyBlockchain 
     (sBroadcastPrefix ++ (unident name) ++ (show $ number mod))
     [
-      EEq (EVar iContrState) (EInt 1), 
+      EEq (EVar iContrState) (EInt nInitContractState), 
+      EEq (EVar iCommState) (EInt nInitCommState), 
       ENe (EVar $ Ident $ unident name ++ sStatusSuffix ++ (show $ number mod)) (EVar $ Ident sTBroadcast)
     ]
     -- TODO: ALive?
@@ -157,7 +158,8 @@ verFunExecute modifyModule (Fun name args stms) = do
     modifyBlockchain 
     (sBroadcastPrefix ++ (unident name))
     [
-      EEq (EVar iContrState) (EInt nInitContrState),
+      EEq (EVar iContrState) (EInt nInitContractState),
+      EEq (EVar iCommState) (EInt nInitCommState),
       EEq 
         (EVar $ Ident $ unident name ++ sStatusSuffix ++ (show $ number mod)) 
         (EVar $ iTBroadcast),
@@ -171,7 +173,8 @@ verFunExecute modifyModule (Fun name args stms) = do
     modifyBlockchain 
     ""
     [
-      EEq (EVar iContrState) (EInt nInitContrState),
+      EEq (EVar iContrState) (EInt nInitContractState),
+      EEq (EVar iCommState) (EInt nInitCommState),
       EEq 
         (EVar $ Ident $ unident name ++ sStatusSuffix ++ (show $ number mod)) 
         (EVar $ iTBroadcast),
