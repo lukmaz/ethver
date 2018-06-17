@@ -23,6 +23,8 @@ contract RPS {
 	uint(3) input1;
   bool reveal0;
   bool reveal1;
+  bool AbeforeB;
+  bool BbeforeA;
 
   bool finalized;
 
@@ -32,11 +34,9 @@ contract RPS {
     }
     else if (msg.value == 1) {
       if (msg.sender == "A" && !committed0 && !withdraw0) {
-        //commit0 = random_lazy(3);
         committed0 = true;
       }
       if (msg.sender == "B" && !committed1 && !withdraw1){
-        //commit1 = random_lazy(3);
         committed1 = true;
       }
     }
@@ -47,15 +47,21 @@ contract RPS {
       if (committed0 && !reveal0) {
         input0 = random(3);
         reveal0 = true;
+        if (!reveal1) {
+          AbeforeB = true;
+        }
       }
     }
     if (msg.sender == "B") {
       if (committed1 && !reveal1) {
         input1 = random(3);
         reveal1 = true;
+        if (!reveal0) {
+          BbeforeA = true;
+        }
       }
     }
-	}
+  }
 
 	function finalize() {
     if (!finalized && reveal0 && reveal1) {
