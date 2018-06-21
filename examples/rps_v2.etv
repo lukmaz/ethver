@@ -11,16 +11,16 @@ MAX_TIME = 2;
 
 contract RPS {
 
-	random_uint(3) commit0;
-	random_uint(3) commit1;
+  random_uint(3) commit0;
+  random_uint(3) commit1;
   bool committed0;
   bool committed1;
   bool withdraw0;
   bool withdraw1;
 
 
-	uint(3) input0;
-	uint(3) input1;
+  uint(3) input0;
+  uint(3) input1;
   bool reveal0;
   bool reveal1;
   bool AbeforeB;

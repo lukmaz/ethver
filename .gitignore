@@ -17,7 +17,7 @@ cabal.sandbox.config
 *.y
 *.log
 *.pdf
-*.tex
+src/*.tex
 .*.swp
 *.bak
 .stack-work/
