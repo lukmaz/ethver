@@ -77,22 +77,6 @@ contract RPS {
       }
       finalized = true;
     }
-    if (!finalized && committed0 && !committed1 && time_elapsed > 0) {
-      "A".send(contract_balance);
-      finalized = true;
-    }
-    if (!finalized && !committed0 && committed1 && time_elapsed > 0) {
-      "B".send(contract_balance);
-      finalized = true;
-    }
-    if (!finalized && reveal0 && !reveal1 && time_elapsed > 1) {
-      "A".send(contract_balance);
-      finalized = true;
-    }
-    if (!finalized && !reveal0 && reveal1 && time_elapsed > 1) {
-      "B".send(contract_balance);
-      finalized = true;
-    }
   }
 }
 

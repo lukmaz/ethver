@@ -15,7 +15,72 @@
 
 \section{Rock-Paper-Scissors}
 
-\lstinputlisting{../examples/rps_v2.etv}
+\subsection{RPS v3}
+
+\subsubsection{Code}
+
+\lstinputlisting{../examples/rps_v3.etv}
+
+\subsubsection{Properties (same as for v4)}
+
+\lstinputlisting{../examples/rps_v3.props}
+
+\subsubsection{Setup honest-honest}
+
+\begin{enumerate}
+\item ADVERSARY=-1, target = 2/3, result = 2/3
+\item ADVERSARY=-1, target = 2/3, result = 2/3
+\item ADVERSARY=-1, target = 2/3, result = 2/3
+\item ADVERSARY=-1, target = 2/3, result = 2/3
+\end{enumerate}
+
+\subsubsection{Setup honest-adversary}
+
+\begin{enumerate}
+\item ADVERSARY=1, target = 2/3, result = 0
+\item ADVERSARY=1, target = 2/3, result = 1
+\item ADVERSARY=0, target = 2/3, result = 0
+\item ADVERSARY=0, target = 2/3, result = 1
+\end{enumerate}
+
+\subsubsection{Problems}
+
+\begin{itemize}
+\item Player 1 can wait until player 0 opens his commitment and in case he knows he is going to lose, he can 
+avoid to open his own commitment.
+\end{itemize}
+
+\subsubsection{Solution}
+Introduce a penalty: if a player does not open the commitment within some timeframe, he loses.
+
+\subsection{RPS v4}
+
+\subsubsection{Code}
+
+\lstinputlisting{../examples/rps_v4.etv}
+
+\subsubsection{Properties}
+
+\lstinputlisting{../examples/rps_v4.props}
+
+\subsubsection{Setup (with fairness)}
+
+\begin{enumerate}
+\item ADVERSARY=1, result = 2/3
+\item ADVERSARY=1, result = 2/3
+\item ADVERSARY=0, result = 2/3
+\item ADVERSARY=0, result = 2/3
+\end{enumerate}
+
+\subsubsection{Comments}
+
+\begin{itemize}
+\item First property (line 1) checks whether player 0 wins or draws with probability at lest 2/3 (with ADVERSARY=1)
+\item Second property (line 3) checks wheter player 0 wins with probability at least 1/3 which is equivalent to player 0
+loses with probability at most 2/3. (Also ADVERSARY = 1)
+\item The next two properties analogously for honest player0 and ADVERSARY=0.
+\end{itemize}
+
 
 \section{Micropayments}
 
