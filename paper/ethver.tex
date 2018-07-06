@@ -19,16 +19,16 @@
 \section{Rock-Paper-Scissors}
 
 %%%%%%%%%%%%%%%
-\subsection{RPS v2}
+\subsection{RPS v1}
 %%%%%%%%%%%%%%%
 
-\lstinputlisting{../examples/rps_v2.etv}
+\lstinputlisting{../examples/rps_v1.etv}
 
-\subsubsection{Properties (similar to v2, but wihout committed)}
+\subsubsection{Properties}
 
-\lstinputlisting{../examples/rps_v2.props}
+\lstinputlisting{../examples/rps_v1.props}
 
-\subsubsection{Setup honest-honest}
+\subsubsection{Setup honest-honest (fairness not needed)}
 
 \begin{enumerate}
 \item ADVERSARY=-1, target = 2/3, result = 2/3
@@ -37,7 +37,36 @@
 \item ADVERSARY=-1, target = 2/3, result = 2/3
 \end{enumerate}
 
-\subsubsection{Setup honest-adversary}
+\subsubsection{Setup honest-adversary (fairness does not matter}
+
+\begin{enumerate}
+\item ADVERSARY=1, target = 2/3, result = 0
+\item ADVERSARY=1, target = 2/3, result = 1
+\item ADVERSARY=0, target = 2/3, result = 0
+\item ADVERSARY=0, target = 2/3, result = 1
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%
+\subsection{RPS v2}
+%%%%%%%%%%%%%%%
+
+\lstinputlisting{../examples/rps_v2.etv}
+
+\subsubsection{Properties (similar to v3, but wihout committed)}
+
+\lstinputlisting{../examples/rps_v2.props}
+
+\subsubsection{Setup honest-honest (fairness not needed)}
+
+\begin{enumerate}
+\item ADVERSARY=-1, target = 2/3, result = 2/3
+\item ADVERSARY=-1, target = 2/3, result = 2/3
+\item ADVERSARY=-1, target = 2/3, result = 2/3
+\item ADVERSARY=-1, target = 2/3, result = 2/3
+\end{enumerate}
+
+\subsubsection{Setup honest-adversary (fairness does not matter)}
 
 \begin{enumerate}
 \item ADVERSARY=1, target = 2/3, result = 0
@@ -58,7 +87,7 @@
 
 \lstinputlisting{../examples/rps_v3.props}
 
-\subsubsection{Setup honest-honest}
+\subsubsection{Setup honest-honest (fairness not needed)}
 
 \begin{enumerate}
 \item ADVERSARY=-1, target = 2/3, result = 2/3
@@ -67,7 +96,7 @@
 \item ADVERSARY=-1, target = 2/3, result = 2/3
 \end{enumerate}
 
-\subsubsection{Setup honest-adversary}
+\subsubsection{Setup honest-adversary (fairness does not matter)}
 
 \begin{enumerate}
 \item ADVERSARY=1, target = 2/3, result = 0
@@ -97,13 +126,22 @@ Introduce a penalty: if a player does not open the commitment within some timefr
 
 \lstinputlisting{../examples/rps_v4.props}
 
-\subsubsection{Setup (with fairness)}
+\subsubsection{Setup honest-honest (fairness not needed)}
 
 \begin{enumerate}
-\item ADVERSARY=1, result = 2/3
-\item ADVERSARY=1, result = 2/3
-\item ADVERSARY=0, result = 2/3
-\item ADVERSARY=0, result = 2/3
+\item ADVERSARY=-1, target = 2/3, result = 2/3
+\item ADVERSARY=-1, target = 2/3, result = 2/3
+\item ADVERSARY=-1, target = 2/3, result = 2/3
+\item ADVERSARY=-1, target = 2/3, result = 2/3
+\end{enumerate}
+
+\subsubsection{Setup honest-adversary (FAIRNESS neccesarry for P1, P3)}
+
+\begin{enumerate}
+\item ADVERSARY=1, target = 2/3, result = 2/3
+\item ADVERSARY=1, target = 2/3, result = 2/3
+\item ADVERSARY=0, target = 2/3, result = 2/3
+\item ADVERSARY=0, target = 2/3, result = 2/3
 \end{enumerate}
 
 \subsubsection{Comments}
@@ -118,7 +156,57 @@ loses with probability at most 2/3. (Also ADVERSARY = 1)
 
 \section{Micropayments}
 
+\subsection{Micropayments v1}
+
+\subsubsection{Code}
+
+\lstinputlisting{../examples/micro_v1.etv}
+
+\subsubsection{Properties}
+
+\lstinputlisting{../examples/micro_v1.props}
+
+\subsubsection{Setup honest-adversary (fairness not needed)}
+
+\begin{enumerate}
+\item ADVERSARY=-1, target = 1/2, result = 1/2
+\item ADVERSARY=-1, target = 1/2, result = 1/2
+\item ADVERSARY=-1, target = 1/2, result = 1/2
+\end{enumerate}
+
+\subsubsection{Setup honest-adversary (fairness does not matter)}
+
+\begin{enumerate}
+\item ADVERSARY=-1, target = 1/2, result = 1/2
+\item ADVERSARY=0, target = 1/2, result = 1
+\item ADVERSARY=1, target = 1/2, \textbf{result = 1/2 (ok?)}
+\end{enumerate}
+
+\subsection{Micropayments v2}
+
+\subsubsection{Code}
+
 \lstinputlisting{../examples/micro_v2.etv}
 
+\subsubsection{Properties}
+
+\lstinputlisting{../examples/micro_v2.props}
+
+
+\subsubsection{Setup honest-adversary (fairness not needed)}
+
+\begin{enumerate}
+\item ADVERSARY=-1, target = 1/2, result = 1/2
+\item ADVERSARY=-1, target = 1/2, result = 1/2
+\item ADVERSARY=-1, target = 1/2, result = 1/2
+\end{enumerate}
+
+\subsubsection{Setup honest-adversary (fairness does not matter)}
+
+\begin{enumerate}
+\item ADVERSARY=-1, target = 1/2, result = 1/2
+\item ADVERSARY=0, target = 1/2, result = 1/2
+\item ADVERSARY=1, target = 1/2, result = 1/2
+\end{enumerate}
 
 \end{document}
