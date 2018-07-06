@@ -418,6 +418,19 @@ burnMoney value = do
 
 transferMoney :: Ident -> Ident -> Exp -> Exp -> VerRes ()
 transferMoney from to maxTo value = do
+  mod <- modifyContract id
+  let newState = numStates mod + 1
+  
+  -- fail if not enough money or not enough max balance of recipient
+  addCustomTrans 
+    modifyContract 
+    "" 
+    (currState mod) 
+    newState 
+    [EOr (ELt (EVar from) value) (EGt (EAdd (EVar to) value) maxTo)]
+    [([], [Alive])]
+  
+  -- succeed if enough money and max balance of recipient high enough
   addTransToNewState
     --TODO: czy to przypadkiem nie ma być w BC?
     modifyContract
@@ -425,6 +438,13 @@ transferMoney from to maxTo value = do
     [EGe (EVar from) value, ELe (EAdd (EVar to) value) maxTo]
     -- TODO: Alive?
     [([(from, ESub (EVar from) value), (to, EAdd (EVar to) value)], [Alive])]
+
+
+
+
+
+
+
 
 -- TODO: one MAX_USER_BALANCE for all users
 smartTransferFromContract :: Ident -> Exp -> VerRes [[(Ident, Exp)]]

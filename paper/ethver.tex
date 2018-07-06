@@ -13,9 +13,42 @@
 
 \javastyle
 
+\tableofcontents
+
+
 \section{Rock-Paper-Scissors}
 
+%%%%%%%%%%%%%%%
+\subsection{RPS v2}
+%%%%%%%%%%%%%%%
+
+\lstinputlisting{../examples/rps_v2.etv}
+
+\subsubsection{Properties (similar to v2, but wihout committed)}
+
+\lstinputlisting{../examples/rps_v2.props}
+
+\subsubsection{Setup honest-honest}
+
+\begin{enumerate}
+\item ADVERSARY=-1, target = 2/3, result = 2/3
+\item ADVERSARY=-1, target = 2/3, result = 2/3
+\item ADVERSARY=-1, target = 2/3, result = 2/3
+\item ADVERSARY=-1, target = 2/3, result = 2/3
+\end{enumerate}
+
+\subsubsection{Setup honest-adversary}
+
+\begin{enumerate}
+\item ADVERSARY=1, target = 2/3, result = 0
+\item ADVERSARY=1, target = 2/3, result = 1
+\item ADVERSARY=0, target = 2/3, result = 0
+\item ADVERSARY=0, target = 2/3, result = 1
+\end{enumerate}
+
+%%%%%%%%%%%%%%%
 \subsection{RPS v3}
+%%%%%%%%%%%%%%%
 
 \subsubsection{Code}
 
@@ -53,8 +86,9 @@ avoid to open his own commitment.
 \subsubsection{Solution}
 Introduce a penalty: if a player does not open the commitment within some timeframe, he loses.
 
+%%%%%%%%%%%%%%%%%%
 \subsection{RPS v4}
-
+%%%%%%%%%%%%%%%%%%
 \subsubsection{Code}
 
 \lstinputlisting{../examples/rps_v4.etv}
