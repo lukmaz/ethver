@@ -439,13 +439,6 @@ transferMoney from to maxTo value = do
     -- TODO: Alive?
     [([(from, ESub (EVar from) value), (to, EAdd (EVar to) value)], [Alive])]
 
-
-
-
-
-
-
-
 -- TODO: one MAX_USER_BALANCE for all users
 smartTransferFromContract :: Ident -> Exp -> VerRes [[(Ident, Exp)]]
 smartTransferFromContract to value = do

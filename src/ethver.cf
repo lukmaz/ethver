@@ -97,7 +97,6 @@ _. Exp7  ::= Exp8 ;
 
 coercions Exp 8 ;
 separator CallArg "," ;
-separator nonempty Ident "." ;
 
 AExp.   CallArg ::= Exp ;
 ABra.   CallArg ::= "{" "from" ":" Exp "," "value" ":" Exp "}" ;
