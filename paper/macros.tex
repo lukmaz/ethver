@@ -2,6 +2,8 @@
 
 \usepackage{listings}
 \usepackage{algpseudocode}
+\usepackage{graphicx}
+\usepackage{amsmath}
 
 % Default fixed font does not support bold face
 \DeclareFixedFont{\ttb}{T1}{txtt}{bx}{n}{12} % for bold
@@ -16,14 +18,14 @@
 % Javascript style for highlighting
 \newcommand\javastyle{\lstset{
 language=Java,
-basicstyle=\small,
-otherkeywords={var, contract, uint, struct, function, bytes32, address, bool},             % Add keywords here
+basicstyle=\small\ttfamily,
+otherkeywords={var, contract, uint, struct, function, bytes32, bool},             % Add keywords here
 keywordstyle=\small\bf\color{deepblue},
 emph={},          % Custom highlighting
 emphstyle=\ttb\color{deepred},    % Custom highlighting style
 stringstyle=\color{deepgreen},
 frame=tb,                         % Any extra options here
-numbers=left,
+%numbers=left,
 showstringspaces=false            % 
 }}
 
@@ -37,4 +39,14 @@ showstringspaces=false            %
 
 % Java for inline
 \newcommand\javainline[1]{{\javastyle\lstinline!#1!}}
+
+% picture
+\newcommand{\img}[2]{
+	\begin{figure}[h]
+	\centering
+	\includegraphics[scale=0.5]{img/#1}
+	\caption{#2}
+	\label{img:#1}
+	\end{figure}
+}
 

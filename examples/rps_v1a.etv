@@ -1,0 +1,93 @@
+user "A";
+user "B";
+
+CONTRACT_BALANCE_MAX = 2;
+CONTRACT_BALANCE_INIT = 0;
+USER_BALANCE_MAX = 3;
+USER0_BALANCE_INIT = 1;
+USER1_BALANCE_INIT = 2;
+MAX_VALUE = 1;
+MAX_TIME = 2;
+
+contract RPS {
+  uint(3) num_players;
+  uint(2) player_address0;
+  uint(2) player_address1;
+  uint(3) p0;
+  uint(3) p1;
+  uint(3) reward;
+
+  function_with_value player_input(uint(3) choice) {
+    if (num_players < 2 && msg.value == 1) {
+      reward = reward + msg.value;
+      if (num_players == 0) {
+        player_address0 = msg.sender;
+        p0 = choice;
+      }
+      if (num_players == 1) {
+        player_address1 = msg.sender;
+        p1 = choice;
+      }
+      num_players = num_players + 1;
+    }
+  }
+
+	function finalize() {
+    if (num_players == 2) {
+      if ((((3 + p0) - p1) % 3) == 1) {
+        if (player_address0 == 0) {
+          0.send(reward);
+        }
+        if (player_address0 == 1) {
+          1.send(reward);
+        }
+      }
+      if ((((3 + p0) - p1) % 3) == 2) {
+        if (player_address1 == 0) {
+          0.send(reward);
+        }
+        if (player_address1 == 1) {
+          1.send(reward);
+        }
+      }
+      if ((((3 + p0) - p1) % 3) == 0) {
+        if (player_address0 == 0) {
+          0.send(reward/2);
+        }
+        if (player_address0 == 1) {
+          1.send(reward/2);
+        }
+        if (player_address1 == 0) {
+          0.send(reward/2);
+        }
+        if (player_address1 == 1) {
+          1.send(reward/2);
+        }
+      }
+    }
+  }
+}
+
+communication {
+
+}
+
+scenario A {
+  bool endA;
+  uint(3) choiceA;
+  choiceA = random(3);
+  player_input.sendTransaction(choiceA, {from: "A", value: 1});
+  wait(num_players == 2, 1);
+  finalize.sendTransaction({from: "A", value: 0});
+  endA = true;
+}
+
+scenario B {
+  bool endB;
+  uint(3) choiceB;
+  choiceB = random(3);
+  player_input.sendTransaction(choiceB, {from: "B", value: 1});
+  wait(num_players == 2, 1);
+  finalize.sendTransaction({from: "B", value: 0});
+  endB = true;
+}

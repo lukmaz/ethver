@@ -15,14 +15,13 @@
 
 \tableofcontents
 
-
 \section{Rock-Paper-Scissors}
 
 %%%%%%%%%%%%%%%
 \subsection{RPS v1}
 %%%%%%%%%%%%%%%
 
-\lstinputlisting{../examples/rps_v1.etv}
+\lstinputlisting[caption=RPS v1]{../examples/rps_v1.etv}
 
 \subsubsection{Properties}
 
@@ -46,6 +45,87 @@
 \item ADVERSARY=0, target = 2/3, result = 1
 \end{enumerate}
 
+\subsubsection{Debugging RPS v1}
+We can start debugging RPS v1 with verifying if the final distribution of money corresponds to the chosen values 
+of \lstinline{p0}, \lstinline{p1}.
+PRISM provides a useful tool for generating a witness/counterexample for reachability properties.
+In order to use it, we must formulate a property describing an unwanted state, e.g., 
+\textit{eventually, the player 0 finishes with no money
+while the chosen values were the same} (it is a draw, so he should end with \lstinline{balance = 1}):
+\begin{equation}
+\text{\lstinline{E [ F endA & balance0 = 0 & p0 = 1 & p1 = 1 ]}}
+\label{prop:rps_v1_witness}
+\end{equation}
+This should never happen and in \emph{honest mode} the property indeed evaluates to false.
+However in \emph{adversarial mode} (\lstinline{ADVERSARY = 1}) the property evaluates to true and PRISM
+generates a \emph{witness} --- the path to reach this undesirable state.
+\img{rps_v1_witness}{The witness for property \ref{prop:rps_v1_witness}}
+Figure \ref{img:rps_v1_witness} shows the witness path.
+A quick look on the functions being executed in the first 20 steps gives an immediate answer, what is wrong.
+Function \lstinline{finalize} is broadcast before player 0 managed to broadcast his \lstinline{player_input} function.
+This is an obvious shortcoming of the contract --- broadcasting \lstinline{finalize} function should not be allowed
+before both \lstinline{player_input} functions have been executed.
+
+\paragraph{Fix 1} 
+
+The above flaw in the contract can be easily fixed by adding an additional condition at the beginning of the 
+\lstinline{finalize} function:
+\begin{lstlisting}
+function finalize() {
+  if (num_players == 2) {
+    ...
+\end{lstlisting}
+
+After this fix we can rerun the verification.
+It turns out that the property (1) is still satisfied, however this
+time the witness looks different (see fig. \ref{img:rps_v1a_witness}).
+\img{rps_v1a_witness}{The witness for property \lstinline{E [ F endA & balance0 = 0 & p0 = 1 & p1 = 1 ]}
+run on RPS v1 model after adding Fix 1 (the requirement for executing both \lstinline{player_input} functions before
+execution of \lstinline{finalize})}
+Now the alarming step in the path is \lstinline{timelock_step} which occurs before \lstinline{broadcast_player_input1}.
+Basically, it means that the player 1 does not execute his \lstinline{player_input} step within the given time period.
+This is another obvious flaw in the contract --- the player 0 should not lose his money just because his opponent
+didn't perform the required action on time.
+
+\paragraph{Fix 2}
+
+The shortcoming mentioned above can be overcome by adding a \emph{refund} possibility for the first player, if the second player
+didn't join the game on time:
+\begin{lstlisting}
+function finalize() {
+  if (time_elapsed > 0 && num_players == 1) {
+    player_address[0].send(BET);
+    ...
+\end{lstlisting}
+
+After rerunning the verification we can see that this fix also does not solve the problem completely --- the property 
+(\ref{prop:rps_v1_witness}) is still not satisfied.
+\img{rps_v1b_witness}{The witness for property (\ref{prop:rps_v1_witness}) run on RPS v1 model after adding 
+Fix 1 and Fix 2}
+Now the witness for the property (fig. \ref{img:rps_v1b_witness}) emphasizes another drawback of the protocol:
+a malicious player 1 can execute the \lstinline{player_input} function twice before player 0 joins the game.
+This scenario is analogous to the situation in which two players joins the game and then player 0 tries to join
+the game as a \textbf{third} one.
+This cannot be prevented, since even if the cautious player checks the number of joined players before his move,
+there still is a possibility that two players calls the \lstinline{player_input} function simultaneously.
+In such case the decision on choosing the first function call to process depends on several random factors and the player
+who joins last will lose his bet while staying outside the game.
+
+\paragraph{Fix 3}
+
+To mitigate the last problem, one can add another \emph{refund} mechanism to the \lstinline{player_input} function
+which sends the bet back to the transaction sender, if the game is already full:
+\begin{lstlisting}
+function player_input() {
+  if (num_players >= 2) {
+    msg.sender.send(msg.value);
+  }
+  ...
+\end{lstlisting}
+
+The complete contract code after fixes 1, 2, 3 is depicted in listing \ref{lst:rps_v2}.
+\lstinputlisting[caption=RPS v2, label=lst:rps_v2]{../examples/rps_v2.etv}
+  
 
 %%%%%%%%%%%%%%%
 \subsection{RPS v2}
@@ -53,7 +133,7 @@
 
 \lstinputlisting{../examples/rps_v2.etv}
 
-\subsubsection{Properties (similar to v3, but wihout committed)}
+\subsubsection{Properties (similar to v3, but without committed)}
 
 \lstinputlisting{../examples/rps_v2.props}
 
