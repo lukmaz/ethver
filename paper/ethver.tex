@@ -18,7 +18,7 @@
 \section{Rock-Paper-Scissors}
 
 %%%%%%%%%%%%%%%
-\subsection{RPS v1}
+\subsection{Initial code}
 %%%%%%%%%%%%%%%
 
 %\lstinputlisting[caption=RPS v1]{../examples/rps_v1.etv}
@@ -26,33 +26,19 @@
 RPS v1
 \end{lstlisting}
 
+\lstinputlisting[caption=Properties for RPS v1, label=prop:rps_v1]{../examples/rps_v1.props}
 
-\subsubsection{Properties}
+\begin{tabular}{|c|c|c|c|}
+\hline
+property & target & \shortstack{result \\ (honest mode)} & \shortstack{result \\ (adversarial mode)} \\
+\hline
+\lstinline{Pmin=? [F endA & balance0 >= 2]} & 1/3 & 1/3 & 0 \\
+\hline
+\lstinline{Pmin=? [F endA & balance0 >= 1]} & 2/3 & 2/3 & 0 \\
+\hline
+\end{tabular}
 
-\begin{equation}
-\text{\lstinputlisting{../examples/rps_v1.props}}
-\label{prop:rps_v1}
-\end{equation}
-
-\subsubsection{Setup honest-honest (fairness not needed)}
-
-\begin{enumerate}
-\item ADVERSARY=-1, target = 1/3, result = 2/3
-\item ADVERSARY=-1, target = 2/3, result = 2/3
-\item ADVERSARY=-1, target = 1/3, result = 2/3
-\item ADVERSARY=-1, target = 2/3, result = 2/3
-\end{enumerate}
-
-\subsubsection{Setup honest-adversary (fairness does not matter}
-
-\begin{enumerate}
-\item ADVERSARY=1, target = 1/3, result = 0
-\item ADVERSARY=1, target = 2/3, result = 1
-\item ADVERSARY=0, target = 1/3, result = 0
-\item ADVERSARY=0, target = 2/3, result = 1
-\end{enumerate}
-
-\subsubsection{Debugging RPS v1}
+\subsection{Debugging RPS v1}
 We can start debugging RPS v1 with verifying if the final distribution of money corresponds to the chosen values 
 of \lstinline{p0}, \lstinline{p1}.
 PRISM provides a useful tool for generating a witness/counterexample for reachability properties.
@@ -60,7 +46,7 @@ In order to use it, we must formulate a property describing an unwanted state, e
 \textit{eventually, the player 0 finishes with no money
 while the chosen values were the same} (it is a draw, so he should end with \lstinline{balance = 1}):
 \begin{equation}
-\text{\lstinline{E [ F endA & balance0 = 0 & p0 = p1 ]}}
+\text{\lstinline{E [F endA & balance0 = 0 & p0 = p1]}}
 \label{prop:rps_v1_witness}
 \end{equation}
 This should never happen and in \emph{honest mode} the property indeed evaluates to false.
@@ -139,28 +125,6 @@ RPS v2
 %%%%%%%%%%%%%%%
 \subsection{Cryptographic commitments}
 %%%%%%%%%%%%%%%
-
-\subsubsection{Properties (similar to v3, but without committed)}
-
-\lstinputlisting{../examples/rps_v2.props}
-
-\subsubsection{Setup honest-honest (fairness not needed)}
-
-\begin{enumerate}
-\item ADVERSARY=-1, target = 2/3, result = 2/3
-\item ADVERSARY=-1, target = 2/3, result = 2/3
-\item ADVERSARY=-1, target = 2/3, result = 2/3
-\item ADVERSARY=-1, target = 2/3, result = 2/3
-\end{enumerate}
-
-\subsubsection{Setup honest-adversary (fairness does not matter)}
-
-\begin{enumerate}
-\item ADVERSARY=1, target = 2/3, result = 0
-\item ADVERSARY=1, target = 2/3, result = 1
-\item ADVERSARY=0, target = 2/3, result = 0
-\item ADVERSARY=0, target = 2/3, result = 1
-\end{enumerate}
 
 After fixes 1, 2 and 3 the property (\ref{prop:rps_v1_witness}) is no longer satisfied.
 This means that the problem of lack of connection between the chosen values and the final money distribution
@@ -271,69 +235,14 @@ function finalize() {
   ...
 \end{lstlisting}
 
-\subsubsection{Properties (same as for v4)}
-
-\lstinputlisting{../examples/rps_v3.props}
-
-\subsubsection{Setup honest-honest (fairness not needed)}
-
-\begin{enumerate}
-\item ADVERSARY=-1, target = 2/3, result = 2/3
-\item ADVERSARY=-1, target = 2/3, result = 2/3
-\item ADVERSARY=-1, target = 2/3, result = 2/3
-\item ADVERSARY=-1, target = 2/3, result = 2/3
-\end{enumerate}
-
-\subsubsection{Setup honest-adversary (fairness does not matter)}
-
-\begin{enumerate}
-\item ADVERSARY=1, target = 2/3, result = 0
-\item ADVERSARY=1, target = 2/3, result = 1
-\item ADVERSARY=0, target = 2/3, result = 0
-\item ADVERSARY=0, target = 2/3, result = 1
-\end{enumerate}
-
-\subsubsection{Problems}
-
-\begin{itemize}
-\item Player 1 can wait until player 0 opens his commitment and in case he knows he is going to lose, he can 
-avoid to open his own commitment.
-\end{itemize}
-
-\subsubsection{Solution}
-Introduce a penalty: if a player does not open the commitment within some timeframe, he loses.
-
-%%%%%%%%%%%%%%%%%%
-\subsection{RPS v4}
-%%%%%%%%%%%%%%%%%%
-\subsubsection{Code}
-
 %\lstinputlisting{../examples/rps_v4.etv}
 \begin{lstlisting}[caption=RPS v4, label=lst:rps_v4]
 RPS v4
 \end{lstlisting}
 
-\subsubsection{Properties}
+\subsection{Final properties (TODO}
 
 \lstinputlisting{../examples/rps_v4.props}
-
-\subsubsection{Setup honest-honest (fairness not needed)}
-
-\begin{enumerate}
-\item ADVERSARY=-1, target = 2/3, result = 2/3
-\item ADVERSARY=-1, target = 2/3, result = 2/3
-\item ADVERSARY=-1, target = 2/3, result = 2/3
-\item ADVERSARY=-1, target = 2/3, result = 2/3
-\end{enumerate}
-
-\subsubsection{Setup honest-adversary (FAIRNESS neccesarry for P1, P3)}
-
-\begin{enumerate}
-\item ADVERSARY=1, target = 2/3, result = 2/3
-\item ADVERSARY=1, target = 2/3, result = 2/3
-\item ADVERSARY=0, target = 2/3, result = 2/3
-\item ADVERSARY=0, target = 2/3, result = 2/3
-\end{enumerate}
 
 \subsubsection{Comments}
 
