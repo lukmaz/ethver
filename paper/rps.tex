@@ -1,0 +1,239 @@
+% !TEX root = ethver.tex
+
+\section{Rock-Paper-Scissors}
+
+%%%%%%%%%%%%%%%
+\subsection{Initial code}
+%%%%%%%%%%%%%%%
+
+%\lstinputlisting[caption=RPS v1]{../examples/rps_v1.etv}
+\begin{lstlisting}
+RPS v1
+\end{lstlisting}
+
+\lstinputlisting[caption=Properties for RPS v1, label=prop:rps_v1]{../examples/rps_v1.props}
+
+\begin{tabular}{|c|c|c|c|}
+\hline
+property & target & \shortstack{result \\ (honest mode)} & \shortstack{result \\ (adversarial mode)} \\
+\hline
+\lstinline{Pmin=? [F endA & balance0 >= 2]} & 1/3 & 1/3 & 0 \\
+\hline
+\lstinline{Pmin=? [F endA & balance0 >= 1]} & 2/3 & 2/3 & 0 \\
+\hline
+\end{tabular}
+
+\subsection{Debugging RPS v1}
+We can start debugging RPS v1 with verifying if the final distribution of money corresponds to the chosen values 
+of \lstinline{p0}, \lstinline{p1}.
+PRISM provides a useful tool for generating a witness/counterexample for reachability properties.
+In order to use it, we must formulate a property describing an unwanted state, e.g., 
+\textit{eventually, the player 0 finishes with no money
+while the chosen values were the same} (it is a draw, so he should end with \lstinline{balance = 1}):
+\begin{equation}
+\text{\lstinline{E [F endA & balance0 = 0 & p0 = p1]}}
+\label{prop:rps_v1_witness}
+\end{equation}
+This should never happen and in \emph{honest mode} the property indeed evaluates to false.
+However in \emph{adversarial mode} (\lstinline{ADVERSARY = 1}) the property evaluates to true and PRISM
+generates a \emph{witness} --- the path to reach this undesirable state.
+\img{rps_v1_witness}{The witness for property (\ref{prop:rps_v1_witness})}
+Figure \ref{img:rps_v1_witness} shows the witness path.
+A quick look on the functions being executed in the first 20 steps gives an immediate answer, what is wrong.
+Function \lstinline{finalize} is broadcast before player 0 managed to broadcast his \lstinline{player_input} function.
+This is an obvious shortcoming of the contract --- broadcasting \lstinline{finalize} function should not be allowed
+before both \lstinline{player_input} functions have been executed.
+
+\paragraph{Fix 1} 
+
+The above flaw in the contract can be easily fixed by adding an additional condition at the beginning of the 
+\lstinline{finalize} function:
+\begin{lstlisting}
+function finalize() {
+  if (num_players == 2) {
+    ...
+\end{lstlisting}
+
+After this fix we can rerun the verification.
+It turns out that the property (1) is still satisfied, however this
+time the witness looks different (see fig. \ref{img:rps_v1a_witness}).
+\img{rps_v1a_witness}{The witness for property (\ref{prop:rps_v1_witness})
+run on RPS v1 model after Fix 1}
+Now the alarming step in the path is \lstinline{timelock_step} which occurs before \lstinline{broadcast_player_input1}.
+Basically, it means that player 1 does not execute his \lstinline{player_input} step within the given time period.
+This is another obvious flaw in the contract --- the player 0 should not lose his money just because his opponent
+didn't perform the required action on time.
+
+\paragraph{Fix 2}
+
+The shortcoming mentioned above can be overcome by adding a \emph{refund} possibility for the first player, if the second player
+didn't join the game on time:
+\begin{lstlisting}
+function finalize() {
+  if (time_elapsed > 0 && num_players == 1) {
+    player_address[0].send(BET);
+    ...
+\end{lstlisting}
+
+After rerunning the verification we can see that this fix also does not solve the problem completely --- the property 
+(\ref{prop:rps_v1_witness}) is still satisfied.
+\img{rps_v1b_witness}{The witness for the property (\ref{prop:rps_v1_witness}) run on RPS v1 model after 
+Fix 1 and Fix 2}
+Now the witness for the property (fig.\ \ref{img:rps_v1b_witness}) emphasizes another drawback of the protocol:
+a malicious player 1 can execute the \lstinline{player_input} function twice before player 0 joins the game.
+This scenario is analogous to the situation in which two players joins the game and then player 0 tries to join
+the game as a \textbf{third} one.
+This cannot be prevented, since even if the cautious player checks the number of joined players before his move,
+there still is a possibility that two players calls the \lstinline{player_input} function simultaneously.
+In such case the decision on choosing the first function call to process depends on several random factors and the player
+who joins last will lose his bet while staying outside the game.
+
+\paragraph{Fix 3}
+
+To mitigate the last problem, we can add another \emph{refund} mechanism to the \lstinline{player_input} function
+which sends the bet back to the transaction sender, if the game is already full:
+\begin{lstlisting}
+function player_input() {
+  if (num_players >= 2) {
+    msg.sender.send(msg.value);
+  }
+  ...
+\end{lstlisting}
+
+The complete contract code after fixes 1, 2, 3 is depicted in listing \ref{lst:rps_v2} and will be referred to as RPS v2.
+
+%\lstinputlisting[caption=RPS v2, label=lst:rps_v2]{../examples/rps_v2.etv}
+\begin{lstlisting}[caption=RPS v2, label=lst:rps_v2]
+RPS v2
+\end{lstlisting}
+
+%%%%%%%%%%%%%%%
+\subsection{Cryptographic commitments}
+%%%%%%%%%%%%%%%
+
+After fixes 1, 2 and 3 the property (\ref{prop:rps_v1_witness}) is no longer satisfied.
+This means that the problem of lack of connection between the chosen values and the final money distribution
+could potentially disappear.
+However, the properties (\ref{prop:rps_v1}) still do not evaluate to the desired probabilities.
+
+This time, the problem is more subtle.
+In order to address it, we must take a closer look into how the transactions are being processed
+in a blockchain-based system.
+When a user calls a contract function, he creates a transaction, broadcasts it to a peer-to-peer network and 
+eventually the transaction gets published in one of the upcoming blocks.
+This in particular means that all the data contained in the transactions (like, e.g., arguments to function calls)
+are publicly visible to all the network nodes and cannot be changed.
+Thus, a malicious player in our Rock-Paper-Scissors game can wait until his opponent posts his move and 
+the react with the appropriate move, which guarantees him a victory.
+
+This feature of the blockchain-based system is reflected in a PRISM model checker in the following way.
+Every variable in PRISM is \emph{public}, which means that once the value of a variable is set, it can influence
+the non-deterministic choices of the next model steps.
+In other words, after an honest player makes his move, its result is publicly known and the next, non-deterministic
+moves of the malicious player can take advantage of this knowledge.
+That is the reason why the properties (\ref{prop:rps_v1}) evaluate to 0 --- in these properties we compute the
+\emph{minimal probability}, and the minimum is taken over all the non-deterministic choices in the model.
+
+The first line of defence against such pitfalls are the cryptographic commitments.
+In order to prevent the chosen value from being visible to others, the value is chosen in secret and only
+the commitment is published.
+In real contract, the commitment is realized using a hash function --- a value $v$ and a random salt $s$ is chosen
+in secret, then the hash $h = H(v, s)$ is computed and only $h$ is published.
+In EthVer, commitments are implemented under special functions \lstinline{commit} and \lstinline{open} which
+postpones the random choice of a value until the \emph{open} in the PRISM model.
+
+The Rock-Paper-Scissors code updated with the commitments is presented in listing \ref{lst:rps_v3}.
+
+%\lstinputlisting[caption=RPS v3, label=lst:rps_v3]{../examples/rps_v3.etv}
+\begin{lstlisting}[caption=RPS v3, label=lst:rps_v3]
+RPS v3
+\end{lstlisting}
+
+
+%%%%%%%%%%%%%%%
+\subsection{Misaligned incentives}
+%%%%%%%%%%%%%%%
+
+Even with cryptographic commitments implemented, the probabilities from \ref{prop:rps_v1} still evaluate to 0.
+To find a bug we will once again use property (\ref{prop:rps_v1_witness}) to verify if the final distribution of money
+corresponds to the chosen values of \lstinline{p0} and \lstinline{p1}.
+It turns out that the property (\ref{prop:rps_v1_witness}) evaluates to true and PRISM provides us a witness 
+interleaving:
+\begin{itemize}
+\item player 0 calls \lstinline{player_input}
+\item timelock step
+\item player 1 calls \lstinline{player_input}
+\item player 0 calls \lstinline{finalize}
+\end{itemize}
+In this scenario the player 1 does not join the game within a given time period.
+We have already handled this situation in Fix 2, however this fix no longer works, because now the protocol
+has 2 phases: making commitments and opening commitments.
+
+If we look carefully at the witness interleaving for RPS v3 (REFERENCE), we can see that the problem is
+that the malicious player 1 can reject to call \lstinline{player_input} function on time, wait until player 0 starts
+the \emph{refund procedure} and then call \lstinline{player_input} which potentially can be executed by the 
+network before \lstinline{finalize}.
+In such case the refund procedure from \lstinline{finalize} function fails, because at that time
+\lstinline{num_players} is already equal to 2.
+
+\paragraph{Fix 4}
+
+One possible remedy for the problem mentioned above is to change the refund condition to: (TODO: 0/1 to variables)
+\begin{lstlisting}
+function finalize() {
+  if (time_elapsed > 0 && committed0 && !committed1) {
+    player_address[0].send(BET);
+  ...
+\end{lstlisting}
+and prohibit players to commit after the timelock step:
+\begin{lstlisting}
+function player_input() {
+  if (num_players >= 2 || msg.value != 1 || time_elapsed > 0) {
+    msg.sender.send(msg.value);
+  ...
+\end{lstlisting}
+
+After the fix the property (\ref{prop:rps_v1_witness}) is still satisfied, however this time the witness interleaving
+is as follows:
+\begin{itemize}
+\item player 0 calls \lstinline{player_input}
+\item player 1 calls \lstinline{player_input}
+\item player 0 calls \lstinline{open}
+\item timelock step
+\item timelock step
+\item player 0 calls \lstinline{finalize}
+\end{itemize}
+
+In this case both players join the game by executing the \lstinline{player_input} function and then only
+player 0 opens his commitment on time.
+This is a realistic scenario when a malicious player 1 waits until player 0 opens his commitment and then 
+(knowing already the result of the game) refuses to open his commitment.
+
+\paragraph{Fix 5}
+
+To prevent from this behavior, we can introduce another refund mechanism, which transfers all the reward
+to one player in case his opponent refuses to open his commitment within a given time frame (two timelock steps):
+\begin{lstlisting}
+function finalize() {
+  if (time_elapsed > 1 && has_revealed0 && !has_revealed1) {
+    player_address[0].send(reward);
+  ...
+\end{lstlisting}
+
+%\lstinputlisting{../examples/rps_v4.etv}
+\begin{lstlisting}[caption=RPS v4, label=lst:rps_v4]
+RPS v4
+\end{lstlisting}
+
+\subsection{Final properties (TODO}
+
+\lstinputlisting{../examples/rps_v4.props}
+
+\subsubsection{Comments}
+
+\begin{itemize}
+\item First property (line 1) checks whether player 0 wins or draws with probability at lest 2/3 (with ADVERSARY=1)
+\item Second property (line 3) checks wheter player 0 wins with probability at least 1/3 which is equivalent to player 0
+loses with probability at most 2/3. (Also ADVERSARY = 1)
+\item The next two properties analogously for honest player0 and ADVERSARY=0.
+\end{itemize}

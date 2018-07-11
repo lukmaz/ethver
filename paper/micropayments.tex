@@ -1,0 +1,56 @@
+% !TEX root = ethver.tex
+
+\section{Micropayments}
+
+\subsection{Micropayments v1}
+
+\subsubsection{Code}
+
+\lstinputlisting{../examples/micro_v1.etv}
+
+\subsubsection{Properties}
+
+\lstinputlisting{../examples/micro_v1.props}
+
+\subsubsection{Setup honest-adversary (fairness not needed)}
+
+\begin{enumerate}
+\item ADVERSARY=-1, target = 1/2, result = 1/2
+\item ADVERSARY=-1, target = 1/2, result = 1/2
+\item ADVERSARY=-1, target = 1/2, result = 1/2
+\end{enumerate}
+
+\subsubsection{Setup honest-adversary (fairness does not matter)}
+
+\begin{enumerate}
+\item ADVERSARY=-1, target = 1/2, result = 1/2
+\item ADVERSARY=0, target = 1/2, result = 1
+\item ADVERSARY=1, target = 1/2, \textbf{result = 1/2 (ok?)}
+\end{enumerate}
+
+\subsection{Micropayments v2}
+
+\subsubsection{Code}
+
+\lstinputlisting{../examples/micro_v2.etv}
+
+\subsubsection{Properties}
+
+\lstinputlisting{../examples/micro_v2.props}
+
+
+\subsubsection{Setup honest-adversary (fairness not needed)}
+
+\begin{enumerate}
+\item ADVERSARY=-1, target = 1/2, result = 1/2
+\item ADVERSARY=-1, target = 1/2, result = 1/2
+\item ADVERSARY=-1, target = 1/2, result = 1/2
+\end{enumerate}
+
+\subsubsection{Setup honest-adversary (fairness does not matter)}
+
+\begin{enumerate}
+\item ADVERSARY=-1, target = 1/2, result = 1/2
+\item ADVERSARY=0, target = 1/2, result = 1/2
+\item ADVERSARY=1, target = 1/2, result = 1/2
+\end{enumerate}
