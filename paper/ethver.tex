@@ -25,7 +25,10 @@
 
 \subsubsection{Properties}
 
-\lstinputlisting{../examples/rps_v1.props}
+\begin{equation}
+\text{\lstinputlisting{../examples/rps_v1.props}}
+\label{prop:rps_v1}
+\end{equation}
 
 \subsubsection{Setup honest-honest (fairness not needed)}
 
@@ -59,7 +62,7 @@ while the chosen values were the same} (it is a draw, so he should end with \lst
 This should never happen and in \emph{honest mode} the property indeed evaluates to false.
 However in \emph{adversarial mode} (\lstinline{ADVERSARY = 1}) the property evaluates to true and PRISM
 generates a \emph{witness} --- the path to reach this undesirable state.
-\img{rps_v1_witness}{The witness for property \ref{prop:rps_v1_witness}}
+\img{rps_v1_witness}{The witness for property (\ref{prop:rps_v1_witness})}
 Figure \ref{img:rps_v1_witness} shows the witness path.
 A quick look on the functions being executed in the first 20 steps gives an immediate answer, what is wrong.
 Function \lstinline{finalize} is broadcast before player 0 managed to broadcast his \lstinline{player_input} function.
@@ -79,11 +82,10 @@ function finalize() {
 After this fix we can rerun the verification.
 It turns out that the property (1) is still satisfied, however this
 time the witness looks different (see fig. \ref{img:rps_v1a_witness}).
-\img{rps_v1a_witness}{The witness for property \lstinline{E [ F endA & balance0 = 0 & p0 = 1 & p1 = 1 ]}
-run on RPS v1 model after adding Fix 1 (the requirement for executing both \lstinline{player_input} functions before
-execution of \lstinline{finalize})}
+\img{rps_v1a_witness}{The witness for property (\ref{prop:rps_v1_witness})
+run on RPS v1 model after Fix 1}
 Now the alarming step in the path is \lstinline{timelock_step} which occurs before \lstinline{broadcast_player_input1}.
-Basically, it means that the player 1 does not execute his \lstinline{player_input} step within the given time period.
+Basically, it means that player 1 does not execute his \lstinline{player_input} step within the given time period.
 This is another obvious flaw in the contract --- the player 0 should not lose his money just because his opponent
 didn't perform the required action on time.
 
@@ -99,10 +101,10 @@ function finalize() {
 \end{lstlisting}
 
 After rerunning the verification we can see that this fix also does not solve the problem completely --- the property 
-(\ref{prop:rps_v1_witness}) is still not satisfied.
-\img{rps_v1b_witness}{The witness for property (\ref{prop:rps_v1_witness}) run on RPS v1 model after adding 
+(\ref{prop:rps_v1_witness}) is still satisfied.
+\img{rps_v1b_witness}{The witness for the property (\ref{prop:rps_v1_witness}) run on RPS v1 model after 
 Fix 1 and Fix 2}
-Now the witness for the property (fig. \ref{img:rps_v1b_witness}) emphasizes another drawback of the protocol:
+Now the witness for the property (fig.\ \ref{img:rps_v1b_witness}) emphasizes another drawback of the protocol:
 a malicious player 1 can execute the \lstinline{player_input} function twice before player 0 joins the game.
 This scenario is analogous to the situation in which two players joins the game and then player 0 tries to join
 the game as a \textbf{third} one.
@@ -113,7 +115,7 @@ who joins last will lose his bet while staying outside the game.
 
 \paragraph{Fix 3}
 
-To mitigate the last problem, one can add another \emph{refund} mechanism to the \lstinline{player_input} function
+To mitigate the last problem, we can add another \emph{refund} mechanism to the \lstinline{player_input} function
 which sends the bet back to the transaction sender, if the game is already full:
 \begin{lstlisting}
 function player_input() {
@@ -123,15 +125,13 @@ function player_input() {
   ...
 \end{lstlisting}
 
-The complete contract code after fixes 1, 2, 3 is depicted in listing \ref{lst:rps_v2}.
+The complete contract code after fixes 1, 2, 3 is depicted in listing \ref{lst:rps_v2} and will be referred to as RPS v2.
 \lstinputlisting[caption=RPS v2, label=lst:rps_v2]{../examples/rps_v2.etv}
   
 
 %%%%%%%%%%%%%%%
-\subsection{RPS v2}
+\subsection{Cryptographic commitments}
 %%%%%%%%%%%%%%%
-
-\lstinputlisting{../examples/rps_v2.etv}
 
 \subsubsection{Properties (similar to v3, but without committed)}
 
@@ -155,13 +155,44 @@ The complete contract code after fixes 1, 2, 3 is depicted in listing \ref{lst:r
 \item ADVERSARY=0, target = 2/3, result = 1
 \end{enumerate}
 
-%%%%%%%%%%%%%%%
-\subsection{RPS v3}
-%%%%%%%%%%%%%%%
+After fixes 1, 2 and 3 the property (\ref{prop:rps_v1_witness}) is no longer satisfied.
+This means that the problem of lack of connection between the chosen values and the final money distribution
+could potentially disappear.
+However, the properties (\ref{prop:rps_v1}) still do not evaluate to the desired probabilities.
 
-\subsubsection{Code}
+This time, the problem is more subtle.
+In order to address it, we must take a closer look into how the transactions are being processed
+in a blockchain-based system.
+When a user calls a contract function, he creates a transaction, broadcasts it to a peer-to-peer network and 
+eventually the transaction gets published in one of the upcoming blocks.
+This in particular means that all the data contained in the transactions (like, e.g., arguments to function calls)
+are publicly visible to all the network nodes and cannot be changed.
+Thus, a malicious player in our Rock-Paper-Scissors game can wait until his opponent posts his move and 
+the react with the appropriate move, which guarantees him a victory.
+
+This feature of the blockchain-based system is reflected in a PRISM model checker in the following way.
+Every variable in PRISM is \emph{public}, which means that once the value of a variable is set, it can influence
+the non-deterministic choices of the next model steps.
+In other words, after an honest player makes his move, its result is publicly known and the next, non-deterministic
+moves of the malicious player can take advantage of this knowledge.
+That is the reason why the properties (\ref{prop:rps_v1}) evaluate to 0 --- in these properties we compute the
+\emph{minimal probability}, and the minimum is taken over all the non-deterministic choices in the model.
+
+The first line of defence against such pitfalls are the cryptographic commitments.
+In order to prevent the chosen value from being visible to others, the value is chosen in secret and only
+the commitment is published.
+In real contract, the commitment is realized using a hash function --- a value $v$ and a random salt $s$ is chosen
+in secret, then the hash $h = H(v, s)$ is computed and only $h$ is published.
+In EthVer, commitments are implemented under special functions \lstinline{commit} and \lstinline{open} which
+postpones the random choice of a value until the \emph{open} in the PRISM model.
+
+The Rock-Paper-Scissors code updated with the commitments is presented in listing \ref{lst:rps_v3}.
 
 \lstinputlisting{../examples/rps_v3.etv}
+
+%%%%%%%%%%%%%%%
+\subsection{Misaligned incentives}
+%%%%%%%%%%%%%%%
 
 \subsubsection{Properties (same as for v4)}
 

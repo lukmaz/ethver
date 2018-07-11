@@ -13,41 +13,25 @@ contract RPS {
   uint(3) num_players;
   uint(2) player_address0;
   uint(2) player_address1;
-  uint(3) p0; // player who first joined the game
+  uint(3) p0;
   uint(3) p1;
   uint(3) reward;
-
-  bool committed0; // player who first joined the game
-  bool committed1;
 
   function_with_value player_input(uint(3) choice) {
     if (num_players >= 2 || msg.value != 1) {
       msg.sender.send(msg.value);
     }
-    else if (num_players < 2 && msg.value == 1) {
+    if (num_players < 2 && msg.value == 1) {
       reward = reward + msg.value;
       if (num_players == 0) {
         player_address0 = msg.sender;
-        committed0 = true;
+        p0 = choice;
       }
       if (num_players == 1) {
         player_address1 = msg.sender;
-        committed1 = true;
+        p1 = choice;
       }
       num_players = num_players + 1;
-    }
-  }
-
-  function open() {
-    if (player_address0 == msg.sender) {
-      if (committed0) {
-        p0 = random(3);
-      }
-    }
-    else if (player_address1 == msg.sender) {
-      if (committed1) {
-        p1 = random(3);
-      }
     }
   }
 
