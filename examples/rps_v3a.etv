@@ -21,8 +21,6 @@ contract RPS {
   bool committed1;
   bool has_revealed0;
   bool has_revealed1;
-  bool in_game0;
-  bool in_game1;
 
   function_with_value player_input(uint(3) choice) {
     if (num_players >= 2 || msg.value != 1 || time_elapsed > 0) {
@@ -39,17 +37,10 @@ contract RPS {
         committed1 = true;
       }
       num_players = num_players + 1;
-      if (msg.sender == 0) {
-        in_game0 = true;
-      }
-      else if (msg.sender == 1) {
-        in_game1 = true;
-      }
     }
   }
 
   function open() {
-    
     if (player_address0 == msg.sender) {
       if (committed0 && !has_revealed0) {
         p0 = random(3);
@@ -65,23 +56,7 @@ contract RPS {
   }
 
 	function finalize() {
-    if (time_elapsed > 1 && has_revealed0 && !has_revealed1) {
-      if (player_address0 == 0) {
-        0.send(reward);
-      }
-      if (player_address0 == 1) {
-        1.send(reward);
-      }
-    }
-    else if (time_elapsed > 1 && !has_revealed0 && has_revealed1) {
-      if (player_address1 == 0) {
-        0.send(reward);
-      }
-      if (player_address1 == 1) {
-        1.send(reward);
-      }
-    }
-    else if (time_elapsed > 0 && committed0 && !committed1) {
+    if (time_elapsed > 0 && committed0 && !committed1) {
       if (player_address0 == 0) {
         0.send(1);
       }
@@ -144,12 +119,7 @@ scenario A {
   wait(num_players == 2, 1);
   if (num_players == 2) {
     open.sendTransaction({from: "A", value: 0});
-    if (player_address0 == 1) {
-      wait(has_revealed0, 2);
-    }
-    else if (player_address1 == 1) {
-      wait(has_revealed1, 2);
-    }
+    wait(has_revealed1, 2);
   }
   finalize.sendTransaction({from: "A", value: 0});
   endA = true;
@@ -162,13 +132,8 @@ scenario B {
   player_input.sendTransaction(choiceB, {from: "B", value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
-    open.sendTransaction({from: "B", value: 0});
-    if (player_address0 == 0) {
-      wait(has_revealed0, 2);
-    }
-    else if (player_address1 == 0) {
-      wait(has_revealed1, 2);
-    }
+    open.sendTransaction({from: "A", value: 0});
+    wait(has_revealed0, 2);
   }
   finalize.sendTransaction({from: "B", value: 0});
   endB = true;

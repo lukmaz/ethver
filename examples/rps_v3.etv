@@ -19,6 +19,8 @@ contract RPS {
 
   bool committed0; // player who first joined the game
   bool committed1;
+  bool has_revealed0;
+  bool has_revealed1;
 
   function_with_value player_input(uint(3) choice) {
     if (num_players >= 2 || msg.value != 1) {
@@ -40,13 +42,15 @@ contract RPS {
 
   function open() {
     if (player_address0 == msg.sender) {
-      if (committed0) {
+      if (committed0 && !has_revealed0) {
         p0 = random(3);
+        has_revealed0 = true;
       }
     }
     else if (player_address1 == msg.sender) {
-      if (committed1) {
+      if (committed1 && !has_revealed1) {
         p1 = random(3);
+        has_revealed1 = true;
       }
     }
   }
@@ -60,7 +64,7 @@ contract RPS {
         1.send(1);
       }
     }
-    if (num_players == 2) {
+    if (has_revealed0 && has_revealed1) {
       if ((((3 + p0) - p1) % 3) == 1) {
         if (player_address0 == 0) {
           0.send(reward);
@@ -105,6 +109,10 @@ scenario A {
   choiceA = random(3);
   player_input.sendTransaction(choiceA, {from: "A", value: 1});
   wait(num_players == 2, 1);
+  if (num_players == 2) {
+    open.sendTransaction({from: "A", value: 0});
+    wait(has_revealed1, 2);
+  }
   finalize.sendTransaction({from: "A", value: 0});
   endA = true;
 }
@@ -115,6 +123,10 @@ scenario B {
   choiceB = random(3);
   player_input.sendTransaction(choiceB, {from: "B", value: 1});
   wait(num_players == 2, 1);
+  if (num_players == 2) {
+    open.sendTransaction({from: "A", value: 0});
+    wait(has_revealed0, 2);
+  }
   finalize.sendTransaction({from: "B", value: 0});
   endB = true;
 }

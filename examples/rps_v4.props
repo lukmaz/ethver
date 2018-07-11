@@ -1,8 +1,4 @@
-Pmin=? [ F endA & balance0 >= 1 ]
+Pmin=? [ F endA&balance0>=1 ]
 
-Pmax=? [ F endA & balance0 < 2 & committed1 ]
-
-Pmin=? [ F endB & balance1 >= 1 ]
-
-Pmax=? [ F endB & balance1 < 2 & committed0 ]
+Pmax=? [ F endA & balance0 < 2 & in_game0 & committed0 & committed1 ]
 

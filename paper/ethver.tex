@@ -21,7 +21,11 @@
 \subsection{RPS v1}
 %%%%%%%%%%%%%%%
 
-\lstinputlisting[caption=RPS v1]{../examples/rps_v1.etv}
+%\lstinputlisting[caption=RPS v1]{../examples/rps_v1.etv}
+\begin{lstlisting}
+RPS v1
+\end{lstlisting}
+
 
 \subsubsection{Properties}
 
@@ -56,7 +60,7 @@ In order to use it, we must formulate a property describing an unwanted state, e
 \textit{eventually, the player 0 finishes with no money
 while the chosen values were the same} (it is a draw, so he should end with \lstinline{balance = 1}):
 \begin{equation}
-\text{\lstinline{E [ F endA & balance0 = 0 & p0 = 1 & p1 = 1 ]}}
+\text{\lstinline{E [ F endA & balance0 = 0 & p0 = p1 ]}}
 \label{prop:rps_v1_witness}
 \end{equation}
 This should never happen and in \emph{honest mode} the property indeed evaluates to false.
@@ -126,8 +130,11 @@ function player_input() {
 \end{lstlisting}
 
 The complete contract code after fixes 1, 2, 3 is depicted in listing \ref{lst:rps_v2} and will be referred to as RPS v2.
-\lstinputlisting[caption=RPS v2, label=lst:rps_v2]{../examples/rps_v2.etv}
-  
+
+%\lstinputlisting[caption=RPS v2, label=lst:rps_v2]{../examples/rps_v2.etv}
+\begin{lstlisting}[caption=RPS v2, label=lst:rps_v2]
+RPS v2
+\end{lstlisting}
 
 %%%%%%%%%%%%%%%
 \subsection{Cryptographic commitments}
@@ -188,11 +195,81 @@ postpones the random choice of a value until the \emph{open} in the PRISM model.
 
 The Rock-Paper-Scissors code updated with the commitments is presented in listing \ref{lst:rps_v3}.
 
-\lstinputlisting{../examples/rps_v3.etv}
+%\lstinputlisting[caption=RPS v3, label=lst:rps_v3]{../examples/rps_v3.etv}
+\begin{lstlisting}[caption=RPS v3, label=lst:rps_v3]
+RPS v3
+\end{lstlisting}
+
 
 %%%%%%%%%%%%%%%
 \subsection{Misaligned incentives}
 %%%%%%%%%%%%%%%
+
+Even with cryptographic commitments implemented, the probabilities from \ref{prop:rps_v1} still evaluate to 0.
+To find a bug we will once again use property (\ref{prop:rps_v1_witness}) to verify if the final distribution of money
+corresponds to the chosen values of \lstinline{p0} and \lstinline{p1}.
+It turns out that the property (\ref{prop:rps_v1_witness}) evaluates to true and PRISM provides us a witness 
+interleaving:
+\begin{itemize}
+\item player 0 calls \lstinline{player_input}
+\item timelock step
+\item player 1 calls \lstinline{player_input}
+\item player 0 calls \lstinline{finalize}
+\end{itemize}
+In this scenario the player 1 does not join the game within a given time period.
+We have already handled this situation in Fix 2, however this fix no longer works, because now the protocol
+has 2 phases: making commitments and opening commitments.
+
+If we look carefully at the witness interleaving for RPS v3 (REFERENCE), we can see that the problem is
+that the malicious player 1 can reject to call \lstinline{player_input} function on time, wait until player 0 starts
+the \emph{refund procedure} and then call \lstinline{player_input} which potentially can be executed by the 
+network before \lstinline{finalize}.
+In such case the refund procedure from \lstinline{finalize} function fails, because at that time
+\lstinline{num_players} is already equal to 2.
+
+\paragraph{Fix 4}
+
+One possible remedy for the problem mentioned above is to change the refund condition to: (TODO: 0/1 to variables)
+\begin{lstlisting}
+function finalize() {
+  if (time_elapsed > 0 && committed0 && !committed1) {
+    player_address[0].send(BET);
+  ...
+\end{lstlisting}
+and prohibit players to commit after the timelock step:
+\begin{lstlisting}
+function player_input() {
+  if (num_players >= 2 || msg.value != 1 || time_elapsed > 0) {
+    msg.sender.send(msg.value);
+  ...
+\end{lstlisting}
+
+After the fix the property (\ref{prop:rps_v1_witness}) is still satisfied, however this time the witness interleaving
+is as follows:
+\begin{itemize}
+\item player 0 calls \lstinline{player_input}
+\item player 1 calls \lstinline{player_input}
+\item player 0 calls \lstinline{open}
+\item timelock step
+\item timelock step
+\item player 0 calls \lstinline{finalize}
+\end{itemize}
+
+In this case both players join the game by executing the \lstinline{player_input} function and then only
+player 0 opens his commitment on time.
+This is a realistic scenario when a malicious player 1 waits until player 0 opens his commitment and then 
+(knowing already the result of the game) refuses to open his commitment.
+
+\paragraph{Fix 5}
+
+To prevent from this behavior, we can introduce another refund mechanism, which transfers all the reward
+to one player in case his opponent refuses to open his commitment within a given time frame (two timelock steps):
+\begin{lstlisting}
+function finalize() {
+  if (time_elapsed > 1 && has_revealed0 && !has_revealed1) {
+    player_address[0].send(reward);
+  ...
+\end{lstlisting}
 
 \subsubsection{Properties (same as for v4)}
 
@@ -231,7 +308,10 @@ Introduce a penalty: if a player does not open the commitment within some timefr
 %%%%%%%%%%%%%%%%%%
 \subsubsection{Code}
 
-\lstinputlisting{../examples/rps_v4.etv}
+%\lstinputlisting{../examples/rps_v4.etv}
+\begin{lstlisting}[caption=RPS v4, label=lst:rps_v4]
+RPS v4
+\end{lstlisting}
 
 \subsubsection{Properties}
 

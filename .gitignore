@@ -31,7 +31,10 @@ src/ParEthver.hs
 src/PrintEthver.hs
 src/SkelEthver.hs
 src/TestEthver.hs
-examples/*.prism
-examples/.props
-.DS_Store
 src/TestEthver
+examples/*.prism
+examples/old
+old
+paper/*.toc
+paper/*.synctex.gz
+.DS_Store
