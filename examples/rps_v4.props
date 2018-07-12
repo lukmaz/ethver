@@ -1,4 +1,4 @@
-Pmin=? [ F endA&balance0>=1 ]
+filter(min, Pmin=? [ F balance0 >= 2 ], in_game0 & committed0 & committed1 & !has_revealed0 & !has_revealed1)
 
-Pmax=? [ F endA & balance0 < 2 & in_game0 & committed0 & committed1 ]
+Pmin=? [ F endA&balance0>=1 ]
 
