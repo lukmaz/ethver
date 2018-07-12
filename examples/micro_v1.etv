@@ -1,6 +1,7 @@
-// P0: ADV = -1
-// P1: ADV = 0
-// P2: ADV = 1
+// P1: ADV = -1
+// P2: ADV = -1
+// P3: ADV = 1
+// P4: ADV = 0
 
 user "U";
 user "M";
@@ -23,13 +24,13 @@ contract RPS {
 
   function release() {
     if (msg.sender == 0) {
-      if ((pot > 0) && is_signedU && is_openedM && ((randM + saltM) % 2 == commitmentM) && (randM == signed_randU)) {
+      if ((pot > 0) && is_signedU && has_revealedM && ((randM + saltM) % 2 == commitmentM) && (randM == signed_randU)) {
         0.send(1);
         pot = pot - 1;
       }
     }
     else {
-      if ((pot > 0) && is_signedU && is_openedM && ((randM + saltM) % 2 == commitmentM) && (randM == signed_randU)) {
+      if ((pot > 0) && is_signedU && has_revealedM && ((randM + saltM) % 2 == commitmentM) && (randM == signed_randU)) {
         1.send(1);
         pot = pot - 1;
       }
@@ -40,7 +41,7 @@ contract RPS {
 communication {
   uint(2) commitmentM;
   bool is_committedM;
-  bool is_openedM;
+  bool has_revealedM;
   bool is_signedU;
   uint(2) randM;
   uint(2) saltM;
@@ -55,17 +56,17 @@ communication {
   }
 
   function payment_issuance(uint(2) r, uint(2) recipient) {
-    if (msg.sender == 0 && is_committedM) {
+    if (is_committedM) {
       randU = r;
       is_signedU = true;
     }
   }
   function open() {
-    if (msg.sender == 1 && !is_openedM) {
+    if (msg.sender == 1 && !has_revealedM) {
       randM = random(2);
       signed_randU = randU;
       saltM = (commitmentM - randM + 2) % 2;
-      is_openedM = true;
+      has_revealedM = true;
     }
   }
 }

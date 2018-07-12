@@ -1,0 +1,108 @@
+% !TEX root = ethver.tex
+
+\section{Case study: Micropay protocol}
+
+\subsection{Original contract code}
+
+\lstinputlisting[caption=Contract code for the original Micropay protocol, label=lst:micro_v1]{../examples/micro_v1.etv}
+
+For this protocol we want to verify the following property: \emph{whenever a user U issues a payment, 
+the merchant M gets paid with probability $1/N$}.
+This translates to the PRISM properties\footnote{Recall that for non-deterministic models in PRISM we must use 
+\lstinline{Pmin}/\lstinline{Pmax} operator which computes minimum/maximum probability over all the non-deterministic
+choices in the model.}:
+\[
+\begin{tabular}{c}
+\lstinline{Pmin=? [F endM & balance1 >= 1]} \\
+\lstinline{Pmax=? [F endM & balance1 >= 1]}
+\end{tabular}
+\]
+
+These two properties correspond to the \emph{honest mode} --- if both players follow the protocol, then this probability
+should be equal to $1/N$.
+However, besides the \emph{honest mode} verification, we would like to verify if
+\begin{itemize}
+\item if merchant M is malicious, then he cannot increase his chances of getting money.
+\item if user U is malicious, then he cannot decrease the probability of getting money by merchant M,
+\end{itemize}
+This leads to the total of 4 PRISM properties listed in the table below
+(to reduce computational complexity, we perform all the computations for $N = 2$):
+
+\[
+\begin{tabular}{|c|c|c|c|}
+\hline
+property & adversary & target & \shortstack{result} \\
+\hline
+\lstinline{Pmin=? [F endM & balance1 >= 1]} & None & 1/2 & 1/2 \\
+\hline
+\lstinline{Pmax=? [F endM & balance1 >= 1]} & None & 1/2 & 1/2 \\
+\hline
+\lstinline{Pmax=? [F balance1 >= 1]} & M & 1/2 & 1/2 \\
+\hline
+\lstinline{Pmax=? [F endM & has_revealedM & balance1 < 1]} & U & 1/2 & \textbf{1} \\
+\hline
+\end{tabular}
+\]
+Note that in the third property, we have negated the condition: instead of computing \emph{the minimal probability
+that M reveals his winning ticket and gets paid}, we are computing \emph{the maximal probability, that M reveals
+his winning ticket and does not get paid}.
+This is only because the second property is easier expressible in PRISM properties language.
+
+After verifying these properties in PRISM it turns out that in the first three properties 
+evaluate to the correct value of $1/2$, however the last one evaluates to 1.
+In order to investigate the problem, we will use the method known from the previous section for generating
+a witness for unwanted path in PRISM.
+We will use the following reachability property:
+\lstinputlisting{../examples/micro_witness.props}
+This property can be read as \emph{merchant M finishes with \lstinline{balance1 = 0} despite ha has revealed
+his winning ticket}.
+
+After verifying this property in PRISM, it turns out, the property is true and moreover PRISM provides us the 
+following interleaving for the witness:
+\begin{itemize}
+\item merchant M executes \lstinline{payment_request}
+\item user U executes \lstinline{payment issuance}
+\item merchant M executes \lstinline{open}
+\item user U calls \lstinline{release} contract function
+\item merchant M calls \lstinline{release} contract function
+\end{itemize}
+This illustrates a real flaw in the protocol: a front-running attack.
+In this attack a malicious user U can produce a winning ticket by simulating
+the merchant protocol and broadcast his version of \lstinline{release} transaction which can be processed 
+before the \lstinline{release} transaction created by merchant M.
+What is more, user U can monitor the network and wait until M's transaction appears in the network and only then
+react with broadcasting his own transaction.
+In such case there are two concurrent transactions in the network among only one can be confirmed
+and which one will be chosen depends on several random factors.
+In fact, if U has good enough network setup, he can force his transaction to be accepted before the M's one
+with high probability.
+
+\subsection{Mitigating the front-running attack}
+
+The front-running attack can be mitigated using a penalty deposit.
+At the beginning of the protocol the user U deposits some amount of money (bigger than the amount of payment).
+This deposit can be released in one of the two following ways:
+\begin{itemize}
+\item after some time $\Delta t$ the deposit goes back to U,
+\item the deposit is burned if one provides two competitive winning tickets.
+\end{itemize}
+In case user U tries to perform a front-running attack, the merchant M will have the knowledge of two 
+competitive winning tickets and he could use the \emph{burn} function to penalize U.
+If U honestly follows the protocol, he can get the deposit back after the appropriate time period has passed.
+The complete code of the Micropay contract updated with this deposit penalty mechanism is depicted in listing
+\ref{lst:micro_v2}.
+
+\lstinputlisting[caption=Micropay v2, label=lst:micro_v2]{../examples/micro_v2.etv}
+
+In order to check if this contract is resilient to the front-running attack, we must slightly modify the properties:
+now in case of honest execution of the protocol the user U finishes with \lstinline{balance0 = 2} (we set the 
+deposit to 2).
+In case of a successful attack, the merchant M does not receive his payment, however then U will end up 
+with \lstinline{balance0 = 0}.
+Therefore we must verify if a malicious user U cannot increase the chances that
+\emph{merchant M does not get paid while he successfully revealed his winning ticket and user U remains
+not punished by losing his deposit}.
+Thus, the final version of properties for this protocol are as follows:
+\lstinputlisting{../examples/micro_v2.props}
+
+
