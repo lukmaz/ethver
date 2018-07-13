@@ -1,5 +1,7 @@
 Pmin=? [ F endM&balance1>=1 ]
 
+Pmax=? [ F endM&balance1>=1 ]
+
 Pmax=? [ F balance1>=1 ]
 
 Pmax=? [ F endM&has_revealedM&balance0>=2&balance1<1 ]

@@ -70,17 +70,17 @@ This illustrates a real flaw in the protocol: a front-running attack.
 In this attack a malicious user U can produce a winning ticket by simulating
 the merchant protocol and broadcast his version of \lstinline{release} transaction which can be processed 
 before the \lstinline{release} transaction created by merchant M.
-What is more, user U can monitor the network and wait until M's transaction appears in the network and only then
+Moreover, user U can monitor the network and wait until M's transaction appears in the network and only then
 react with broadcasting his own transaction.
-In such case there are two concurrent transactions in the network among only one can be confirmed
-and which one will be chosen depends on several random factors.
+In such case there are two concurrent transactions in the network and among them only one can be confirmed.
+Which transaction will be chosen depends on several random factors.
 In fact, if U has good enough network setup, he can force his transaction to be accepted before the M's one
 with high probability.
 
 \subsection{Mitigating the front-running attack}
 
 The front-running attack can be mitigated using a penalty deposit.
-At the beginning of the protocol the user U deposits some amount of money (bigger than the amount of payment).
+At the beginning of the protocol the user U deposits some amount of money (larger than the amount of payment).
 This deposit can be released in one of the two following ways:
 \begin{itemize}
 \item after some time $\Delta t$ the deposit goes back to U,
@@ -100,9 +100,26 @@ deposit to 2).
 In case of a successful attack, the merchant M does not receive his payment, however then U will end up 
 with \lstinline{balance0 = 0}.
 Therefore we must verify if a malicious user U cannot increase the chances that
-\emph{merchant M does not get paid while he successfully revealed his winning ticket and user U remains
+\emph{merchant M does not get paid while he has successfully revealed his winning ticket and user U remains
 not punished by losing his deposit}.
 Thus, the final version of properties for this protocol are as follows:
-\lstinputlisting{../examples/micro_v2.props}
+
+\[
+\begin{tabular}{|c|c|c|c|}
+\hline
+property & adversary & target & \shortstack{result} \\
+\hline
+\lstinline{Pmin=? [F endM & balance1 >= 1]} & None & 1/2 & 1/2 \\
+\hline
+\lstinline{Pmax=? [F endM & balance1 >= 1]} & None & 1/2 & 1/2 \\
+\hline
+\lstinline{Pmax=? [F balance1 >= 1]} & M & 1/2 & 1/2 \\
+\hline
+\lstinline{Pmax=? [F endM & has_revealedM & balance0 >= 2 & balance1 < 1]} & U & 1/2 & \textbf{1/2} \\
+\hline
+\end{tabular}
+\]
+
+%\lstinputlisting{../examples/micro_v2.props}
 
 
