@@ -11,8 +11,8 @@ MAX_TIME = 2;
 
 contract RPS {
   uint(3) num_players;
-  uint(2) player_address0;
-  uint(2) player_address1;
+  uint(2) player_address[2];
+  uint(3) player_choice[2];
   uint(3) p0;
   uint(3) p1;
   uint(3) reward;
@@ -20,32 +20,28 @@ contract RPS {
   function_with_value player_input(uint(3) choice) {
     if (num_players < 2 && msg.value == 1) {
       reward = reward + msg.value;
-      if (num_players == 0) {
-        player_address0 = msg.sender;
-        p0 = choice;
-      }
-      if (num_players == 1) {
-        player_address1 = msg.sender;
-        p1 = choice;
-      }
+      player_address[num_players] = msg.sender;
+      player_choice[num_players] = choice;
       num_players = num_players + 1;
     }
   }
 
 	function finalize() {
     if (time_elapsed > 0 && num_players == 1) {
-      player_address0.send(1);
+      player_address[0].send(1);
     }
     if (num_players == 2) {
+      p0 = player_choice[0];
+      p1 = player_choice[1];
       if ((((3 + p0) - p1) % 3) == 1) {
-        player_address0.send(reward);
+        player_address[0].send(reward);
       }
       if ((((3 + p0) - p1) % 3) == 2) {
-        player_address1.send(reward);
+        player_address[1].send(reward);
       }
       if ((((3 + p0) - p1) % 3) == 0) {
-        player_address0.send(reward/2);
-        player_address1.send(reward/2);
+        player_address[0].send(reward/2);
+        player_address[1].send(reward/2);
       }
     }
   }

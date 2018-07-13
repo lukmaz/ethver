@@ -91,12 +91,7 @@ scenario A {
   wait(num_players == 2, 1);
   if (num_players == 2) {
     open.sendTransaction({from: "A", value: 0});
-    if (player_address[0] == 1) { // TODO: to sie da ladniej
-      wait(has_revealed[0], 2);
-    }
-    else if (player_address[1] == 1) {
-      wait(has_revealed[1], 2);
-    }
+    wait(has_revealed[1] && has_revealed[1], 2);
   }
   finalize.sendTransaction({from: "A", value: 0});
   endA = true;
@@ -110,12 +105,7 @@ scenario B {
   wait(num_players == 2, 1);
   if (num_players == 2) {
     open.sendTransaction({from: "B", value: 0});
-    if (player_address[0] == 0) {
-      wait(has_revealed[0], 2);
-    }
-    else if (player_address[1] == 0) {
-      wait(has_revealed[1], 2);
-    }
+    wait(has_revealed[0] && has_revealed[1], 2);
   }
   finalize.sendTransaction({from: "B", value: 0});
   endB = true;

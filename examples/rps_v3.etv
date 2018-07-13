@@ -11,16 +11,15 @@ MAX_TIME = 2;
 
 contract RPS {
   uint(3) num_players;
-  uint(2) player_address0;
-  uint(2) player_address1;
+  uint(2) player_address[2];
+  uint(3) player_choice[2];
   uint(3) p0; // player who first joined the game
   uint(3) p1;
   uint(3) reward;
+  uint(2) player_num;
 
-  bool committed0; // player who first joined the game
-  bool committed1;
-  bool has_revealed0;
-  bool has_revealed1;
+  bool committed[2]; // 0 - player who first joined the game
+  bool has_revealed[2];
 
   function_with_value player_input(uint(3) choice) {
     if (num_players >= 2 || msg.value != 1) {
@@ -28,47 +27,41 @@ contract RPS {
     }
     else if (num_players < 2 && msg.value == 1) {
       reward = reward + msg.value;
-      if (num_players == 0) {
-        player_address0 = msg.sender;
-        committed0 = true;
-      }
-      if (num_players == 1) {
-        player_address1 = msg.sender;
-        committed1 = true;
-      }
+      player_address[num_players] = msg.sender;
+      committed[num_players] = true;
       num_players = num_players + 1;
     }
   }
 
   function open() {
-    if (player_address0 == msg.sender) {
-      if (committed0 && !has_revealed0) {
-        p0 = random(3);
-        has_revealed0 = true;
-      }
+    if (msg.sender == player_address[0]) {
+      player_num = 0;
     }
-    else if (player_address1 == msg.sender) {
-      if (committed1 && !has_revealed1) {
-        p1 = random(3);
-        has_revealed1 = true;
-      }
+    else if (msg.sender == player_address[1]) {
+      player_num = 1;
+    }
+    if (committed[player_num] && !has_revealed[player_num]) {
+      player_choice[player_num] = random(3);
+      has_revealed[player_num] = true;
     }
   }
 
 	function finalize() {
     if (time_elapsed > 0 && num_players == 1) {
-      player_address0.send(1);
+      player_address[0].send(1);
     }
-    if (has_revealed0 && has_revealed1) {
+    if (has_revealed[0] && has_revealed[1]) {
+      p0 = player_choice[0];
+      p1 = player_choice[1];
       if ((((3 + p0) - p1) % 3) == 1) {
-        player_address0.send(reward);
+        player_address[0].send(reward);
       }
       if ((((3 + p0) - p1) % 3) == 2) {
-        player_address1.send(reward);
+        player_address[1].send(reward);
       }
       if ((((3 + p0) - p1) % 3) == 0) {
-        player_address0.send(reward/2);
-        player_address1.send(reward/2);
+        player_address[0].send(reward/2);
+        player_address[1].send(reward/2);
       }
     }
   }
@@ -86,7 +79,7 @@ scenario A {
   wait(num_players == 2, 1);
   if (num_players == 2) {
     open.sendTransaction({from: "A", value: 0});
-    wait(has_revealed1, 2);
+    wait(has_revealed[0] && has_revealed[1], 2);
   }
   finalize.sendTransaction({from: "A", value: 0});
   endA = true;
@@ -100,7 +93,7 @@ scenario B {
   wait(num_players == 2, 1);
   if (num_players == 2) {
     open.sendTransaction({from: "A", value: 0});
-    wait(has_revealed0, 2);
+    wait(has_revealed[0] && has_revealed[1], 2);
   }
   finalize.sendTransaction({from: "B", value: 0});
   endB = true;
