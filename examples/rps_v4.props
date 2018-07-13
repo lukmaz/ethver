@@ -1,4 +1,4 @@
-filter(min, Pmin=? [ F balance0 >= 2 ], in_game0 & committed0 & committed1 & !has_revealed0 & !has_revealed1)
+filter(min, Pmin=? [ F balance0>=2 ], in_game_0&committed_0&committed_1&!has_revealed_0&!has_revealed_1)
 
 Pmin=? [ F endA&balance0>=1 ]
 

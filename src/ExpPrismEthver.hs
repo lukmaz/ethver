@@ -215,6 +215,21 @@ verStm modifyModule (SSend receiverExp arg) = do
       transferFromContract receiverBalance val
     EVar receiverVar -> do
       verStm modifyModule $ SIfElse (EEq (EVar receiverVar) (EInt 0)) (SSend (EInt 0) arg) (SSend (EInt 1) arg)
+    EArray arrName index -> do
+      case index of
+        ESender -> do
+          verStm 
+            modifyModule 
+            (SIfElse 
+              (EEq (EVar actualSender) (EInt 0))
+              (SSend (EArray arrName (EInt 0)) arg)
+              (SSend (EArray arrName (EInt 1)) arg)
+            )
+        EInt indexInt -> do
+          verStm modifyModule $ SSend (EVar $ Ident $ (unident arrName) ++ "_" ++ (show indexInt)) arg
+        _ -> error $ "(" ++ (show receiverExp) ++ ").send() not supported"
+
+        
 
 verStm modifyModule (SSendT funExp args) = do
   case funExp of
