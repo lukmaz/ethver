@@ -214,11 +214,17 @@ verStm modifyModule (SSend receiverExp arg) = do
       let receiverBalance = Ident $ sBalancePrefix ++ (show receiverNumber)
       transferFromContract receiverBalance val
 
-verStm modifyModule (SSendT funIdent args) = do
-  verSendTAux modifyModule funIdent args
+verStm modifyModule (SSendT funExp args) = do
+  case funExp of
+    EVar funIdent ->
+      verSendTAux modifyModule funIdent args
+    _ -> error "sendTransaction can be called only on an Ident object"
 
-verStm modifyModule (SSendC funIdent args) = do
-  verSendCAux modifyModule funIdent args
+verStm modifyModule (SSendC funExp args) = do
+  case funExp of
+    EVar funIdent ->
+      verSendCAux modifyModule funIdent args
+    _ -> error "sendCommunication can be called only on an Ident object"
 
 verStm modifyModule (SWait cond time) = do
   evalCond <- verExp modifyModule cond

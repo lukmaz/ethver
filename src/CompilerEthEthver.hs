@@ -142,12 +142,13 @@ ethScExp (EInt x) = do
 ethScExp (EVar ident) = do
   ethScIdent ident
 
+{-
 ethScExp (ECall ident args) = do
   ethScIdent ident
   addScen "("
   commaList ethScExp addScen args
   addScen ")"
-
+-}
 
 -- CallArg
 ethScCallArg (AExp exp) = do

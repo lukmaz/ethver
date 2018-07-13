@@ -252,7 +252,4 @@ prismShowExp _ ETrue =
 prismShowExp _ EFalse = 
   "false"
 
--- TODO: czy to jest w ogóle używane? Robi coś dziwnego
-prismShowExp senderIdent (ECall ident args) =
-  unident ident
 

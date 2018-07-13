@@ -35,7 +35,7 @@ contract RPS {
   function finalize() {
     if ((((3 + p0) - p1) % 3) == 1) {
       if (player_address0 == 0) {
-        0.send(reward);
+        player_address0.send(reward);
       }
       if (player_address0 == 1) {
         1.send(reward);
