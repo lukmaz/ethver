@@ -1,6 +1,17 @@
 ./MakeEthver examples/micro_v1.etv
+sleep 0.5
 ./MakeEthver examples/micro_v2.etv
+sleep 0.5
 ./MakeEthver examples/rps_v1.etv
+sleep 0.5
+./MakeEthver examples/rps_v1a.etv
+sleep 0.5
+./MakeEthver examples/rps_v1b.etv
+sleep 0.5
 ./MakeEthver examples/rps_v2.etv
+sleep 0.5
 ./MakeEthver examples/rps_v3.etv
+sleep 0.5
+./MakeEthver examples/rps_v3a.etv
+sleep 0.5
 ./MakeEthver examples/rps_v4.etv
