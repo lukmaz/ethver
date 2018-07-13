@@ -12,7 +12,7 @@ MAX_TIME = 2;
 contract RPS {
   uint(3) num_players;
   uint(2) player_address[2];
-  uint(2) player_choice[2];
+  uint(3) player_choice[2];
   uint(3) p0; // player who first joined the game
   uint(3) p1;
   uint(3) reward;
@@ -36,6 +36,7 @@ contract RPS {
   }
 
   function open() {
+    
     if (msg.sender == player_address[0]) {
       player_num = 0;
     }
