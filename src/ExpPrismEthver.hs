@@ -213,6 +213,8 @@ verStm modifyModule (SSend receiverExp arg) = do
     EInt receiverNumber -> do
       let receiverBalance = Ident $ sBalancePrefix ++ (show receiverNumber)
       transferFromContract receiverBalance val
+    EVar receiverVar -> do
+      verStm modifyModule $ SIfElse (EEq (EVar receiverVar) (EInt 0)) (SSend (EInt 0) arg) (SSend (EInt 1) arg)
 
 verStm modifyModule (SSendT funExp args) = do
   case funExp of
