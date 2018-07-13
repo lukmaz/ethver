@@ -19,7 +19,7 @@ MAX_TIME = 2;
 // rM - values from Merchant role of the protocol
 // rU - values from User role of the protocol
 
-contract RPS {
+contract Micropay {
   uint(2) pot = 1;
 
   function release() {

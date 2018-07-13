@@ -19,7 +19,7 @@ MAX_TIME = 2;
 // rM - values from Merchant role of the protocol
 // rU - values from User role of the protocol
 
-contract RPS {
+contract Micropay {
   uint(3) winning_tickets;
   uint(2) pot = 1;
   uint(3) deposit = 2;
