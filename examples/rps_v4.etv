@@ -91,7 +91,7 @@ scenario A {
   wait(num_players == 2, 1);
   if (num_players == 2) {
     open.sendTransaction({from: "A", value: 0});
-    wait(has_revealed[1] && has_revealed[1], 2);
+    wait(has_revealed[0] && has_revealed[1], 2);
   }
   finalize.sendTransaction({from: "A", value: 0});
   endA = true;
