@@ -17,18 +17,20 @@ contract RPS {
   uint(3) p1;
   uint(3) reward;
   uint(2) player_num;
+  cmt_uint(3) commit[2];
 
   bool committed[2]; // 0 - player who first joined the game
   bool has_revealed[2];
   bool in_game[2];
 
-  function_with_value player_input(uint(3) choice) {
+  function_with_value player_input(cmt_uint(3) commitment) {
     if (num_players >= 2 || msg.value != 1 || time_elapsed > 0) {
       msg.sender.send(msg.value);
     }
     else if (num_players < 2 && msg.value == 1 && time_elapsed == 0) {
       reward = reward + msg.value;
       player_address[num_players] = msg.sender;
+      commit[num_players] = commitment;
       committed[num_players] = true;
       num_players = num_players + 1;
       in_game[msg.sender] = true;
@@ -36,7 +38,6 @@ contract RPS {
   }
 
   function open() {
-    
     if (msg.sender == player_address[0]) {
       player_num = 0;
     }
@@ -44,6 +45,7 @@ contract RPS {
       player_num = 1;
     }
     if (committed[player_num] && !has_revealed[player_num]) {
+      commit[player_num].openCommitment();
       player_choice[player_num] = random(3);
       has_revealed[player_num] = true;
     }
@@ -85,9 +87,9 @@ communication {
 
 scenario A {
   bool endA;
-  uint(3) choiceA;
-  choiceA = random(3);
-  player_input.sendTransaction(choiceA, {from: "A", value: 1});
+  cmt_uint(3) commitmentA;
+  commitmentA.randomCommitment();
+  player_input.sendTransaction(commitmentA, {from: "A", value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
     open.sendTransaction({from: "A", value: 0});
@@ -99,9 +101,9 @@ scenario A {
 
 scenario B {
   bool endB;
-  uint(3) choiceB;
-  choiceB = random(3);
-  player_input.sendTransaction(choiceB, {from: "B", value: 1});
+  cmt_uint(3) commitmentB;
+  commitmentB.randomCommitment();
+  player_input.sendTransaction(commitmentB, {from: "B", value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
     open.sendTransaction({from: "B", value: 0});

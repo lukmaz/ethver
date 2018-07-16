@@ -343,7 +343,7 @@ removeLazyRandom ident = do
 -- default values
 defaultValueOfType :: Type -> Exp
 defaultValueOfType TBool = EFalse
-defaultValueOfType (TRUInt _) = EInt 0
+defaultValueOfType (TCUInt _) = EInt 0
 defaultValueOfType (TUInt _) = EInt 0
 
 

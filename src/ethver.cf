@@ -53,6 +53,8 @@ SReturn. Stm ::= "return" Exp  ";" ;
 SSend.   Stm ::= Exp "." "send" "(" Exp ")" ";" ;
 SSendT.  Stm ::= Exp "." "sendTransaction" "(" [CallArg] ")" ";" ;
 SSendC.  Stm ::= Exp "." "sendCommunication" "(" [Exp] ")" ";" ;
+SRCmt.   Stm ::= Exp "." "randomCommitment" "(" ")" ";" ;
+SOCmt.   Stm ::= Exp "." "openCommitment" "(" ")" ";" ;
 SWait.   Stm ::= "wait" "(" Exp "," Exp ")" ";" ;
 SBreak.  Stm ::= "break" ";" ;
 
@@ -103,7 +105,7 @@ ABra.   CallArg ::= "{" "from" ":" Exp "," "value" ":" Exp "}" ;
 
 TUInt.   Type ::= "uint" "(" Integer ")" ;
 TBool.   Type ::= "bool" ;
-TRUInt.   Type ::= "random_uint" "(" Integer ")" ;
+TCUInt.  Type ::= "cmt_uint" "(" Integer ")" ;
 -- TRStr.   Type ::= "random_string" ;
 
 

@@ -243,6 +243,44 @@ verStm modifyModule (SSendC funExp args) = do
       verSendCAux modifyModule funIdent args
     _ -> error "sendCommunication can be called only on an Ident object"
 
+verStm modifyModule (SRCmt exp) = do
+  case exp of
+    EVar ident -> do
+      typ <- findVarType ident
+      case typ of
+        Just (TCUInt x) -> verStm modifyModule (SAss ident (EInt x))
+        _ -> error $ "randomCommitment can be called on cmt_uint object only."
+    EArray ident index -> do
+      let varName0 = (unident ident) ++ "_0"
+      let varName1 = (unident ident) ++ "_1"
+      typ <- findVarType (Ident varName0)
+      case typ of
+        Just (TCUInt x) -> verStm modifyModule (SIfElse
+          (EEq index (EInt 0))
+          (SAss (Ident varName0) (EInt x))
+          (SAss (Ident varName1) (EInt x)))
+        _ -> error $ "randomCommitment can be called on cmt_uint object only."
+    _ -> error $ "randomCommitment can be called on cmt_uint object only."
+
+verStm modifyModule (SOCmt exp) = do
+  case exp of
+    EVar ident -> do
+      typ <- findVarType ident
+      case typ of
+        Just (TCUInt x) -> verStm modifyModule (SAss ident (ERand (EInt x)))
+        _ -> error $ "openCommitment can be called on cmt_uint object only."
+    EArray ident index -> do
+      let varName0 = (unident ident) ++ "_0"
+      let varName1 = (unident ident) ++ "_1"
+      typ <- findVarType (Ident varName0) -- TODO: sprawdzic, czy findVarType dziala na tablicach
+      case typ of
+        Just (TCUInt x) -> verStm modifyModule (SIfElse
+          (EEq index (EInt 0))
+          (SAss (Ident varName0) (ERand (EInt x)))
+          (SAss (Ident varName1) (ERand (EInt x))))
+        _ -> error $ "openCommitment can be called on cmt_uint object only."
+    _ -> error $ "openCommitment can be called on cmt_uint object only."
+
 verStm modifyModule (SWait cond time) = do
   evalCond <- verExp modifyModule cond
   mod <- modifyModule id
@@ -475,10 +513,14 @@ verMathExp modifyModule (EMod exp1 exp2) = do
 verValExp :: ModifyModuleType -> Exp -> VerRes Exp
 
 verValExp modifyModule (EVar ident) = do
+  return (EVar ident)
+-- old random_lazy etc.:
+{-
+verValExp modifyModule (EVar ident) = do
   world <- get
   typ <- findVarType ident
   case typ of
-    Just (TRUInt range) -> do
+    Just (TCUInt range) -> do
       if Set.member ident (lazyRandoms world)
         then do
           removeLazyRandom ident
@@ -487,6 +529,7 @@ verValExp modifyModule (EVar ident) = do
           return (EVar ident)
     _ ->
       return (EVar ident)
+-}
 
 verValExp modifyModule (EArray (Ident ident) index) = do
   mod <- modifyModule id
