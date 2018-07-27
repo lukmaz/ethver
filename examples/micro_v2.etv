@@ -25,16 +25,16 @@ contract Micropay {
   uint(3) deposit = 2;
 
   function release() {
-    if (winning_tickets < 2 && randM == signed_randU)
+    if (winning_tickets < 2 && commitmentM == signed_randU)
       winning_tickets = winning_tickets + 1;
     if (msg.sender == 0) {
-      if ((pot > 0) && is_signedU && has_revealedM && ((randM + saltM) % 2 == commitmentM) && (randM == signed_randU)) {
+      if ((pot > 0) && is_signedU && has_revealedM && (commitmentM == signed_randU)) {
         0.send(1);
         pot = pot - 1;
       }
     }
     else {
-      if ((pot > 0) && is_signedU && has_revealedM && ((randM + saltM) % 2 == commitmentM) && (randM == signed_randU)) {
+      if ((pot > 0) && is_signedU && has_revealedM && (commitmentM == signed_randU)) {
         1.send(1);
         pot = pot - 1;
       }
@@ -57,18 +57,16 @@ contract Micropay {
 }    
 
 communication {
-  uint(2) commitmentM;
+  cmt_uint(2) commitmentM;
   bool is_committedM;
   bool has_revealedM;
   bool is_signedU;
-  uint(2) randM;
-  uint(2) saltM;
   uint(2) randU;
   uint(2) signed_randU;
 
   function payment_request() {
     if (msg.sender == 1 && !is_signedU) {
-      commitmentM = random(2);
+      commitmentM.randomCommitment();
       is_committedM = true;
     }
   }
@@ -81,9 +79,8 @@ communication {
   }
   function open() {
     if (msg.sender == 1 && !has_revealedM) {
-      randM = random(2);
+      commitmentM.openCommitment();
       signed_randU = randU;
-      saltM = (commitmentM - randM + 2) % 2;
       has_revealedM = true;
     }
   }
@@ -111,7 +108,7 @@ scenario M {
   wait(is_signedU, 1);
   if (is_signedU && time_elapsed < 1) {
     open.sendCommunication();
-    if (randM == signed_randU) {
+    if (commitmentM == signed_randU) {
       release.sendTransaction({from: "M", value: 0});
       wait(balance1 >= 1, 1);
       if ((balance1 < 1) && (winning_tickets >= 2)) {
