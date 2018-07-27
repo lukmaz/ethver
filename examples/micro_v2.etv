@@ -13,6 +13,7 @@ USER0_BALANCE_INIT = 0;
 USER1_BALANCE_INIT = 0;
 MAX_VALUE = 1;
 MAX_TIME = 2;
+MAX_SIGNATURES = 2;
 
 // c1, r1 - values in honest mode, recipient = 1
 // c0, r0 - values in adversarial mode, recipient = 0
@@ -25,19 +26,13 @@ contract Micropay {
   uint(3) deposit = 2;
 
   function release() {
-    if (winning_tickets < 2 && commitmentM == signed_randU)
+    if ((winning_tickets < 2) && (commitmentM == randU)) {
       winning_tickets = winning_tickets + 1;
-    if (msg.sender == 0) {
-      if ((pot > 0) && is_signedU && has_revealedM && (commitmentM == signed_randU)) {
-        0.send(1);
-        pot = pot - 1;
-      }
     }
-    else {
-      if ((pot > 0) && is_signedU && has_revealedM && (commitmentM == signed_randU)) {
-        1.send(1);
-        pot = pot - 1;
-      }
+    if (pot > 0 && is_signedU && has_revealedM && commitmentM == randU
+        && sigma == signature_of(commitmentM) && sigma == signature_of(randU) && sigma == signature_of(receiver)) {
+      receiver.send(1);
+      pot = pot - 1;
     }
   }
 
@@ -57,17 +52,20 @@ contract Micropay {
 }    
 
 communication {
-  cmt_uint(2) commitmentM;
+  cmt_uint_signable(2) commitmentM;
   bool is_committedM;
   bool has_revealedM;
   bool is_signedU;
   uint(2) randU;
-  uint(2) signed_randU;
+  uint_signable(2) signed_randU;   
+  uint_signable(2) receiver;
+  signature sigma;
 
   function payment_request() {
     if (msg.sender == 1 && !is_signedU) {
       commitmentM.randomCommitment();
       is_committedM = true;
+      receiver = msg.sender;
     }
   }
 
@@ -75,12 +73,13 @@ communication {
     if (msg.sender == 0 && is_committedM && !is_signedU) {
       randU = r;
       is_signedU = true;
+      sigma = sign(commitmentM, randU, receiver);
     }
   }
+
   function open() {
     if (msg.sender == 1 && !has_revealedM) {
       commitmentM.openCommitment();
-      signed_randU = randU;
       has_revealedM = true;
     }
   }
@@ -108,7 +107,7 @@ scenario M {
   wait(is_signedU, 1);
   if (is_signedU && time_elapsed < 1) {
     open.sendCommunication();
-    if (commitmentM == signed_randU) {
+    if (commitmentM == randU) {
       release.sendTransaction({from: "M", value: 0});
       wait(balance1 >= 1, 1);
       if ((balance1 < 1) && (winning_tickets >= 2)) {

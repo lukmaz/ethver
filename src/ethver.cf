@@ -54,7 +54,6 @@ SSend.   Stm ::= Exp "." "send" "(" Exp ")" ";" ;
 SSendT.  Stm ::= Exp "." "sendTransaction" "(" [CallArg] ")" ";" ;
 SSendC.  Stm ::= Exp "." "sendCommunication" "(" [Exp] ")" ";" ;
 SRCmt.   Stm ::= Exp "." "randomCommitment" "(" ")" ";" ;
-SSign.   Stm ::= Exp "." "sign" "(" ")" ";" ;
 SOCmt.   Stm ::= Exp "." "openCommitment" "(" ")" ";" ;
 SWait.   Stm ::= "wait" "(" Exp "," Exp ")" ";" ;
 SBreak.  Stm ::= "break" ";" ;
@@ -81,6 +80,8 @@ EArray.  Exp7 ::= Ident "[" Exp "]" ;
 --ECall.   Exp7 ::= Ident "." "call" "(" [Exp] ")" ;
 ERand.   Exp7 ::= "random" "(" Exp ")" ;
 ERandL.  Exp7 ::= "random_lazy" "(" Exp ")" ;
+ESign.   Exp7 ::= "sign" "(" [Exp] ")" ;
+ESignat. Exp7 ::= "signature_of" "(" Exp ")" ;
 EVar.    Exp7 ::= Ident ;
 EValue.  Exp7 ::= "msg" "." "value" ;
 ESender. Exp7 ::= "msg" "." "sender" ;
@@ -105,8 +106,11 @@ AExp.   CallArg ::= Exp ;
 ABra.   CallArg ::= "{" "from" ":" Exp "," "value" ":" Exp "}" ;
 
 TUInt.   Type ::= "uint" "(" Integer ")" ;
+TUIntS.  Type ::= "uint_signable" "(" Integer ")" ;
 TBool.   Type ::= "bool" ;
 TCUInt.  Type ::= "cmt_uint" "(" Integer ")" ;
+TCUIntS. Type ::= "cmt_uint_signable" "(" Integer ")" ;
+TSig.    Type ::= "signature" ;
 -- TRStr.   Type ::= "random_string" ;
 
 
