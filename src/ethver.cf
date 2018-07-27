@@ -54,6 +54,7 @@ SSend.   Stm ::= Exp "." "send" "(" Exp ")" ";" ;
 SSendT.  Stm ::= Exp "." "sendTransaction" "(" [CallArg] ")" ";" ;
 SSendC.  Stm ::= Exp "." "sendCommunication" "(" [Exp] ")" ";" ;
 SRCmt.   Stm ::= Exp "." "randomCommitment" "(" ")" ";" ;
+SSign.   Stm ::= Exp "." "sign" "(" ")" ";" ;
 SOCmt.   Stm ::= Exp "." "openCommitment" "(" ")" ";" ;
 SWait.   Stm ::= "wait" "(" Exp "," Exp ")" ";" ;
 SBreak.  Stm ::= "break" ";" ;
