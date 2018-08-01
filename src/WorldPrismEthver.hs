@@ -182,18 +182,33 @@ addVar :: ModifyModuleType -> Type -> Ident -> VerRes ()
 addVar modifyModule typ ident = do
   _ <- modifyModule (addVarToModule typ ident)
   case typ of
-    TUIntS _ -> addSigVar modifyModule ident
-    TCUIntS _ -> addSigVar modifyModule ident
+    TUIntS _ -> addSignableVar modifyModule ident
+    TCUIntS _ -> addSignableVar modifyModule ident
+    TSig _ -> addSignatureVar modifyModule ident
     _ -> return ()
 
-addSigVar :: ModifyModuleType -> Ident -> VerRes ()
-addSigVar modifyModule varIdent = do
+addSignableVar :: ModifyModuleType -> Ident -> VerRes ()
+addSignableVar modifyModule varIdent = do
   world <- get
   case Map.lookup (Ident sMaxSignatures) (constants world) of
     Nothing -> error $ sMaxSignatures ++ " constant definition not found in the source file.\n"
     Just maxSignatures -> do
-      let sigIdent = Ident $ unident varIdent ++ sSigSuffix
-      _ <- modifyModule (addVarToModule (TUInt maxSignatures) sigIdent)
+      let sigIdent0 = Ident $ unident varIdent ++ sSigSuffix ++ "0"
+      let sigIdent1 = Ident $ unident varIdent ++ sSigSuffix ++ "1"
+      _ <- modifyModule (addVarToModule (TUInt (maxSignatures + 1)) sigIdent0)
+      _ <- modifyModule (addVarToModule (TUInt (maxSignatures + 1)) sigIdent1)
+      return ()
+
+addSignatureVar :: ModifyModuleType -> Ident -> VerRes ()
+addSignatureVar modifyModule varIdent = do
+  world <- get
+  case Map.lookup (Ident sMaxSignatures) (constants world) of
+    Nothing -> error $ sMaxSignatures ++ " constant definition not found in the source file."
+    Just maxSignatures -> do
+      let sigValIdent = Ident $ unident varIdent ++ sValSuffix
+      let sigAuthIdent = Ident $ unident varIdent ++ sAuthSuffix
+      _ <- modifyModule (addVarToModule (TUInt (maxSignatures + 1)) sigValIdent)
+      _ <- modifyModule (addVarToModule (TUInt 2) sigAuthIdent)
       return ()
 
 addInitialValue :: ModifyModuleType -> Ident -> Exp -> VerRes ()

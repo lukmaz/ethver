@@ -24,11 +24,8 @@ contract Micropay {
   uint(2) pot = 1;
 
   function release() {
-    
-    
-    
     if (pot > 0 && is_signedU && has_revealedM && commitmentM == randU
-        && sigma == signature_of(commitmentM) && sigma == signature_of(randU) && sigma == signature_of(receiver)) {
+        && ver(0, sigma, (commitmentM, randU, receiver))) {
       receiver.send(1);
       pot = pot - 1;
     }
@@ -45,19 +42,15 @@ communication {
   signature(3) sigma;
 
   function payment_request() {
-    if (msg.sender == 1 && !is_signedU) {
-      commitmentM.randomCommitment();
-      is_committedM = true;
-      receiver = msg.sender;
-    }
+    commitmentM.randomCommitment();
+    is_committedM = true;
+    receiver = msg.sender;
   }
 
   function payment_issuance(uint(2) r, uint(2) recipient) {
-    if (msg.sender == 0 && is_committedM && !is_signedU) {
-      randU = r;
-      is_signedU = true;
-      sigma = sign(commitmentM, randU, receiver);
-    }
+    randU = r;
+    is_signedU = true;
+    sigma = sign(commitmentM, randU, receiver);
   }
   function open() {
     if (msg.sender == 1 && !has_revealedM) {

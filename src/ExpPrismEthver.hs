@@ -323,14 +323,24 @@ verFullAss modifyModule (SAss ident exp) = do
     _ -> 
       return ()
 
-  (guards, updates) <- generateSimpleAss modifyModule (SAss ident exp)
-  
-  addTransToNewState
-    modifyModule
-    ""
-    guards
-    -- TODO: Alive?
-    [(updates, [Alive])]
+  typ <- findVarType ident
+  case typ of
+    Just (TSig _) -> do
+      mod <- modifyModule id
+      let actualSender = whichSender mod
+      verStm modifyModule $ SIfElse (EEq (EVar actualSender) (EInt 0))
+        (SAss (Ident $ unident ident ++ sAuthSuffix) (EInt 0))
+        (SAss (Ident $ unident ident ++ sAuthSuffix) (EInt 1))
+      verStm modifyModule $ SAss (Ident $ unident ident ++ sValSuffix) exp
+    _ -> do
+      (guards, updates) <- generateSimpleAss modifyModule (SAss ident exp)
+      
+      addTransToNewState
+        modifyModule
+        ""
+        guards
+        -- TODO: Alive?
+        [(updates, [Alive])]
 
 verFullAss modifyModule (SArrAss (Ident ident) index exp) = do
   case index of
@@ -431,7 +441,8 @@ verExp modifyModule (ERand exp) = verRandom modifyModule exp
 verExp modifyModule (ERandL exp) = verRandomLazy modifyModule exp
 
 verExp modifyModule (ESign vars) = verSign modifyModule vars
-verExp modifyModule (ESignOf var) = verSignOf modifyModule var
+verExp modifyModule (ESignOf var player) = verSignOf modifyModule var player
+verExp modifyModule (EVer key signature vars) = verVer modifyModule key signature vars
 
 -------------
 -- MathExp --
@@ -640,26 +651,46 @@ verSign modifyModule vars = do
   let newSignature = lastSignature world + 1
   put $ world {lastSignature = newSignature}
   mapM_ (verSignOne modifyModule newSignature) vars
-  return $ EInt newSignature
+  return (EInt newSignature)
 
 verSignOne :: ModifyModuleType -> Integer -> Exp -> VerRes ()
 verSignOne modifyModule newSignature (EVar varIdent) = do
-  let sigIdent = Ident $ (unident varIdent) ++ sSigSuffix
+  mod <- modifyModule id
+  let
+    sigIdent = Ident $ (unident varIdent) ++ sSigSuffix
   typ <- findVarType varIdent
   case typ of
     Just (TUIntS _) ->
-      verStm modifyModule (SAss sigIdent $ EInt newSignature)
+      verSignOneAux modifyModule sigIdent (EInt newSignature)
     Just (TCUIntS _) ->
-      verStm modifyModule (SAss sigIdent $ EInt newSignature)
+      verSignOneAux modifyModule sigIdent (EInt newSignature)
     Just _ ->
       error $ "Error in sign(" ++ (unident varIdent) ++ "): sign can be called only on a _signable variable"
     Nothing ->
-      error $  "Type of variable " ++ (unident varIdent) ++ " not found."
+      error $ "Type of variable " ++ (unident varIdent) ++ " not found."
 
-verSignOf :: ModifyModuleType -> Exp -> VerRes Exp
-verSignOf modifyModule (EVar varIdent) = do
+verSignOneAux :: ModifyModuleType -> Ident -> Exp -> VerRes ()
+verSignOneAux modifyModule sigIdent newSignature = do
+  mod <- modifyModule id
+  let actualSender = whichSender mod
+  verStm modifyModule
+    (SIfElse
+      (EEq (EVar actualSender) (EInt 0))
+      (SAss (Ident $ unident sigIdent ++ "0") newSignature)
+      (SAss (Ident $ unident sigIdent ++ "1") newSignature)
+    )
+
+-- TODO: do wywalenia?
+verSignOf :: ModifyModuleType -> Exp -> Exp -> VerRes Exp
+verSignOf modifyModule (EVar varIdent) player = do
   world <- get
-  let sigIdent = Ident $ (unident varIdent) ++ sSigSuffix
+  mod <- modifyModule id
+  let 
+    playerNr = case player of
+      EInt x -> show x
+      ESender -> unident $ whichSender mod
+      _ -> error $ show player ++ ": signature_of supported only for EInt and msg.sender"
+    sigIdent = Ident $ (unident varIdent) ++ sSigSuffix ++ playerNr
   typ <- findVarType varIdent
   case typ of
     Just (TUIntS _) ->
@@ -671,6 +702,18 @@ verSignOf modifyModule (EVar varIdent) = do
         "): signature_of can be called only on a _signable variable"
     Nothing ->
       error $  "Type of variable " ++ (unident varIdent) ++ " not found."
+
+verVer :: ModifyModuleType -> Exp -> Exp -> [Exp] -> VerRes Exp
+verVer modifyModule key (EVar signature) vars = do
+  case key of
+    EInt k ->
+      let
+        sig_val = Ident $ unident signature ++ sValSuffix
+        sig_auth = Ident $ unident signature ++ sAuthSuffix
+        f acc (EVar (Ident varName)) = 
+          EAnd acc (EEq (EVar sig_val) (EVar $ Ident $ varName ++ sSigSuffix ++ (show k)))
+      in
+        return $ foldl f (EEq (EVar sig_auth) (EInt k)) vars
 
 -----------------------------
 -- Call auxilary functions --
