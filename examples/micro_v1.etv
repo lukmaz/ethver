@@ -47,7 +47,7 @@ communication {
     receiver = msg.sender;
   }
 
-  function payment_issuance(uint(2) r, uint(2) recipient) {
+  function payment_issuance(uint(2) r) {
     randU = r;
     is_signedU = true;
     sigma = sign(commitmentM, randU, receiver);

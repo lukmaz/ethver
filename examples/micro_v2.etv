@@ -25,12 +25,12 @@ contract Micropay {
   uint(2) pot = 1;
   uint(3) deposit = 2;
 
+  //function release(cmt_uint_signable(2) r1, uint_signable(2) r2, signature(3) s, uint_signable(2) a) {
   function release() {
-    if ((winning_tickets < 2) && (commitmentM == randU)) {
+    if ((winning_tickets < 2) && (randU == commitmentM)) {
       winning_tickets = winning_tickets + 1;
     }
-    if (pot > 0 && is_signedU && has_revealedM && commitmentM == randU
-        && ver(0, sigma, (commitmentM, randU, receiver))) {
+    if (pot > 0 && randU == commitmentM && ver(0, sigma, (commitmentM, randU, receiver))) {
       receiver.send(1);
       pot = pot - 1;
     }
@@ -66,8 +66,8 @@ communication {
     receiver = msg.sender;
   }
 
-  function payment_issuance(uint(2) r, uint(2) recipient) {
-    randU = r;
+  function payment_issuance(uint(2) pay_r) {
+    randU = pay_r;
     is_signedU = true;
     sigma = sign(commitmentM, randU, receiver);
   }
@@ -87,7 +87,7 @@ scenario U {
   wait(is_committedM, 1);
   if (is_committedM) {
     rand0 = random(2);
-    payment_issuance.sendCommunication(rand0, 1);
+    payment_issuance.sendCommunication(rand0);
   }
   wait(false, 2);
   release_deposit.sendTransaction({from: "U", value: 0});
@@ -103,7 +103,7 @@ scenario M {
   if (is_signedU && time_elapsed < 1) {
     open.sendCommunication();
     if (commitmentM == randU) {
-      release.sendTransaction({from: "M", value: 0});
+      release.sendTransaction(commitmentM, randU, sigma, receiver, {from: "M", value: 0});
       wait(balance1 >= 1, 1);
       if ((balance1 < 1) && (winning_tickets >= 2)) {
         burn.sendTransaction({from: "M", value: 0});
