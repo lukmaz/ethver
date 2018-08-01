@@ -5,6 +5,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
 import AbsEthver
+import AuxPrismEthver
 import ConstantsEthver
 
 -- TYPES --
@@ -49,7 +50,8 @@ data VerWorld = VerWorld {
   -- set of indexes which are read in condition checks (ESender or EInt) - AND ALSO EVar! (TODO?)
   condRandomArrays :: Map.Map Ident (Set.Set Exp),
   lazyRandoms :: Set.Set Ident,
-  addedGuards :: [Exp]
+  addedGuards :: [Exp],
+  lastSignature :: Integer
   }
 
 data Module = Module {
@@ -90,7 +92,8 @@ emptyVerWorld = VerWorld {
   condRandoms = Set.empty,
   condRandomArrays = Map.empty,
   lazyRandoms = Set.empty,
-  addedGuards = []
+  addedGuards = [],
+  lastSignature = 0
   } 
 
 emptyModule :: Module
@@ -178,7 +181,20 @@ addLocal modifyModule typ = do
 addVar :: ModifyModuleType -> Type -> Ident -> VerRes ()
 addVar modifyModule typ ident = do
   _ <- modifyModule (addVarToModule typ ident)
-  return ()
+  case typ of
+    TUIntS _ -> addSigVar modifyModule ident
+    TCUIntS _ -> addSigVar modifyModule ident
+    _ -> return ()
+
+addSigVar :: ModifyModuleType -> Ident -> VerRes ()
+addSigVar modifyModule varIdent = do
+  world <- get
+  case Map.lookup (Ident sMaxSignatures) (constants world) of
+    Nothing -> error $ sMaxSignatures ++ " constant definition not found in the source file.\n"
+    Just maxSignatures -> do
+      let sigIdent = Ident $ unident varIdent ++ sSigSuffix
+      _ <- modifyModule (addVarToModule (TUInt maxSignatures) sigIdent)
+      return ()
 
 addInitialValue :: ModifyModuleType -> Ident -> Exp -> VerRes ()
 addInitialValue modifyModule ident exp = do
@@ -370,6 +386,7 @@ removeBreakState mod = do
 addVarToModule :: Type -> Ident -> Module -> Module
 addVarToModule typ ident mod = do
   mod {vars = Map.insert ident typ (vars mod)}
+
 
 addInitialValueToModule :: Ident -> Exp -> Module -> Module
 addInitialValueToModule ident exp mod = do

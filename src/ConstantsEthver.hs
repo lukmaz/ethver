@@ -42,6 +42,7 @@ sInitUser0Balance = "USER0_BALANCE_INIT"
 sInitUser1Balance = "USER1_BALANCE_INIT"
 sMaxValue = "MAX_VALUE"
 sMaxTime = "MAX_TIME"
+sMaxSignatures = "MAX_SIGNATURES"
 
 sContrState = "contrstate"
 sCommState = "commstate"
@@ -50,6 +51,7 @@ sP0State = "state0"
 sP1State = "state1"
 sStatePrefix = "state"
 sStatusSuffix = "_status"
+sSigSuffix = "_sig"
 sEmptyState = "empty_state"
 sEmptySender = "empty_sender"
 sTimeElapsed = "time_elapsed"
@@ -99,7 +101,6 @@ sRandom = "random"
 sRandomLazy = "random_lazy"
 
 sReturnValueSuffix = "_returnValue"
-
 
 -- IDENTS
 

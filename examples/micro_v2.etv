@@ -13,7 +13,7 @@ USER0_BALANCE_INIT = 0;
 USER1_BALANCE_INIT = 0;
 MAX_VALUE = 1;
 MAX_TIME = 2;
-MAX_SIGNATURES = 2;
+MAX_SIGNATURES = 3;
 
 // c1, r1 - values in honest mode, recipient = 1
 // c0, r0 - values in adversarial mode, recipient = 0
@@ -56,10 +56,9 @@ communication {
   bool is_committedM;
   bool has_revealedM;
   bool is_signedU;
-  uint(2) randU;
-  uint_signable(2) signed_randU;   
+  uint_signable(2) randU;
   uint_signable(2) receiver;
-  signature sigma;
+  signature(3) sigma;
 
   function payment_request() {
     if (msg.sender == 1 && !is_signedU) {

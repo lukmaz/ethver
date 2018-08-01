@@ -19,6 +19,9 @@ minValue ident = do
   case typ of
     Just (TUInt x) -> return 0
     Just (TCUInt x) -> return 0
+    Just (TUIntS x) -> return 0
+    Just (TCUIntS x) -> return 0
+    Just (TSig x) -> return 0
     Just TBool -> return 0
     Nothing -> error $ "Type of '" ++ (show ident) ++ "' not found"
 

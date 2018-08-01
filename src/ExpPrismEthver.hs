@@ -249,7 +249,8 @@ verStm modifyModule (SRCmt exp) = do
       typ <- findVarType ident
       case typ of
         Just (TCUInt x) -> verStm modifyModule (SAss ident (EInt x))
-        _ -> error $ "randomCommitment can be called on cmt_uint object only."
+        Just (TCUIntS x) -> verStm modifyModule (SAss ident (EInt x))
+        _ -> error $ unident ident ++ ": randomCommitment can be called on cmt_uint object only."
     EArray ident index -> do
       let varName0 = (unident ident) ++ "_0"
       let varName1 = (unident ident) ++ "_1"
@@ -259,8 +260,12 @@ verStm modifyModule (SRCmt exp) = do
           (EEq index (EInt 0))
           (SAss (Ident varName0) (EInt x))
           (SAss (Ident varName1) (EInt x)))
-        _ -> error $ "randomCommitment can be called on cmt_uint object only."
-    _ -> error $ "randomCommitment can be called on cmt_uint object only."
+        Just (TCUIntS x) -> verStm modifyModule (SIfElse
+          (EEq index (EInt 0))
+          (SAss (Ident varName0) (EInt x))
+          (SAss (Ident varName1) (EInt x)))
+        _ -> error $ varName0 ++ " (0/1): randomCommitment can be called on cmt_uint object only."
+    _ -> error $ (show exp) ++ "randomCommitment can be called on cmt_uint object only."
 
 verStm modifyModule (SOCmt exp) = do
   case exp of
@@ -268,7 +273,8 @@ verStm modifyModule (SOCmt exp) = do
       typ <- findVarType ident
       case typ of
         Just (TCUInt x) -> verStm modifyModule (SAss ident (ERand (EInt x)))
-        _ -> error $ "openCommitment can be called on cmt_uint object only."
+        Just (TCUIntS x) -> verStm modifyModule (SAss ident (ERand (EInt x)))
+        _ -> error $ unident ident ++ ": openCommitment can be called on cmt_uint object only."
     EArray ident index -> do
       let varName0 = (unident ident) ++ "_0"
       let varName1 = (unident ident) ++ "_1"
@@ -278,8 +284,8 @@ verStm modifyModule (SOCmt exp) = do
           (EEq index (EInt 0))
           (SAss (Ident varName0) (ERand (EInt x)))
           (SAss (Ident varName1) (ERand (EInt x))))
-        _ -> error $ "openCommitment can be called on cmt_uint object only."
-    _ -> error $ "openCommitment can be called on cmt_uint object only."
+        _ -> error $ varName0 ++ "(0/1): openCommitment can be called on cmt_uint object only."
+    _ -> error $ (show exp) ++ ": openCommitment can be called on cmt_uint object only."
 
 verStm modifyModule (SWait cond time) = do
   evalCond <- verExp modifyModule cond
@@ -424,6 +430,9 @@ verExp modifyModule EFalse = verValExp modifyModule EFalse
 verExp modifyModule (ERand exp) = verRandom modifyModule exp
 verExp modifyModule (ERandL exp) = verRandomLazy modifyModule exp
 
+verExp modifyModule (ESign vars) = verSign modifyModule vars
+verExp modifyModule (ESignOf var) = verSignOf modifyModule var
+
 -------------
 -- MathExp --
 -------------
@@ -514,22 +523,6 @@ verValExp :: ModifyModuleType -> Exp -> VerRes Exp
 
 verValExp modifyModule (EVar ident) = do
   return (EVar ident)
--- old random_lazy etc.:
-{-
-verValExp modifyModule (EVar ident) = do
-  world <- get
-  typ <- findVarType ident
-  case typ of
-    Just (TCUInt range) -> do
-      if Set.member ident (lazyRandoms world)
-        then do
-          removeLazyRandom ident
-          verRandom modifyModule $ EInt range
-        else do
-          return (EVar ident)
-    _ ->
-      return (EVar ident)
--}
 
 verValExp modifyModule (EArray (Ident ident) index) = do
   mod <- modifyModule id
@@ -636,6 +629,48 @@ verRandom modifyModule (EInt range) = do
 verRandomLazy :: ModifyModuleType -> Exp -> VerRes Exp
 verRandomLazy modifyModule (EInt range) = do
   return $ EInt range
+
+----------------
+-- Signatures --
+----------------
+
+verSign :: ModifyModuleType -> [Exp] -> VerRes Exp
+verSign modifyModule vars = do
+  world <- get
+  let newSignature = lastSignature world + 1
+  mapM_ (verSignOne modifyModule newSignature) vars
+  put $ world {lastSignature = newSignature}
+  return $ EInt newSignature
+
+verSignOne :: ModifyModuleType -> Integer -> Exp -> VerRes ()
+verSignOne modifyModule newSignature (EVar varIdent) = do
+  let sigIdent = Ident $ (unident varIdent) ++ sSigSuffix
+  typ <- findVarType varIdent
+  case typ of
+    Just (TUIntS _) ->
+      verStm modifyModule (SAss sigIdent $ EInt newSignature)
+    Just (TCUIntS _) ->
+      verStm modifyModule (SAss sigIdent $ EInt newSignature)
+    Just _ ->
+      error $ "Error in sign(" ++ (unident varIdent) ++ "): sign can be called only on a _signable variable"
+    Nothing ->
+      error $  "Type of variable " ++ (unident varIdent) ++ " not found."
+
+verSignOf :: ModifyModuleType -> Exp -> VerRes Exp
+verSignOf modifyModule (EVar varIdent) = do
+  world <- get
+  let sigIdent = Ident $ (unident varIdent) ++ sSigSuffix
+  typ <- findVarType varIdent
+  case typ of
+    Just (TUIntS _) ->
+      return $ EVar sigIdent
+    Just (TCUIntS _) ->
+      return $ EVar sigIdent
+    Just _ ->
+      error $ "Error in signature_of(" ++ (unident varIdent) ++ 
+        "): signature_of can be called only on a _signable variable"
+    Nothing ->
+      error $  "Type of variable " ++ (unident varIdent) ++ " not found."
 
 -----------------------------
 -- Call auxilary functions --

@@ -81,7 +81,7 @@ EArray.  Exp7 ::= Ident "[" Exp "]" ;
 ERand.   Exp7 ::= "random" "(" Exp ")" ;
 ERandL.  Exp7 ::= "random_lazy" "(" Exp ")" ;
 ESign.   Exp7 ::= "sign" "(" [Exp] ")" ;
-ESignat. Exp7 ::= "signature_of" "(" Exp ")" ;
+ESignOf. Exp7 ::= "signature_of" "(" Exp ")" ;
 EVar.    Exp7 ::= Ident ;
 EValue.  Exp7 ::= "msg" "." "value" ;
 ESender. Exp7 ::= "msg" "." "sender" ;
@@ -110,7 +110,7 @@ TUIntS.  Type ::= "uint_signable" "(" Integer ")" ;
 TBool.   Type ::= "bool" ;
 TCUInt.  Type ::= "cmt_uint" "(" Integer ")" ;
 TCUIntS. Type ::= "cmt_uint_signable" "(" Integer ")" ;
-TSig.    Type ::= "signature" ;
+TSig.    Type ::= "signature" "(" Integer ")" ;
 -- TRStr.   Type ::= "random_string" ;
 
 

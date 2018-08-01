@@ -178,7 +178,11 @@ prismUpdate senderIdent (ident, exp) =
 
 prismShowType :: Type -> String
 prismShowType (TUInt x) = "[0.." ++ (show $ x - 1) ++ "]" 
+prismShowType (TUIntS x) = "[0.." ++ (show $ x - 1) ++ "]" 
 prismShowType (TCUInt x) = "[0.." ++ (show x) ++ "]"
+prismShowType (TCUIntS x) = "[0.." ++ (show x) ++ "]"
+prismShowType (TSig x) = "[0.." ++ (show x) ++ "]"
+--prismShowType TSig = "[0.." ++ (show sMaxSignatures) ++ "]"
 prismShowType TBool = "bool"
 
 -- TODO: porównanie w ver jest =, a w sol jest ==. Ale chyba będą i tak dwie różne
