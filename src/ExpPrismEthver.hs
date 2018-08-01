@@ -638,8 +638,8 @@ verSign :: ModifyModuleType -> [Exp] -> VerRes Exp
 verSign modifyModule vars = do
   world <- get
   let newSignature = lastSignature world + 1
-  mapM_ (verSignOne modifyModule newSignature) vars
   put $ world {lastSignature = newSignature}
+  mapM_ (verSignOne modifyModule newSignature) vars
   return $ EInt newSignature
 
 verSignOne :: ModifyModuleType -> Integer -> Exp -> VerRes ()
