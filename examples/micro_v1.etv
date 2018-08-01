@@ -67,7 +67,7 @@ scenario U {
   wait(is_committedM, 1);
   if (is_committedM) {
     rand0 = random(2);
-    payment_issuance.sendCommunication(rand0, 1);
+    payment_issuance.sendCommunication(rand0);
   }
 
   endU = true;

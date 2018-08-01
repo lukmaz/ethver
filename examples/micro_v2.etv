@@ -30,7 +30,8 @@ contract Micropay {
     if ((winning_tickets < 2) && (randU == commitmentM)) {
       winning_tickets = winning_tickets + 1;
     }
-    if (pot > 0 && randU == commitmentM && ver(0, sigma, (commitmentM, randU, receiver))) {
+    if (pot > 0 && is_signedU && has_revealedM && randU == commitmentM 
+        && ver(0, sigma, (commitmentM, randU, receiver))) {
       receiver.send(1);
       pot = pot - 1;
     }
@@ -103,7 +104,8 @@ scenario M {
   if (is_signedU && time_elapsed < 1) {
     open.sendCommunication();
     if (commitmentM == randU) {
-      release.sendTransaction(commitmentM, randU, sigma, receiver, {from: "M", value: 0});
+      //release.sendTransaction(commitmentM, randU, sigma, receiver, {from: "M", value: 0});
+      release.sendTransaction({from: "M", value: 0});
       wait(balance1 >= 1, 1);
       if ((balance1 < 1) && (winning_tickets >= 2)) {
         burn.sendTransaction({from: "M", value: 0});
