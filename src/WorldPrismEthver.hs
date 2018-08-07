@@ -186,8 +186,8 @@ addVar :: ModifyModuleType -> Type -> Ident -> VerRes ()
 addVar modifyModule typ ident = do
   _ <- modifyModule (addVarToModule typ ident)
   case typ of
-    TSig _ -> do
-      addSignatureVar modifyModule ident
+    TSig types -> do
+      addSignatureVar modifyModule types ident
     TCUInt range -> do
       addInitialValue modifyModule ident (EInt $ range + 1)
       addCmtIdVar modifyModule ident range
@@ -213,21 +213,40 @@ addSignableVar modifyModule varIdent = do
 
 
 
-addSignatureVar :: ModifyModuleType -> Ident -> VerRes ()
-addSignatureVar modifyModule varIdent = do
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  -- TODO
-  return ()
+addSignatureVar :: ModifyModuleType -> [Type] -> Ident -> VerRes ()
+addSignatureVarAux modifyModule types varIdent = do
+  mapM_ 
+    (addSignatureVarAux modifyModule varIdent
+
+
+
+
+
+
+
+
+
+
+
+TODO: TU SKONCZYLEM
+
+CHYBA TRZEBA KOLEJNE ELEMENTY SIGNATURE NUMEROWAC, BO NIE MA DOSTEPU DO NAZW PÓL (I NIE CHCEMY TEGO ROBIĆ RACZEJ)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

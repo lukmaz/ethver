@@ -72,7 +72,7 @@ communication {
   bool is_signedU[0]; // wyluskac z podpisu
   uint(2) randU[2];
   uint(2) receiver[2];
-  signature(3) sigma[2];
+  signature(cmt_uint(2), uint(2), uint(2)) sigma[2];
 
   function payment_request() {
     commitmentM[msg.sender].randomCommitment();
