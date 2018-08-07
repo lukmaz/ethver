@@ -27,14 +27,26 @@ contract Micropay {
 
   //function release(cmt_uint_signable(2) r1, uint_signable(2) r2, signature(3) s, uint_signable(2) a) {
   function release() {
-    if ((winning_tickets < 2) && (randU == commitmentM)) {
-      winning_tickets = winning_tickets + 1;
+    // adversary case:
+    if (msg.sender == 0 && randU[0] == commitmentM[0]) {
+      if (winning_tickets < 2) {
+        winning_tickets = winning_tickets + 1;
+      }
+      if (pot > 0 && ver(0, sigma[0], (commitmentM[0], randU[0], receiver[0]))) {
+        receiver[0].send(1);
+        pot = pot - 1;
+      }
     }
-    if (pot > 0 && is_signedU && has_revealedM && randU == commitmentM 
-        && ver(0, sigma, (commitmentM, randU, receiver))) {
-      receiver.send(1);
-      pot = pot - 1;
-    }
+    // honest case:
+    if (msg.sender == 1 && randU[0] == commitmentM[1]) {
+      if (winning_tickets < 2) {
+        winning_tickets = winning_tickets + 1;
+      }
+      if (pot > 0 && ver(0, sigma[0], (commitmentM[1], randU[0], receiver[1]))) {
+        receiver[1].send(1);
+        pot = pot - 1;
+      }
+    } 
   }
 
   function burn() {
@@ -53,31 +65,31 @@ contract Micropay {
 }    
 
 communication {
-  cmt_uint_signable(2) commitmentM;
-  bool is_committedM;
-  bool has_revealedM;
-  bool is_signedU;
-  uint_signable(2) randU;
-  uint_signable(2) receiver;
-  signature(3) sigma;
+  cmt_uint_signable(2) commitmentM[2];
+  bool is_committedM[2]; // wyluskac z commitmentu
+  bool has_revealedM[2];
+  bool is_signedU[0]; // wyluskac z podpisu
+  uint_signable(2) randU[2];
+  uint_signable(2) receiver[2];
+  signature(3) sigma[2];
 
   function payment_request() {
-    commitmentM.randomCommitment();
-    is_committedM = true;
-    receiver = msg.sender;
+    commitmentM[msg.sender].randomCommitment();
+    is_committedM[msg.sender] = true;
+    receiver[msg.sender] = msg.sender;
   }
 
   function payment_issuance(uint(2) pay_r) {
-    randU = pay_r;
-    is_signedU = true;
-    sigma = sign(commitmentM, randU, receiver);
+    randU[msg.sender] = pay_r;
+    is_signedU[msg.sender] = true;
+    sigma[msg.sender] = sign(commitmentM[msg.sender], randU[msg.sender], receiver[msg.sender]);
   }
 
   function open() {
-    if (msg.sender == 1 && !has_revealedM) {
-      commitmentM.openCommitment();
-      has_revealedM = true;
-    }
+    //if (msg.sender == 1 && !has_revealedM) {
+    //commitmentM[msg.sender].openCommitment();
+    has_revealedM[msg.sender] = true;
+    //}
   }
 }
 
@@ -85,8 +97,8 @@ scenario U {
   uint(2) rand0;
   bool endU;
 
-  wait(is_committedM, 1);
-  if (is_committedM) {
+  wait(is_committedM[1], 1);
+  if (is_committedM[1]) {
     rand0 = random(2);
     payment_issuance.sendCommunication(rand0);
   }
@@ -100,10 +112,10 @@ scenario M {
   bool endM;
 
   payment_request.sendCommunication();
-  wait(is_signedU, 1);
-  if (is_signedU && time_elapsed < 1) {
+  wait(is_signedU[0], 1);
+  if (is_signedU[0] && time_elapsed < 1) {
     open.sendCommunication();
-    if (commitmentM == randU) {
+    if (commitmentM[1] == randU[0]) {
       //release.sendTransaction(commitmentM, randU, sigma, receiver, {from: "M", value: 0});
       release.sendTransaction({from: "M", value: 0});
       wait(balance1 >= 1, 1);

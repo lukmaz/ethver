@@ -190,18 +190,14 @@ verStm modifyModule (SSend receiverExp arg) = do
   let actualSender = whichSender mod
   case receiverExp of
     ESender -> do
-      verStm 
-        modifyModule 
-        (SIf 
-          (EEq (EVar actualSender) (EInt 0))
-          (SSend (EInt 0) arg)
-        )
-      verStm
-        modifyModule
-        (SIf
-          (EEq (EVar actualSender) (EInt 1))
-          (SSend (EInt 1) arg)
-        )
+      world <- get
+      case senderNumber world of
+        Just number ->
+          verStm 
+            modifyModule 
+            (SSend (EInt number) arg)
+        _ ->
+          error $ show (SSend receiverExp arg) ++ ": sendNumber not set"
     EStr receiverAddress -> do
       if receiverAddress == sNull
         then do
@@ -218,13 +214,14 @@ verStm modifyModule (SSend receiverExp arg) = do
     EArray arrName index -> do
       case index of
         ESender -> do
-          verStm 
-            modifyModule 
-            (SIfElse 
-              (EEq (EVar actualSender) (EInt 0))
-              (SSend (EArray arrName (EInt 0)) arg)
-              (SSend (EArray arrName (EInt 1)) arg)
-            )
+          world <- get
+          case senderNumber world of
+            Just number ->
+              verStm 
+                modifyModule 
+                (SSend (EArray arrName (EInt number)) arg)
+            _ -> 
+              error $ show (SSend receiverExp arg) ++ ": sendNumber not set"
         EInt indexInt -> do
           verStm modifyModule $ SSend (EVar $ Ident $ (unident arrName) ++ "_" ++ (show indexInt)) arg
         _ -> error $ "(" ++ (show receiverExp) ++ ").send() not supported"
@@ -280,11 +277,16 @@ verStm modifyModule (SOCmt exp) = do
       let varName1 = (unident ident) ++ "_1"
       typ <- findVarType (Ident varName0) -- TODO: sprawdzic, czy findVarType dziala na tablicach
       case typ of
-        Just (TCUInt x) -> verStm modifyModule (SIfElse
-          (EEq index (EInt 0))
-          (SAss (Ident varName0) (ERand (EInt x)))
-          (SAss (Ident varName1) (ERand (EInt x))))
-        _ -> error $ varName0 ++ "(0/1): openCommitment can be called on cmt_uint object only."
+        Just (TCUInt x) -> verSOCmtAux modifyModule varName0 varName1 index x
+        Just (TCUIntS x) -> verSOCmtAux modifyModule varName0 varName1 index x
+        _ -> error $ varName0 ++ "(0/1): openCommitment can be called on cmt_uint object only.\n"
+          ++ "found type: " ++ (show typ)
+      where
+        verSOCmtAux modifyModule varName0 varName1 index x = 
+          verStm modifyModule (SIfElse
+            (EEq index (EInt 0))
+            (SAss (Ident varName0) (ERand (EInt x)))
+            (SAss (Ident varName1) (ERand (EInt x))))
     _ -> error $ (show exp) ++ ": openCommitment can be called on cmt_uint object only."
 
 verStm modifyModule (SWait cond time) = do
@@ -346,19 +348,14 @@ verFullAss modifyModule (SArrAss (Ident ident) index exp) = do
   case index of
     ESender -> do
       mod <- modifyModule id
-      let actualSender = whichSender mod
-      verStm 
-        modifyModule 
-        (SIf 
-          (EEq (EVar actualSender) (EInt 0))
-          (SAss (Ident $ ident ++ "_0") exp)
-        )
-      verStm
-        modifyModule
-        (SIf
-          (EEq (EVar actualSender) (EInt 1))
-          (SAss (Ident $ ident ++ "_1") exp)
-        )
+      world <- get
+      case senderNumber world of
+        Just number ->
+          verStm 
+            modifyModule 
+            (SAss (Ident $ ident ++ "_" ++ (show number)) exp)
+        _ ->
+          error $ show (SArrAss (Ident ident) index exp) ++ ": senderNumber not set"
     EVar v -> do
       var <- verExp modifyModule (EVar v)
       verStm 
@@ -441,7 +438,7 @@ verExp modifyModule (ERand exp) = verRandom modifyModule exp
 verExp modifyModule (ERandL exp) = verRandomLazy modifyModule exp
 
 verExp modifyModule (ESign vars) = verSign modifyModule vars
-verExp modifyModule (ESignOf var player) = verSignOf modifyModule var player
+--verExp modifyModule (ESignOf var player) = verSignOf modifyModule var player
 verExp modifyModule (EVer key signature vars) = verVer modifyModule key signature vars
 
 -------------
@@ -598,9 +595,19 @@ verValExp modifyModule EValue = do
 
 -- czy na pewno tak można?
 verValExp modifyModule ESender = do
+  world <- get
+  case senderNumber world of
+    Just number ->
+      return $ EInt $ number
+    _ ->
+      error $ "senderNumber not set"
+
+  -- OLD:
+  {-
   mod <- modifyModule id
   let actualSender = whichSender mod
   return $ EVar actualSender
+  -}
 
 verValExp modifyModule (EInt x) =
   return (EInt x)
@@ -669,6 +676,10 @@ verSignOne modifyModule newSignature (EVar varIdent) = do
     Nothing ->
       error $ "Type of variable " ++ (unident varIdent) ++ " not found."
 
+verSignOne modifyModule newSignature (EArray arrIdent index) = do
+  var <- varFromArray (EArray arrIdent index)
+  verSignOne modifyModule newSignature var
+
 verSignOneAux :: ModifyModuleType -> Ident -> Exp -> VerRes ()
 verSignOneAux modifyModule sigIdent newSignature = do
   mod <- modifyModule id
@@ -681,6 +692,7 @@ verSignOneAux modifyModule sigIdent newSignature = do
     )
 
 -- TODO: do wywalenia?
+{-
 verSignOf :: ModifyModuleType -> Exp -> Exp -> VerRes Exp
 verSignOf modifyModule (EVar varIdent) player = do
   world <- get
@@ -702,9 +714,11 @@ verSignOf modifyModule (EVar varIdent) player = do
         "): signature_of can be called only on a _signable variable"
     Nothing ->
       error $  "Type of variable " ++ (unident varIdent) ++ " not found."
+-}
 
 verVer :: ModifyModuleType -> Exp -> Exp -> [Exp] -> VerRes Exp
-verVer modifyModule key (EVar signature) vars = do
+verVer modifyModule key (EVar signature) varsOrArrs = do
+  vars <- mapM toVar varsOrArrs
   case key of
     EInt k ->
       let
@@ -714,6 +728,10 @@ verVer modifyModule key (EVar signature) vars = do
           EAnd acc (EEq (EVar sig_val) (EVar $ Ident $ varName ++ sSigSuffix ++ (show k)))
       in
         return $ foldl f (EEq (EVar sig_auth) (EInt k)) vars
+
+verVer modifyModule key (EArray signature index) vars = do
+  signatureVar <- varFromArray (EArray signature index)
+  verVer modifyModule key signatureVar vars
 
 -----------------------------
 -- Call auxilary functions --

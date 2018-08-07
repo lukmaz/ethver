@@ -51,7 +51,8 @@ data VerWorld = VerWorld {
   condRandomArrays :: Map.Map Ident (Set.Set Exp),
   lazyRandoms :: Set.Set Ident,
   addedGuards :: [Exp],
-  lastSignature :: Integer
+  lastSignature :: Integer,
+  senderNumber :: Maybe Integer
   }
 
 data Module = Module {
@@ -93,7 +94,8 @@ emptyVerWorld = VerWorld {
   condRandomArrays = Map.empty,
   lazyRandoms = Set.empty,
   addedGuards = [],
-  lastSignature = 0
+  lastSignature = 0,
+  senderNumber = Nothing
   } 
 
 emptyModule :: Module

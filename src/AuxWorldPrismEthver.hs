@@ -105,9 +105,10 @@ typesFromVarsAndArrays vars arrays = do
         Nothing -> error $ "Error in typesFromVarsAndArrays: var " ++ (show var) ++ " not found."
     )   
     (vars ++ firstElements)
- 
-arrayToVar :: ModifyModuleType -> (Ident, Exp) -> VerRes Ident
-arrayToVar modifyModule ((Ident arrayName), indexExp) = do
+
+-- TODO: should not be used; use varFromArray instead
+arrayToVarOld :: ModifyModuleType -> (Ident, Exp) -> VerRes Ident
+arrayToVarOld modifyModule ((Ident arrayName), indexExp) = do
   world <- get
   mod <- modifyModule id
 
@@ -116,15 +117,31 @@ arrayToVar modifyModule ((Ident arrayName), indexExp) = do
     ESender ->
       case Map.lookup (whichSender mod) (varsValues world) of
         Just (EInt value) -> Ident $ arrayName ++ "_" ++ (show value)
-        Just _ -> error $ "arrayToVar: value of 'sender' is not of type EInt"
-        Nothing -> error $ "arrayToVar: array[sender] used, but 'sender' is not in varsValues"
+        Just _ -> error $ "arrayToVarOld: value of 'sender' is not of type EInt"
+        Nothing -> error $ "arrayToVarOld: array[sender] used, but 'sender' is not in varsValues"
     EVar varName ->
       case Map.lookup varName (varsValues world) of
         Just (EInt value) -> Ident $ arrayName ++ "_" ++ (show value)
-        Just _ -> error $ "arrayToVar: value of '" ++ (unident varName) ++ "' value is not of type EInt"
-        Nothing -> error $ "arrayToVar: array[" ++ (unident varName) ++ "] used, but '" ++ (unident varName) 
+        Just _ -> error $ "arrayToVarOld: value of '" ++ (unident varName) ++ "' value is not of type EInt"
+        Nothing -> error $ "arrayToVarOld: array[" ++ (unident varName) ++ "] used, but '" ++ (unident varName) 
           ++ "' is not in varsValues"
     
+varFromArray :: Exp -> VerRes Exp
+varFromArray (EArray (Ident varName) index) = do
+  world <- get 
+  let 
+    actualIndex = case index of
+      EInt x -> Just x
+      ESender -> senderNumber world
+      _ -> error $ (show index) ++ ": index can be only an integer or msg.sender"
+  case actualIndex of
+    Just x -> return $ EVar $ Ident $ varName ++ "_" ++ (show x)
+    _ -> error $ show (EArray (Ident varName) index) ++ ": senderNumber not set in World"
+
+toVar :: Exp -> VerRes Exp
+toVar (EVar v) = return $ EVar v
+
+toVar (EArray arrIdent index) = varFromArray (EArray arrIdent index)
 
 -----------
 -- Users --

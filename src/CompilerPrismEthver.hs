@@ -235,8 +235,29 @@ verOldFunContractOrCommunication modifyModule commonfun (FunV name args stm) =
 verOldFunContractOrCommunication modifyModule commonFun fun@(Fun name args stms) = do
   commonFun fun
 
-  mapM_ (verStm modifyModule) stms
 
+-- TO DZISIAJ NAPISALEM (07.08.2018), ale gdzies wczesniej juz jest ten mechanizm
+-- MOZE BEZPOSREDNIO W OBSLUDZE TABLIC?
+
+
+  mod <- modifyModule id
+  let actualSender = whichSender mod
+
+  world <- get
+  put (world {senderNumber = Just 0})
+
+  verStm modifyModule $
+    SIf (EEq (EVar actualSender) (EInt 0)) (SBlock stms)
+
+  world <- get
+  put (world {senderNumber = Just 1})
+
+  verStm modifyModule $
+    SIf (EEq (EVar actualSender) (EInt 1)) (SBlock stms)
+
+  world <- get
+  put (world {senderNumber = Nothing})
+  
   -- final command
   mod <- modifyModule id
   addCustomTrans
