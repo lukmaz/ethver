@@ -8,25 +8,19 @@ import ConstantsEthver
 
 maxRealValueOfType :: Type -> Exp
 maxRealValueOfType (TUInt x) = EInt (x - 1)
-maxRealValueOfType (TUIntS x) = EInt (x - 1)
 maxRealValueOfType (TCUInt x) = EInt (x - 1)
-maxRealValueOfType (TCUIntS x) = EInt (x - 1)
 maxRealValueOfType (TSig x) = EInt (x - 1)
 maxRealValueOfType TBool = ETrue
 
 maxTypeExpOfType :: Type -> Exp
 maxTypeExpOfType (TUInt x) = EInt (x - 1)
-maxTypeExpOfType (TUIntS x) = EInt (x - 1)
-maxTypeExpOfType (TCUInt x) = EInt x
-maxTypeExpOfType (TCUIntS x) = EInt x
+maxTypeExpOfType (TCUInt x) = EInt (x + 1)
 maxTypeExpOfType (TSig x) = EInt (x - 1)
 maxTypeExpOfType TBool = ETrue
 
 maxTypeValueOfType :: Type -> Integer
 maxTypeValueOfType (TUInt x) = (x - 1)
-maxTypeValueOfType (TUIntS x) = (x - 1)
-maxTypeValueOfType (TCUInt x) = x
-maxTypeValueOfType (TCUIntS x) = x
+maxTypeValueOfType (TCUInt x) = (x + 1)
 maxTypeValueOfType (TSig x) = (x - 1)
 maxTypeValueOfType TBool = 1
 

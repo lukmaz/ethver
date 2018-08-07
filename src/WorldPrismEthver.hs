@@ -52,7 +52,8 @@ data VerWorld = VerWorld {
   lazyRandoms :: Set.Set Ident,
   addedGuards :: [Exp],
   lastSignature :: Integer,
-  senderNumber :: Maybe Integer
+  senderNumber :: Maybe Integer,
+  commitmentsNr :: Integer
   }
 
 data Module = Module {
@@ -95,7 +96,8 @@ emptyVerWorld = VerWorld {
   lazyRandoms = Set.empty,
   addedGuards = [],
   lastSignature = 0,
-  senderNumber = Nothing
+  senderNumber = Nothing,
+  commitmentsNr = 0
   } 
 
 emptyModule :: Module
@@ -184,11 +186,15 @@ addVar :: ModifyModuleType -> Type -> Ident -> VerRes ()
 addVar modifyModule typ ident = do
   _ <- modifyModule (addVarToModule typ ident)
   case typ of
-    TUIntS _ -> addSignableVar modifyModule ident
-    TCUIntS _ -> addSignableVar modifyModule ident
-    TSig _ -> addSignatureVar modifyModule ident
+    TSig _ -> do
+      addSignatureVar modifyModule ident
+    TCUInt range -> do
+      addInitialValue modifyModule ident (EInt $ range + 1)
+      addCmtIdVar modifyModule ident range
     _ -> return ()
 
+-- Not needed anymore? (old signables)
+{-
 addSignableVar :: ModifyModuleType -> Ident -> VerRes ()
 addSignableVar modifyModule varIdent = do
   world <- get
@@ -200,7 +206,38 @@ addSignableVar modifyModule varIdent = do
       _ <- modifyModule (addVarToModule (TUInt (maxSignatures + 1)) sigIdent0)
       _ <- modifyModule (addVarToModule (TUInt (maxSignatures + 1)) sigIdent1)
       return ()
+-}
 
+
+
+
+
+
+addSignatureVar :: ModifyModuleType -> Ident -> VerRes ()
+addSignatureVar modifyModule varIdent = do
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  -- TODO
+  return ()
+
+
+
+
+
+
+
+
+
+{- TODO: przerobić; to sa stare signatures:
 addSignatureVar :: ModifyModuleType -> Ident -> VerRes ()
 addSignatureVar modifyModule varIdent = do
   world <- get
@@ -212,6 +249,20 @@ addSignatureVar modifyModule varIdent = do
       _ <- modifyModule (addVarToModule (TUInt (maxSignatures + 1)) sigValIdent)
       _ <- modifyModule (addVarToModule (TUInt 2) sigAuthIdent)
       return ()
+-}
+
+addCmtIdVar :: ModifyModuleType -> Ident -> Integer -> VerRes ()
+addCmtIdVar modifyModule varIdent _ = do
+  world <- get
+  let nr = commitmentsNr world
+  put (world {commitmentsNr = (nr + 1)})
+  case Map.lookup (Ident sMaxCommitments) (constants world) of
+    Nothing -> error $ sMaxCommitments ++ " constant definition not found in the source file."
+    Just maxCommitments -> do
+      let idIdent = Ident $ unident varIdent ++ sIdSuffix
+      addVar modifyModule (TUInt maxCommitments) idIdent
+      addInitialValue modifyModule idIdent (EInt nr)
+  
 
 addInitialValue :: ModifyModuleType -> Ident -> Exp -> VerRes ()
 addInitialValue modifyModule ident exp = do
@@ -376,7 +427,7 @@ removeLazyRandom ident = do
 -- default values
 defaultValueOfType :: Type -> Exp
 defaultValueOfType TBool = EFalse
-defaultValueOfType (TCUInt _) = EInt 0
+defaultValueOfType (TCUInt x) = EInt (x + 1)
 defaultValueOfType (TUInt _) = EInt 0
 
 

@@ -240,24 +240,34 @@ verStm modifyModule (SSendC funExp args) = do
       verSendCAux modifyModule funIdent args
     _ -> error "sendCommunication can be called only on an Ident object"
 
+--------------------------------------
+-- Commitments -----------------------
+--------------------------------------
+--
+-- (TCUInt range) x
+-- x = (range + 1) -> init
+-- x = range -> is_committed
+-- x = [0..(range-1)] -> is_revealed
+--
+--------------------------------------
+
+
 verStm modifyModule (SRCmt exp) = do
   case exp of
     EVar ident -> do
       typ <- findVarType ident
       case typ of
         Just (TCUInt x) -> verStm modifyModule (SAss ident (EInt x))
-        Just (TCUIntS x) -> verStm modifyModule (SAss ident (EInt x))
         _ -> error $ unident ident ++ ": randomCommitment can be called on cmt_uint object only."
+    EArray ident ESender -> do
+      varExp <- toVar exp
+      verStm modifyModule (SRCmt varExp)
     EArray ident index -> do
       let varName0 = (unident ident) ++ "_0"
       let varName1 = (unident ident) ++ "_1"
       typ <- findVarType (Ident varName0)
       case typ of
         Just (TCUInt x) -> verStm modifyModule (SIfElse
-          (EEq index (EInt 0))
-          (SAss (Ident varName0) (EInt x))
-          (SAss (Ident varName1) (EInt x)))
-        Just (TCUIntS x) -> verStm modifyModule (SIfElse
           (EEq index (EInt 0))
           (SAss (Ident varName0) (EInt x))
           (SAss (Ident varName1) (EInt x)))
@@ -270,15 +280,16 @@ verStm modifyModule (SOCmt exp) = do
       typ <- findVarType ident
       case typ of
         Just (TCUInt x) -> verStm modifyModule (SAss ident (ERand (EInt x)))
-        Just (TCUIntS x) -> verStm modifyModule (SAss ident (ERand (EInt x)))
         _ -> error $ unident ident ++ ": openCommitment can be called on cmt_uint object only."
+    EArray ident ESender -> do
+      varExp <- toVar exp
+      verStm modifyModule (SOCmt varExp)
     EArray ident index -> do
       let varName0 = (unident ident) ++ "_0"
       let varName1 = (unident ident) ++ "_1"
       typ <- findVarType (Ident varName0) -- TODO: sprawdzic, czy findVarType dziala na tablicach
       case typ of
         Just (TCUInt x) -> verSOCmtAux modifyModule varName0 varName1 index x
-        Just (TCUIntS x) -> verSOCmtAux modifyModule varName0 varName1 index x
         _ -> error $ varName0 ++ "(0/1): openCommitment can be called on cmt_uint object only.\n"
           ++ "found type: " ++ (show typ)
       where
@@ -328,12 +339,42 @@ verFullAss modifyModule (SAss ident exp) = do
   typ <- findVarType ident
   case typ of
     Just (TSig _) -> do
+
+
+
+      return () 
+
+
+
+
+
+
+
+
+
+      -- TODO: przerobic, to jest stare:
+      {-
       mod <- modifyModule id
       let actualSender = whichSender mod
       verStm modifyModule $ SIfElse (EEq (EVar actualSender) (EInt 0))
         (SAss (Ident $ unident ident ++ sAuthSuffix) (EInt 0))
         (SAss (Ident $ unident ident ++ sAuthSuffix) (EInt 1))
       verStm modifyModule $ SAss (Ident $ unident ident ++ sValSuffix) exp
+      -}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     _ -> do
       (guards, updates) <- generateSimpleAss modifyModule (SAss ident exp)
       
@@ -667,12 +708,10 @@ verSignOne modifyModule newSignature (EVar varIdent) = do
     sigIdent = Ident $ (unident varIdent) ++ sSigSuffix
   typ <- findVarType varIdent
   case typ of
-    Just (TUIntS _) ->
+    Just (TUInt _) ->
       verSignOneAux modifyModule sigIdent (EInt newSignature)
-    Just (TCUIntS _) ->
+    Just (TCUInt _) ->
       verSignOneAux modifyModule sigIdent (EInt newSignature)
-    Just _ ->
-      error $ "Error in sign(" ++ (unident varIdent) ++ "): sign can be called only on a _signable variable"
     Nothing ->
       error $ "Type of variable " ++ (unident varIdent) ++ " not found."
 
@@ -707,8 +746,6 @@ verSignOf modifyModule (EVar varIdent) player = do
   case typ of
     Just (TUIntS _) ->
       return $ EVar sigIdent
-    Just (TCUIntS _) ->
-      return $ EVar sigIdent
     Just _ ->
       error $ "Error in signature_of(" ++ (unident varIdent) ++ 
         "): signature_of can be called only on a _signable variable"
@@ -718,6 +755,17 @@ verSignOf modifyModule (EVar varIdent) player = do
 
 verVer :: ModifyModuleType -> Exp -> Exp -> [Exp] -> VerRes Exp
 verVer modifyModule key (EVar signature) varsOrArrs = do
+  
+  
+
+
+  return (EFalse)
+
+
+
+
+  -- TODO: przerobic, to jest stare:
+  {-
   vars <- mapM toVar varsOrArrs
   case key of
     EInt k ->
@@ -728,6 +776,17 @@ verVer modifyModule key (EVar signature) varsOrArrs = do
           EAnd acc (EEq (EVar sig_val) (EVar $ Ident $ varName ++ sSigSuffix ++ (show k)))
       in
         return $ foldl f (EEq (EVar sig_auth) (EInt k)) vars
+
+
+
+
+  -}
+
+
+
+
+
+
 
 verVer modifyModule key (EArray signature index) vars = do
   signatureVar <- varFromArray (EArray signature index)

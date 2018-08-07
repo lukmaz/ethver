@@ -14,6 +14,7 @@ USER1_BALANCE_INIT = 0;
 MAX_VALUE = 1;
 MAX_TIME = 2;
 MAX_SIGNATURES = 3;
+MAX_COMMITMENTS = 2;
 
 // c1, r1 - values in honest mode, recipient = 1
 // c0, r0 - values in adversarial mode, recipient = 0
@@ -65,12 +66,12 @@ contract Micropay {
 }    
 
 communication {
-  cmt_uint_signable(2) commitmentM[2];
+  cmt_uint(2) commitmentM[2];
   bool is_committedM[2]; // wyluskac z commitmentu
   bool has_revealedM[2];
   bool is_signedU[0]; // wyluskac z podpisu
-  uint_signable(2) randU[2];
-  uint_signable(2) receiver[2];
+  uint(2) randU[2];
+  uint(2) receiver[2];
   signature(3) sigma[2];
 
   function payment_request() {
@@ -87,7 +88,7 @@ communication {
 
   function open() {
     //if (msg.sender == 1 && !has_revealedM) {
-    //commitmentM[msg.sender].openCommitment();
+    commitmentM[msg.sender].openCommitment();
     has_revealedM[msg.sender] = true;
     //}
   }
