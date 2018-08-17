@@ -632,13 +632,6 @@ verValExp modifyModule ESender = do
     _ ->
       error $ "senderNumber not set"
 
-  -- OLD:
-  {-
-  mod <- modifyModule id
-  let actualSender = whichSender mod
-  return $ EVar actualSender
-  -}
-
 verValExp modifyModule (EInt x) =
   return (EInt x)
 
@@ -681,70 +674,6 @@ verRandomLazy modifyModule (EInt range) = do
 ----------------
 -- Signatures --
 ----------------
-
-{- OLD, TO REMOVE:
-
-verSign :: ModifyModuleType -> [Exp] -> VerRes Exp
-verSign modifyModule vars = do
-  world <- get
-  let newSignature = lastSignature world + 1
-  put $ world {lastSignature = newSignature}
-  mapM_ (verSignOne modifyModule newSignature) vars
-  return (EInt newSignature)
-
-verSignOne :: ModifyModuleType -> Integer -> Exp -> VerRes ()
-verSignOne modifyModule newSignature (EVar varIdent) = do
-  mod <- modifyModule id
-  let
-    sigIdent = Ident $ (unident varIdent) ++ sSigSuffix
-  typ <- findVarType varIdent
-  case typ of
-    Just (TUInt _) ->
-      verSignOneAux modifyModule sigIdent (EInt newSignature)
-    Just (TCUInt _) ->
-      verSignOneAux modifyModule sigIdent (EInt newSignature)
-    Nothing ->
-      error $ "Type of variable " ++ (unident varIdent) ++ " not found."
-
-verSignOne modifyModule newSignature (EArray arrIdent index) = do
-  var <- varFromArray (EArray arrIdent index)
-  verSignOne modifyModule newSignature var
-
-verSignOneAux :: ModifyModuleType -> Ident -> Exp -> VerRes ()
-verSignOneAux modifyModule sigIdent newSignature = do
-  mod <- modifyModule id
-  let actualSender = whichSender mod
-  verStm modifyModule
-    (SIfElse
-      (EEq (EVar actualSender) (EInt 0))
-      (SAss (Ident $ unident sigIdent ++ "0") newSignature)
-      (SAss (Ident $ unident sigIdent ++ "1") newSignature)
-    )
--}
-
-
--- TODO: do wywalenia?
-{-
-verSignOf :: ModifyModuleType -> Exp -> Exp -> VerRes Exp
-verSignOf modifyModule (EVar varIdent) player = do
-  world <- get
-  mod <- modifyModule id
-  let 
-    playerNr = case player of
-      EInt x -> show x
-      ESender -> unident $ whichSender mod
-      _ -> error $ show player ++ ": signature_of supported only for EInt and msg.sender"
-    sigIdent = Ident $ (unident varIdent) ++ sSigSuffix ++ playerNr
-  typ <- findVarType varIdent
-  case typ of
-    Just (TUIntS _) ->
-      return $ EVar sigIdent
-    Just _ ->
-      error $ "Error in signature_of(" ++ (unident varIdent) ++ 
-        "): signature_of can be called only on a _signable variable"
-    Nothing ->
-      error $  "Type of variable " ++ (unident varIdent) ++ " not found."
--}
 
 verVer :: ModifyModuleType -> Exp -> Exp -> [Exp] -> VerRes Exp
 verVer modifyModule key (EVar signatureVar) varsOrArrs = do

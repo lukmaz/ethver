@@ -193,21 +193,6 @@ addVar modifyModule typ ident = do
       addCmtIdVar modifyModule ident range
     _ -> return ()
 
--- Not needed anymore? (old signables)
-{-
-addSignableVar :: ModifyModuleType -> Ident -> VerRes ()
-addSignableVar modifyModule varIdent = do
-  world <- get
-  case Map.lookup (Ident sMaxSignatures) (constants world) of
-    Nothing -> error $ sMaxSignatures ++ " constant definition not found in the source file.\n"
-    Just maxSignatures -> do
-      let sigIdent0 = Ident $ unident varIdent ++ sSigSuffix ++ "0"
-      let sigIdent1 = Ident $ unident varIdent ++ sSigSuffix ++ "1"
-      _ <- modifyModule (addVarToModule (TUInt (maxSignatures + 1)) sigIdent0)
-      _ <- modifyModule (addVarToModule (TUInt (maxSignatures + 1)) sigIdent1)
-      return ()
--}
-
 addSignatureVar :: ModifyModuleType -> [Type] -> Ident -> VerRes ()
 addSignatureVar modifyModule types varIdent = do
   addVar modifyModule (TUInt 2) $ Ident $ unident varIdent ++ sSigSuffix ++ sKeySuffix
@@ -225,21 +210,6 @@ addSignatureVarAux modifyModule varIdent (nr, typ) = do
     TUInt x -> 
       addVar modifyModule typ newIdent
 
-
-{- TODO: przerobić; to sa stare signatures:
-addSignatureVar :: ModifyModuleType -> Ident -> VerRes ()
-addSignatureVar modifyModule varIdent = do
-  world <- get
-  case Map.lookup (Ident sMaxSignatures) (constants world) of
-    Nothing -> error $ sMaxSignatures ++ " constant definition not found in the source file."
-    Just maxSignatures -> do
-      let sigValIdent = Ident $ unident varIdent ++ sValSuffix
-      let sigAuthIdent = Ident $ unident varIdent ++ sAuthSuffix
-      _ <- modifyModule (addVarToModule (TUInt (maxSignatures + 1)) sigValIdent)
-      _ <- modifyModule (addVarToModule (TUInt 2) sigAuthIdent)
-      return ()
--}
-
 addCmtIdVar :: ModifyModuleType -> Ident -> Integer -> VerRes ()
 addCmtIdVar modifyModule varIdent _ = do
   world <- get
@@ -252,7 +222,6 @@ addCmtIdVar modifyModule varIdent _ = do
       addVar modifyModule (TUInt maxCommitments) idIdent
       addInitialValue modifyModule idIdent (EInt nr)
   
-
 addInitialValue :: ModifyModuleType -> Ident -> Exp -> VerRes ()
 addInitialValue modifyModule ident exp = do
   _ <- modifyModule (addInitialValueToModule ident exp)
