@@ -51,9 +51,9 @@ data VerWorld = VerWorld {
   condRandomArrays :: Map.Map Ident (Set.Set Exp),
   lazyRandoms :: Set.Set Ident,
   addedGuards :: [Exp],
-  lastSignature :: Integer,
   senderNumber :: Maybe Integer,
-  commitmentsNr :: Integer
+  commitmentsIds :: Map.Map Ident Integer
+  -- commitmentsNr :: Integer
   }
 
 data Module = Module {
@@ -95,9 +95,9 @@ emptyVerWorld = VerWorld {
   condRandomArrays = Map.empty,
   lazyRandoms = Set.empty,
   addedGuards = [],
-  lastSignature = 0,
   senderNumber = Nothing,
-  commitmentsNr = 0
+  commitmentsIds = Map.empty
+  --commitmentsNr = 0
   } 
 
 emptyModule :: Module
@@ -208,52 +208,21 @@ addSignableVar modifyModule varIdent = do
       return ()
 -}
 
-
-
-
-
-
 addSignatureVar :: ModifyModuleType -> [Type] -> Ident -> VerRes ()
-addSignatureVarAux modifyModule types varIdent = do
+addSignatureVar modifyModule types varIdent = do
   mapM_ 
-    (addSignatureVarAux modifyModule varIdent
+    (addSignatureVarAux modifyModule varIdent)
+    (zip [0..] types)
 
-
-
-
-
-
-
-
-
-
-
-TODO: TU SKONCZYLEM
-
-CHYBA TRZEBA KOLEJNE ELEMENTY SIGNATURE NUMEROWAC, BO NIE MA DOSTEPU DO NAZW PÓL (I NIE CHCEMY TEGO ROBIĆ RACZEJ)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+addSignatureVarAux :: ModifyModuleType -> Ident -> (Integer, Type) -> VerRes ()
+addSignatureVarAux modifyModule varIdent (nr, typ) = do
+  let newIdent = Ident $ unident varIdent ++ sSigSuffix ++ show nr
+  case typ of
+    TCUInt x -> do
+      world <- get
+      addVar modifyModule (TUInt $ fromIntegral $ Map.size $ commitmentsIds world) newIdent
+    TUInt x -> 
+      addVar modifyModule typ newIdent
 
 
 {- TODO: przerobić; to sa stare signatures:
@@ -273,8 +242,8 @@ addSignatureVar modifyModule varIdent = do
 addCmtIdVar :: ModifyModuleType -> Ident -> Integer -> VerRes ()
 addCmtIdVar modifyModule varIdent _ = do
   world <- get
-  let nr = commitmentsNr world
-  put (world {commitmentsNr = (nr + 1)})
+  let nr = fromIntegral $ Map.size $ commitmentsIds world
+  put (world {commitmentsIds = Map.insert varIdent nr $ commitmentsIds world})
   case Map.lookup (Ident sMaxCommitments) (constants world) of
     Nothing -> error $ sMaxCommitments ++ " constant definition not found in the source file."
     Just maxCommitments -> do

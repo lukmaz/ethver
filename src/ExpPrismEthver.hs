@@ -336,20 +336,23 @@ verFullAss modifyModule (SAss ident exp) = do
     _ -> 
       return ()
 
-  typ <- findVarType ident
-  case typ of
-    Just (TSig _) -> do
-
-
-
-      return () 
-
-
-
-
-
-
-
+  varTyp <- findVarType varIdent
+  case varTyp of
+    Just (TSig sigTypes) -> do
+      case exp of
+        ESign args -> do
+          mapM_ (signOne varIdent) (zip (zip [0..] sigTypes) args)
+            where
+              signOne :: Ident -> ((Integer, Type), Exp) -> VerRes ()
+              signOne varIdent ((nr, sigTyp), (EVar rIdent)) = do
+                let newIdent = Ident $ unident varIdent ++ sSigSuffix ++ show nr
+                case sigTyp of
+                  TCUInt x -> do
+                    world <- get
+                    verStm (SAss newIdent $ EInt $ Map.lookup rIdent $ commitmentsIds world)
+                  TUInt x -> do
+                    verStm (SAss newIdent (EVar rIdent))
+        _ -> error $ show exp ++ ": r-value for signature can only be a sign(...) function"
 
 
       -- TODO: przerobic, to jest stare:
@@ -363,20 +366,8 @@ verFullAss modifyModule (SAss ident exp) = do
       -}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
     _ -> do
-      (guards, updates) <- generateSimpleAss modifyModule (SAss ident exp)
+      (guards, updates) <- generateSimpleAss modifyModule (SAss varIdent exp)
       
       addTransToNewState
         modifyModule
@@ -693,6 +684,8 @@ verRandomLazy modifyModule (EInt range) = do
 -- Signatures --
 ----------------
 
+{- OLD, TO REMOVE:
+
 verSign :: ModifyModuleType -> [Exp] -> VerRes Exp
 verSign modifyModule vars = do
   world <- get
@@ -729,6 +722,8 @@ verSignOneAux modifyModule sigIdent newSignature = do
       (SAss (Ident $ unident sigIdent ++ "0") newSignature)
       (SAss (Ident $ unident sigIdent ++ "1") newSignature)
     )
+-}
+
 
 -- TODO: do wywalenia?
 {-
@@ -754,14 +749,48 @@ verSignOf modifyModule (EVar varIdent) player = do
 -}
 
 verVer :: ModifyModuleType -> Exp -> Exp -> [Exp] -> VerRes Exp
-verVer modifyModule key (EVar signature) varsOrArrs = do
-  
-  
+verVer modifyModule key (EVar signatureVar) varsOrArrs = do
+  sigMaybeTyp <- findVarType signatureVar
+  vars <- mapM toVar varsOrArrs
+  case sigMaybeTyp of
+    Just (TSig sigTypes) ->
+      let
+        f :: Ident -> Exp -> ((Integer, Type), Exp) -> Exp
+        f signatureVar acc ((nr, sigType), EVar varIdent) = do
+          world <- get
+          let 
+            sigId = Ident $ unident signatureVar ++ sSigSuffix ++ show nr
+            varId = Map.lookup varIdent $ commitmentsIds world
+          case sigType of
+            TCUInt x ->
+              EAnd acc (EEq (EVar sigId) (EInt varId))
+            TUInt x ->
+              EAnd acc (EEq (EVar sigId) (EVar varIdent))
+      in
+        return $ foldl (f signatureVar) (EEq (EVar sig_key) key) (zip (zip [0..] sigTypes) vars)
+    Nothing -> error $ (show signatureVar ++ ": not found by findVarType"
 
-
-  return (EFalse)
-
-
+  {-
+  POM: (verFullAss)
+  varTyp <- findVarType varIdent
+  case varTyp of
+    Just (TSig sigTypes) -> do
+      case exp of
+        ESign args -> do
+          mapM_ (signOne varIdent) (zip (zip [0..] sigTypes) args)
+            where
+              signOne :: Ident -> ((Integer, Type), Exp) -> VerRes ()
+              signOne varIdent ((nr, sigTyp), (EVar rIdent)) = do
+                let newIdent = Ident $ unident varIdent ++ sSigSuffix ++ show nr
+                case sigTyp of
+                  TCUInt x -> do
+                    world <- get
+                    verStm (SAss newIdent $ EInt $ Map.lookup rIdent $ commitmentsIds world)
+                  TUInt x -> do
+                    verStm (SAss newIdent (EVar rIdent))
+        _ -> error $ show exp ++ ": r-value for signature can only be a sign(...) function"
+  END_POM
+  -}
 
 
   -- TODO: przerobic, to jest stare:
@@ -776,21 +805,13 @@ verVer modifyModule key (EVar signature) varsOrArrs = do
           EAnd acc (EEq (EVar sig_val) (EVar $ Ident $ varName ++ sSigSuffix ++ (show k)))
       in
         return $ foldl f (EEq (EVar sig_auth) (EInt k)) vars
-
-
-
-
   -}
 
-
-
-
-
-
-
+{- TODO: Old, Not needed? 
 verVer modifyModule key (EArray signature index) vars = do
   signatureVar <- varFromArray (EArray signature index)
   verVer modifyModule key signatureVar vars
+-}
 
 -----------------------------
 -- Call auxilary functions --
