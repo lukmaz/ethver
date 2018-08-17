@@ -210,6 +210,7 @@ addSignableVar modifyModule varIdent = do
 
 addSignatureVar :: ModifyModuleType -> [Type] -> Ident -> VerRes ()
 addSignatureVar modifyModule types varIdent = do
+  addVar modifyModule (TUInt 2) $ Ident $ unident varIdent ++ sSigSuffix ++ sKeySuffix
   mapM_ 
     (addSignatureVarAux modifyModule varIdent)
     (zip [0..] types)

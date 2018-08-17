@@ -1,5 +1,6 @@
 -- This file was previously used in both Contract and scenarios
--- now it is used only in Scenarios and it's not optimized in DFS way
+-- Then it was used only in Scenarios and it's not optimized in DFS way
+-- Finally it is used everywhere (back to the "OLD" version)
 
 module ExpPrismEthver where
 
@@ -329,10 +330,10 @@ verStm modifyModule (SWait cond time) = do
 
 verFullAss :: ModifyModuleType -> Stm -> VerRes ()
 
-verFullAss modifyModule (SAss ident exp) = do
+verFullAss modifyModule (SAss varIdent exp) = do
   case exp of
     ERandL (EInt _) ->
-      addLazyRandom ident
+      addLazyRandom varIdent
     _ -> 
       return ()
 
@@ -345,26 +346,23 @@ verFullAss modifyModule (SAss ident exp) = do
             where
               signOne :: Ident -> ((Integer, Type), Exp) -> VerRes ()
               signOne varIdent ((nr, sigTyp), (EVar rIdent)) = do
-                let newIdent = Ident $ unident varIdent ++ sSigSuffix ++ show nr
+                let 
+                  newIdent = Ident $ unident varIdent ++ sSigSuffix ++ show nr
+                  keyIdent = Ident $ unident varIdent ++ sSigSuffix ++ sKeySuffix
+                world <- get
+                case senderNumber world of
+                  Just x -> verStm modifyModule (SAss keyIdent $ EInt x)
                 case sigTyp of
                   TCUInt x -> do
                     world <- get
-                    verStm (SAss newIdent $ EInt $ Map.lookup rIdent $ commitmentsIds world)
+                    case Map.lookup rIdent $ commitmentsIds world of
+                      Just x ->
+                        verStm modifyModule (SAss newIdent $ EInt x)
+                      _ ->
+                        error $ show rIdent ++ ": not found in commitmentsIds"
                   TUInt x -> do
-                    verStm (SAss newIdent (EVar rIdent))
+                    verStm modifyModule (SAss newIdent (EVar rIdent))
         _ -> error $ show exp ++ ": r-value for signature can only be a sign(...) function"
-
-
-      -- TODO: przerobic, to jest stare:
-      {-
-      mod <- modifyModule id
-      let actualSender = whichSender mod
-      verStm modifyModule $ SIfElse (EEq (EVar actualSender) (EInt 0))
-        (SAss (Ident $ unident ident ++ sAuthSuffix) (EInt 0))
-        (SAss (Ident $ unident ident ++ sAuthSuffix) (EInt 1))
-      verStm modifyModule $ SAss (Ident $ unident ident ++ sValSuffix) exp
-      -}
-
 
     _ -> do
       (guards, updates) <- generateSimpleAss modifyModule (SAss varIdent exp)
@@ -469,7 +467,7 @@ verExp modifyModule EFalse = verValExp modifyModule EFalse
 verExp modifyModule (ERand exp) = verRandom modifyModule exp
 verExp modifyModule (ERandL exp) = verRandomLazy modifyModule exp
 
-verExp modifyModule (ESign vars) = verSign modifyModule vars
+--verExp modifyModule (ESign vars) = verSign modifyModule vars
 --verExp modifyModule (ESignOf var player) = verSignOf modifyModule var player
 verExp modifyModule (EVer key signature vars) = verVer modifyModule key signature vars
 
@@ -753,65 +751,23 @@ verVer modifyModule key (EVar signatureVar) varsOrArrs = do
   sigMaybeTyp <- findVarType signatureVar
   vars <- mapM toVar varsOrArrs
   case sigMaybeTyp of
-    Just (TSig sigTypes) ->
+    Just (TSig sigTypes) -> do
+      world <- get
       let
-        f :: Ident -> Exp -> ((Integer, Type), Exp) -> Exp
-        f signatureVar acc ((nr, sigType), EVar varIdent) = do
-          world <- get
+        sigKey = Ident $ unident signatureVar ++ sSigSuffix ++ sKeySuffix
+        f :: Ident -> Map.Map Ident Integer -> Exp -> ((Integer, Type), Exp) -> Exp
+        f signatureVar commitmentsIds acc ((nr, sigType), EVar varIdent) = 
           let 
             sigId = Ident $ unident signatureVar ++ sSigSuffix ++ show nr
-            varId = Map.lookup varIdent $ commitmentsIds world
-          case sigType of
-            TCUInt x ->
-              EAnd acc (EEq (EVar sigId) (EInt varId))
-            TUInt x ->
-              EAnd acc (EEq (EVar sigId) (EVar varIdent))
-      in
-        return $ foldl (f signatureVar) (EEq (EVar sig_key) key) (zip (zip [0..] sigTypes) vars)
-    Nothing -> error $ (show signatureVar ++ ": not found by findVarType"
-
-  {-
-  POM: (verFullAss)
-  varTyp <- findVarType varIdent
-  case varTyp of
-    Just (TSig sigTypes) -> do
-      case exp of
-        ESign args -> do
-          mapM_ (signOne varIdent) (zip (zip [0..] sigTypes) args)
-            where
-              signOne :: Ident -> ((Integer, Type), Exp) -> VerRes ()
-              signOne varIdent ((nr, sigTyp), (EVar rIdent)) = do
-                let newIdent = Ident $ unident varIdent ++ sSigSuffix ++ show nr
-                case sigTyp of
-                  TCUInt x -> do
-                    world <- get
-                    verStm (SAss newIdent $ EInt $ Map.lookup rIdent $ commitmentsIds world)
-                  TUInt x -> do
-                    verStm (SAss newIdent (EVar rIdent))
-        _ -> error $ show exp ++ ": r-value for signature can only be a sign(...) function"
-  END_POM
-  -}
-
-
-  -- TODO: przerobic, to jest stare:
-  {-
-  vars <- mapM toVar varsOrArrs
-  case key of
-    EInt k ->
-      let
-        sig_val = Ident $ unident signature ++ sValSuffix
-        sig_auth = Ident $ unident signature ++ sAuthSuffix
-        f acc (EVar (Ident varName)) = 
-          EAnd acc (EEq (EVar sig_val) (EVar $ Ident $ varName ++ sSigSuffix ++ (show k)))
-      in
-        return $ foldl f (EEq (EVar sig_auth) (EInt k)) vars
-  -}
-
-{- TODO: Old, Not needed? 
-verVer modifyModule key (EArray signature index) vars = do
-  signatureVar <- varFromArray (EArray signature index)
-  verVer modifyModule key signatureVar vars
--}
+            foundVarId = Map.lookup varIdent commitmentsIds
+          in 
+            case (foundVarId, sigType) of
+              (Just varId, TCUInt x) ->
+                EAnd acc (EEq (EVar sigId) (EInt varId))
+              (_, TUInt x) ->
+                EAnd acc (EEq (EVar sigId) (EVar varIdent))
+      return $ foldl (f signatureVar (commitmentsIds world)) (EEq (EVar sigKey) key) (zip (zip [0..] sigTypes) vars)
+    Nothing -> error $ show signatureVar ++ ": not found by findVarType"
 
 -----------------------------
 -- Call auxilary functions --
