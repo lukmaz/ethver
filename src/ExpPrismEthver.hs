@@ -342,7 +342,8 @@ verFullAss modifyModule (SAss varIdent exp) = do
     Just (TSig sigTypes) -> do
       case exp of
         ESign args -> do
-          mapM_ (signOne varIdent) (zip (zip [0..] sigTypes) args)
+          argsVars <- mapM toVar args
+          mapM_ (signOne varIdent) (zip (zip [0..] sigTypes) argsVars)
             where
               signOne :: Ident -> ((Integer, Type), Exp) -> VerRes ()
               signOne varIdent ((nr, sigTyp), (EVar rIdent)) = do
@@ -698,6 +699,14 @@ verVer modifyModule key (EVar signatureVar) varsOrArrs = do
       return $ foldl (f signatureVar (commitmentsIds world)) (EEq (EVar sigKey) key) (zip (zip [0..] sigTypes) vars)
     Nothing -> error $ show signatureVar ++ ": not found by findVarType"
 
+verVer modifyModule key (EArray arrIdent index) varsOrArrs = do
+  case index of
+    EInt x ->
+      verVer modifyModule key (EVar $ Ident $ unident arrIdent ++ "_" ++ (show x)) varsOrArrs
+    ESender -> do
+      world <- get
+      verVer modifyModule key (EVar $ Ident $ unident arrIdent ++ "_" ++ (show $ senderNumber world)) varsOrArrs
+    _ -> error $ show index ++ ": not supported index for arrays"
 -----------------------------
 -- Call auxilary functions --
 -----------------------------
