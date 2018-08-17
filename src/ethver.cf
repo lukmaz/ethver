@@ -81,8 +81,6 @@ EArray.  Exp7 ::= Ident "[" Exp "]" ;
 ERand.   Exp7 ::= "random" "(" Exp ")" ;
 ERandL.  Exp7 ::= "random_lazy" "(" Exp ")" ;
 ESign.   Exp7 ::= "sign" "(" [Exp] ")" ;
--- TODO: do wywalenia?
---ESignOf. Exp7 ::= "signature_of" "(" Exp "," Exp ")" ;
 EVer.    Exp7 ::= "ver" "(" Exp "," Exp "," "(" [Exp] ")" ")" ;
 EVar.    Exp7 ::= Ident ;
 EValue.  Exp7 ::= "msg" "." "value" ;

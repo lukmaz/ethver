@@ -105,15 +105,19 @@ generateNumStates world =
 prismVars :: Ident -> Map.Map Ident Type -> Map.Map Ident Exp -> String
 prismVars senderIdent vars initialValues = 
   Map.foldlWithKey
-    (\code ident typ -> 
-      let 
-        initSufix = 
-          case Map.lookup ident initialValues of
-            Nothing -> ""
-            Just exp -> " init " ++ prismShowExp senderIdent exp
-      in
-        code ++ "  " ++ (unident ident)
-          ++ " : " ++ (prismShowType typ) ++ initSufix ++ ";\n")
+    (\code ident typ ->
+      case typ of
+        TSig _ ->
+          code
+        _ -> 
+          let 
+            initSufix = 
+              case Map.lookup ident initialValues of
+                Nothing -> ""
+                Just exp -> " init " ++ prismShowExp senderIdent exp
+          in
+            code ++ "  " ++ (unident ident)
+              ++ " : " ++ (prismShowType typ) ++ initSufix ++ ";\n")
     "" 
     vars
 
