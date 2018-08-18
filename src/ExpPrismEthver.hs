@@ -463,9 +463,8 @@ verExp modifyModule EFalse = verValExp modifyModule EFalse
 verExp modifyModule (ERand exp) = verRandom modifyModule exp
 verExp modifyModule (ERandL exp) = verRandomLazy modifyModule exp
 
---verExp modifyModule (ESign vars) = verSign modifyModule vars
---verExp modifyModule (ESignOf var player) = verSignOf modifyModule var player
 verExp modifyModule (EVer key signature vars) = verVer modifyModule key signature vars
+verExp modifyModule (ECheck cmt val) = verCheck modifyModule cmt val
 
 -------------
 -- MathExp --
@@ -691,6 +690,20 @@ verVer modifyModule key (EArray arrIdent index) varsOrArrs = do
         _ ->
           error $ "senderNumber world not defined"
     _ -> error $ show index ++ ": not supported index for arrays"
+
+
+verCheck :: ModifyModuleType -> Exp -> Exp -> VerRes Exp
+verCheck modifyModule cmtVar val = do
+  world <- get
+  let
+    cmtId = EVar $ Ident $ unident (unvar cmtVar) ++ sIdSuffix
+    cmtName0 = (commitmentsNames world) !! 0
+    cmtName1 = (commitmentsNames world) !! 1
+    r0 = EEq (EVar cmtName0) val
+    r1 = EEq (EVar cmtName1) val
+  return $ EOr
+    (EAnd (EEq cmtId (EInt 0)) r0)
+    (EAnd (EEq cmtId (EInt 1)) r1)
 -----------------------------
 -- Call auxilary functions --
 -----------------------------
@@ -787,8 +800,7 @@ verSendCAux modifyModule funName expArgsVals = do
 -- TODO: adds function name in prefix of a variable name
 createAssignments :: Integer -> Ident -> Arg -> Exp -> [(Ident, Exp)]
 createAssignments playerNumber funName (Ar (TCUInt x) varName) (EVar argVal) =
-  [(Ident $ unident varName ++ (show playerNumber), EVar $ Ident $ unident argVal),
-  (Ident $ unident varName ++ (show playerNumber) ++ sIdSuffix, EVar $ Ident $ unident argVal ++ sIdSuffix)]
+  [(Ident $ unident varName ++ (show playerNumber) ++ sIdSuffix, EVar $ Ident $ unident argVal ++ sIdSuffix)]
 
 createAssignments playerNumber funName (Ar (TCUInt x) varName) (EArray argVal index) =
   case index of 

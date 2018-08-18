@@ -230,8 +230,8 @@ addCommunicateOnePlayer funName args playerNumber = do
     addAssignment acc (Ar (TCUInt _) varName) = acc
         ++ [(createCoArgumentName sIdSuffix funName varName, 
               EVar $ createScenarioArgumentName sIdSuffix funName varName playerNumber)]
-        ++ [(createCoArgumentName "" funName varName, 
-              EVar $ createScenarioArgumentName "" funName varName playerNumber)]
+        -- ++ [(createCoArgumentName "" funName varName, 
+        --       EVar $ createScenarioArgumentName "" funName varName playerNumber)]
     addAssignment acc (Ar _ varName) = acc ++
         [(createCoArgumentName "" funName varName, 
           EVar $ createScenarioArgumentName "" funName varName playerNumber)]
@@ -325,13 +325,19 @@ setCS2 number  =
 
 advUpdates :: Bool -> Integer -> Ident -> [Arg] -> [Exp] -> [[(Ident, Exp)]]
 advUpdates withVal number funName args valList =
-  let prefix = if withVal then ((unident funName ++ "_" ++ sValue):) else id in
-    let varNames = prefix (map (\(Ar _ (Ident ident)) -> ident) args) in
-      [   
-        map 
-          (\(varName, v) -> (createScenarioArgumentName "" funName (Ident varName) number, v)) 
-          (zip varNames valList)
-      ]   
+  let 
+    prefix :: [(String, String)] -> [(String, String)]
+    prefix x = if withVal then (unident funName ++ "_" ++ sValue, ""):x else x
+    aux :: Arg -> (String, String)
+    aux (Ar (TCUInt _) (Ident ident)) = (ident, sIdSuffix)
+    aux (Ar _ (Ident ident)) = (ident, "")
+    varNames = prefix (map aux args) 
+  in
+    [   
+      map 
+        (\((varName, suffix), v) -> (createScenarioArgumentName suffix funName (Ident varName) number, v)) 
+        (zip varNames valList)
+    ]   
 
 -- moved from verScenarios
 addAdversarialBlockchainTranss :: VerRes()

@@ -92,6 +92,11 @@ verCommunication (Comm _ funs) = do
 
 verDecl :: ModifyModuleType -> Decl -> VerRes ()
 
+verDecl modifyModule (Dec (TCUInt range) ident) = do
+  _ <- modifyModule (addVarToModule (TCUInt range) ident)
+  addInitialValue modifyModule ident (EInt $ range + 1)
+  addVar modifyModule (TCUInt range) ident
+
 verDecl modifyModule (Dec typ ident) = do
   addVar modifyModule typ ident
   --assignVarValue ident $ defaultValueOfType typ
@@ -102,11 +107,16 @@ verDecl modifyModule (DecInit typ ident value) = do
 
 -- TODO: size inne niż 2
 verDecl modifyModule (ArrDec typ (Ident ident) size) = do
+  verDecl modifyModule (Dec typ $ Ident $ ident ++ "_0")
+  verDecl modifyModule (Dec typ $ Ident $ ident ++ "_1")
+
+-- OLD:
+{-verDecl modifyModule (ArrDec typ (Ident ident) size) = do
   addVar modifyModule typ $ Ident $ ident ++ "_0"
   assignVarValue (Ident (ident ++ "_0")) $ defaultValueOfType typ
   addVar modifyModule typ $ Ident $ ident ++ "_1"
   assignVarValue (Ident (ident ++ "_1")) $ defaultValueOfType typ
-
+-}
 ------------------
 -- verFunBroadcast
 ------------------
@@ -153,7 +163,7 @@ verFunExecute modifyModule (Fun name args stms) = do
     addAssignment acc (Ar (TCUInt _) varName) = acc 
         ++ [(createCoArgumentName sIdSuffix name varName, 
           EVar $ createScenarioArgumentName sIdSuffix name varName $ number mod)] 
-        ++ [(createCoArgumentName "" name varName, EVar $ createScenarioArgumentName "" name varName $ number mod)]
+        -- ++ [(createCoArgumentName "" name varName, EVar $ createScenarioArgumentName "" name varName $ number mod)]
     addAssignment acc (Ar _ varName) = acc ++ 
         [(createCoArgumentName "" name varName, EVar $ createScenarioArgumentName "" name varName $ number mod)]
   -- TODO: Alive?

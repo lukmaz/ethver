@@ -42,7 +42,7 @@ contract Micropay {
 
 
     // honest case:
-    if (msg.sender == 1 && rel_rU == rel_c) { // czy tu nie trzeba już dochodzić wartości po id?
+    if (checkCommitment(rel_c, rel_rU)) {
       if (winning_tickets < 2) {
         winning_tickets = winning_tickets + 1;
       }

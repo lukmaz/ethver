@@ -82,6 +82,7 @@ ERand.   Exp7 ::= "random" "(" Exp ")" ;
 ERandL.  Exp7 ::= "random_lazy" "(" Exp ")" ;
 ESign.   Exp7 ::= "sign" "(" [Exp] ")" ;
 EVer.    Exp7 ::= "ver" "(" Exp "," Exp "," "(" [Exp] ")" ")" ;
+ECheck.  Exp7 ::= "checkCommitment" "(" Exp "," Exp ")" ;
 EVar.    Exp7 ::= Ident ;
 EValue.  Exp7 ::= "msg" "." "value" ;
 ESender. Exp7 ::= "msg" "." "sender" ;

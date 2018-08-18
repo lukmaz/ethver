@@ -52,7 +52,8 @@ data VerWorld = VerWorld {
   lazyRandoms :: Set.Set Ident,
   addedGuards :: [Exp],
   senderNumber :: Maybe Integer,
-  commitmentsIds :: Map.Map Ident Integer
+  commitmentsIds :: Map.Map Ident Integer,
+  commitmentsNames :: [Ident]
   -- commitmentsNr :: Integer
   }
 
@@ -96,7 +97,8 @@ emptyVerWorld = VerWorld {
   lazyRandoms = Set.empty,
   addedGuards = [],
   senderNumber = Nothing,
-  commitmentsIds = Map.empty
+  commitmentsIds = Map.empty,
+  commitmentsNames = []
   --commitmentsNr = 0
   } 
 
@@ -184,14 +186,15 @@ addLocal modifyModule typ = do
 -- General addVar
 addVar :: ModifyModuleType -> Type -> Ident -> VerRes ()
 addVar modifyModule typ ident = do
-  _ <- modifyModule (addVarToModule typ ident)
   case typ of
     TSig types -> do
+      _ <- modifyModule (addVarToModule typ ident)
       addSignatureVar modifyModule types ident
     TCUInt range -> do
-      addInitialValue modifyModule ident (EInt $ range + 1)
       addCmtIdVar modifyModule ident range
-    _ -> return ()
+    _ -> do
+      _ <- modifyModule (addVarToModule typ ident)
+      return ()
 
 addSignatureVar :: ModifyModuleType -> [Type] -> Ident -> VerRes ()
 addSignatureVar modifyModule types varIdent = do
@@ -214,12 +217,14 @@ addCmtIdVar :: ModifyModuleType -> Ident -> Integer -> VerRes ()
 addCmtIdVar modifyModule varIdent _ = do
   world <- get
   let nr = fromIntegral $ Map.size $ commitmentsIds world
-  put (world {commitmentsIds = Map.insert varIdent nr $ commitmentsIds world})
+  put (world {commitmentsIds = Map.insert varIdent nr $ commitmentsIds world,
+    commitmentsNames = commitmentsNames world ++ [varIdent]})
   case Map.lookup (Ident sMaxCommitments) (constants world) of
     Nothing -> error $ sMaxCommitments ++ " constant definition not found in the source file."
     Just maxCommitments -> do
       let idIdent = Ident $ unident varIdent ++ sIdSuffix
       addVar modifyModule (TUInt maxCommitments) idIdent
+      addInitialValue modifyModule idIdent (EInt nr)
   
 addInitialValue :: ModifyModuleType -> Ident -> Exp -> VerRes ()
 addInitialValue modifyModule ident exp = do
