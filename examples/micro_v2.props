@@ -4,5 +4,9 @@ Pmax=? [ F endM&balance1>=1 ]
 
 Pmax=? [ F balance1>=1 ]
 
-Pmax=? [ F endM&has_revealedM_1&balance0>=2&balance1<1 ]
+Pmax=? [ F endM&commitmentM_1 < 2&balance0>=2&balance1<1 ]
+
+E [ F endM & balance1 = 0 & randU = commitmentM_1 ]
+
+E [ F endM ]
 

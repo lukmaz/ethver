@@ -71,7 +71,6 @@ contract Micropay {
 
 communication {
   cmt_uint(2) commitmentM[2];
-  bool has_revealedM[2]; // to też
   bool is_signedU; // wyluskac z podpisu
   uint(2) randU;
   signature(cmt_uint(2), uint(2), uint(2)) sigma[2];
@@ -102,10 +101,9 @@ communication {
   }
 
   function open() {
-    //if (msg.sender == 1 && !has_revealedM) {
-    commitmentM[msg.sender].openCommitment();
-    has_revealedM[msg.sender] = true;
-    //}
+    if (msg.sender == 1 && commitmentM[msg.sender] == 2) {
+      commitmentM[msg.sender].openCommitment();
+    }
   }
 }
 
