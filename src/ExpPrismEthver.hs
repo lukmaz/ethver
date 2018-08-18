@@ -342,6 +342,10 @@ verFullAss modifyModule (SAss varIdent exp) = do
     Just (TSig sigTypes) -> do
       case exp of
         ESign args -> do
+          let keyIdent = Ident $ unident varIdent ++ sSigSuffix ++ sKeySuffix
+          world <- get
+          case senderNumber world of
+            Just x -> verStm modifyModule (SAss keyIdent $ EInt x)
           argsVars <- mapM toVar args
           mapM_ (signOne varIdent) (zip (zip [0..] sigTypes) argsVars)
             where
@@ -349,18 +353,9 @@ verFullAss modifyModule (SAss varIdent exp) = do
               signOne varIdent ((nr, sigTyp), (EVar rIdent)) = do
                 let 
                   newIdent = Ident $ unident varIdent ++ sSigSuffix ++ show nr
-                  keyIdent = Ident $ unident varIdent ++ sSigSuffix ++ sKeySuffix
-                world <- get
-                case senderNumber world of
-                  Just x -> verStm modifyModule (SAss keyIdent $ EInt x)
                 case sigTyp of
-                  TCUInt x -> do
-                    world <- get
-                    case Map.lookup rIdent $ commitmentsIds world of
-                      Just x ->
-                        verStm modifyModule (SAss newIdent $ EInt x)
-                      _ ->
-                        error $ show rIdent ++ ": not found in commitmentsIds"
+                  TCUInt _ -> do
+                    verStm modifyModule (SAss newIdent $ EVar $ Ident $ unident rIdent ++ sIdSuffix)
                   TUInt x -> do
                     verStm modifyModule (SAss newIdent (EVar rIdent))
         _ -> error $ show exp ++ ": r-value for signature can only be a sign(...) function"
@@ -705,7 +700,11 @@ verVer modifyModule key (EArray arrIdent index) varsOrArrs = do
       verVer modifyModule key (EVar $ Ident $ unident arrIdent ++ "_" ++ (show x)) varsOrArrs
     ESender -> do
       world <- get
-      verVer modifyModule key (EVar $ Ident $ unident arrIdent ++ "_" ++ (show $ senderNumber world)) varsOrArrs
+      case senderNumber world of
+        Just nr ->
+          verVer modifyModule key (EVar $ Ident $ unident arrIdent ++ "_" ++ (show $ nr)) varsOrArrs
+        _ ->
+          error $ "senderNumber world not defined"
     _ -> error $ show index ++ ": not supported index for arrays"
 -----------------------------
 -- Call auxilary functions --
@@ -802,5 +801,15 @@ verSendCAux modifyModule funName expArgsVals = do
 
 -- TODO: adds function name in prefix of a variable name
 createAssignment :: Integer -> Ident -> Arg -> Exp -> (Ident, Exp)
+createAssignment playerNumber funName (Ar (TCUInt x) varName) (EVar argVal) =
+  (Ident $ unident varName ++ (show playerNumber) ++ sIdSuffix, EVar $ Ident $ unident argVal ++ sIdSuffix)
+
+createAssignment playerNumber funName (Ar (TCUInt x) varName) (EArray argVal index) =
+  case index of 
+    EInt x ->
+      createAssignment playerNumber funName (Ar (TCUInt x) varName) (EVar $ Ident $ unident argVal ++ "_" ++ show x)
+    _ ->
+      error $ (show index) ++ ": array index type not supported"
+
 createAssignment playerNumber funName (Ar _ varName) exp =
   (createScenarioArgumentName funName varName playerNumber, exp)

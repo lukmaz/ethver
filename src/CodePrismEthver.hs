@@ -187,7 +187,7 @@ prismShowType (TSig x) = "[0.." ++ (show x) ++ "]"
 --prismShowType TSig = "[0.." ++ (show sMaxSignatures) ++ "]"
 prismShowType TBool = "bool"
 
--- TODO: porównanie w ver jest =, a w sol jest ==. Ale chyba będą i tak dwie różne
+-- TODO: porównanie w PRISM jest =, a w Solidity jest ==. Ale chyba będą i tak dwie różne
 -- funkcje w CompilerEth i CompilerPrism. Wspólny chcemy mieć tylko typ Exp.
 prismShowExp :: Ident -> Exp -> String
 
@@ -240,6 +240,9 @@ prismShowExp senderIdent (ENeg e1) =
 prismShowExp _ (EVar ident) =
   unident ident
 
+prismShowExp _ (EArray ident (EInt x)) = 
+  unident ident ++ "_" ++ show x
+
 prismShowExp _ (EInt x) = 
   show x
 
@@ -258,4 +261,5 @@ prismShowExp _ ETrue =
 prismShowExp _ EFalse = 
   "false"
 
-
+prismShowExp _ exp = 
+  error $ "prismShowExp '" ++ show exp ++ "' not implemented" 

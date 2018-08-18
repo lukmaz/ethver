@@ -26,8 +26,7 @@ contract Micropay {
   uint(2) pot = 1;
   uint(3) deposit = 2;
 
-  function release(cmt_uint(2) rel_c, uint(2) rel_rU, signature(cmt_uint(2), uint(2), uint(2)) rel_s, uint(2) rel_a) {
-  //function release() {
+  function release(cmt_uint(2) rel_c, uint(2) rel_rU, uint(2) rel_a) {
     // adversary case:
     /*
     if (msg.sender == 0 && randU[0] == commitmentM[0]) {
@@ -40,16 +39,19 @@ contract Micropay {
       }
     }
     */
+
+
     // honest case:
     if (msg.sender == 1 && rel_rU == rel_c) {
       if (winning_tickets < 2) {
         winning_tickets = winning_tickets + 1;
       }
-      if (pot > 0 && ver(0, rel_s, (rel_c, rel_rU, rel_a))) {
+      if (pot > 0 && ver(0, sigma[msg.sender], (rel_c, rel_rU, rel_a))) {
         rel_a.send(1);
         pot = pot - 1;
       }
     } 
+
   }
 
   function burn() {
@@ -69,17 +71,13 @@ contract Micropay {
 
 communication {
   cmt_uint(2) commitmentM[2];
-  //bool is_committedM[2]; // wyluskac z commitmentu
   bool has_revealedM[2]; // to też
   bool is_signedU; // wyluskac z podpisu
-  //uint(2) randU[2];
-  //uint(2) receiver[2];
+  uint(2) randU;
   signature(cmt_uint(2), uint(2), uint(2)) sigma[2];
 
   function payment_request() {
     commitmentM[msg.sender].randomCommitment();
-    //is_committedM[msg.sender] = true;
-    //receiver[msg.sender] = msg.sender;
   }
 
   function payment_issuance(cmt_uint(2) pay_c, uint(2) pay_r, uint(2) pay_a) {
@@ -119,8 +117,7 @@ scenario M {
   if (is_signedU && time_elapsed < 1) {
     open.sendCommunication();
     if (commitmentM[1] == randU) { // moze niepotrzebne? Moze nie trzeba trzymac randU w globalu?
-      release.sendTransaction(commitmentM[1], randU, sigma[1], 1, {from: "M", value: 0});
-      //release.sendTransaction({from: "M", value: 0});
+      release.sendTransaction(commitmentM[1], randU, 1, {from: "M", value: 0});
       wait(balance1 >= 1, 1);
       if ((balance1 < 1) && (winning_tickets >= 2)) {
         burn.sendTransaction({from: "M", value: 0});

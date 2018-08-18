@@ -220,7 +220,6 @@ addCmtIdVar modifyModule varIdent _ = do
     Just maxCommitments -> do
       let idIdent = Ident $ unident varIdent ++ sIdSuffix
       addVar modifyModule (TUInt maxCommitments) idIdent
-      addInitialValue modifyModule idIdent (EInt nr)
   
 addInitialValue :: ModifyModuleType -> Ident -> Exp -> VerRes ()
 addInitialValue modifyModule ident exp = do
