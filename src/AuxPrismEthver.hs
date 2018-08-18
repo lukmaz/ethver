@@ -103,6 +103,10 @@ negateExp exp = ENot exp
 unident :: Ident -> String
 unident (Ident ident) = ident
 
+unvar :: Exp -> Ident
+unvar (EVar ident) = ident
+
+unvar exp = error $ show exp ++ "unvar can be applied only to EVar _"
 -- TODO: Only support types with minimal value 0
 
 generateValsList :: Exp -> [Arg] -> [[Exp]]

@@ -26,7 +26,7 @@ contract Micropay {
   uint(2) pot = 1;
   uint(3) deposit = 2;
 
-  function release(cmt_uint(2) rel_c, uint(2) rel_rU, uint(2) rel_a) {
+  function release(cmt_uint(2) rel_c, uint(2) rel_rU) {
     // adversary case:
     /*
     if (msg.sender == 0 && randU[0] == commitmentM[0]) {
@@ -42,12 +42,12 @@ contract Micropay {
 
 
     // honest case:
-    if (msg.sender == 1 && rel_rU == rel_c) {
+    if (msg.sender == 1 && rel_rU == rel_c) { // czy tu nie trzeba już dochodzić wartości po id?
       if (winning_tickets < 2) {
         winning_tickets = winning_tickets + 1;
       }
-      if (pot > 0 && ver(0, sigma[msg.sender], (rel_c, rel_rU, rel_a))) {
-        rel_a.send(1);
+      if (pot > 0 && ver(0, sigma[msg.sender], (rel_c, rel_rU, msg.sender))) {
+        msg.sender.send(1);
         pot = pot - 1;
       }
     } 
@@ -75,6 +75,21 @@ communication {
   bool is_signedU; // wyluskac z podpisu
   uint(2) randU;
   signature(cmt_uint(2), uint(2), uint(2)) sigma[2];
+
+  function copy_signature() {
+    if (msg.sender == 0) {
+      sigma_0_sig_key = sigma_1_sig_key;
+      sigma_0_sig0 = sigma_1_sig0;
+      sigma_0_sig1 = sigma_1_sig1;
+      sigma_0_sig2 = sigma_1_sig2;
+    }
+    else {
+      sigma_1_sig_key = sigma_0_sig_key;
+      sigma_1_sig0 = sigma_0_sig0;
+      sigma_1_sig1 = sigma_0_sig1;
+      sigma_1_sig2 = sigma_0_sig2;
+    }
+  }
 
   function payment_request() {
     commitmentM[msg.sender].randomCommitment();
@@ -115,9 +130,10 @@ scenario M {
   payment_request.sendCommunication();
   wait(is_signedU, 1);
   if (is_signedU && time_elapsed < 1) {
+    copy_signature.sendCommunication();
     open.sendCommunication();
     if (commitmentM[1] == randU) { // moze niepotrzebne? Moze nie trzeba trzymac randU w globalu?
-      release.sendTransaction(commitmentM[1], randU, 1, {from: "M", value: 0});
+      release.sendTransaction(commitmentM[1], randU, {from: "M", value: 0});
       wait(balance1 >= 1, 1);
       if ((balance1 < 1) && (winning_tickets >= 2)) {
         burn.sendTransaction({from: "M", value: 0});

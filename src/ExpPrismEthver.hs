@@ -566,28 +566,9 @@ verValExp modifyModule (EArray (Ident ident) index) = do
   
   case index of
     ESender -> do
-      -- TODO: not needed anymore?
-      error $ "verValExp: array[msg.sender] should not be used in scenarios (only in contract and comm)."
-      {-
-      case maybeType of
-        Just typ -> do 
-          addLocal modifyModule typ
-          mod <- modifyModule id
-          let actualSender = whichSender mod
-          verStm 
-            modifyModule 
-            (SIf 
-              (EEq (EVar actualSender) (EInt 0))
-              (SAsses [AAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_0")])
-            )
-          verStm
-            modifyModule
-            (SIf
-              (EEq (EVar actualSender) (EInt 1))
-              (SAsses [AAss (Ident $ localVarName) (EVar $ Ident $ ident ++ "_1")])
-            )
-          return $ EVar $ Ident localVarName
-      -}
+      world <- get
+      case senderNumber world of
+        Just x -> return $ EVar $ Ident $ ident ++ "_" ++ show x
     EVar v -> do
       case maybeType of
         Just typ -> do
@@ -681,16 +662,20 @@ verVer modifyModule key (EVar signatureVar) varsOrArrs = do
       let
         sigKey = Ident $ unident signatureVar ++ sSigSuffix ++ sKeySuffix
         f :: Ident -> Map.Map Ident Integer -> Exp -> ((Integer, Type), Exp) -> Exp
-        f signatureVar commitmentsIds acc ((nr, sigType), EVar varIdent) = 
-          let 
-            sigId = Ident $ unident signatureVar ++ sSigSuffix ++ show nr
-            foundVarId = Map.lookup varIdent commitmentsIds
-          in 
-            case (foundVarId, sigType) of
-              (Just varId, TCUInt x) ->
-                EAnd acc (EEq (EVar sigId) (EInt varId))
-              (_, TUInt x) ->
-                EAnd acc (EEq (EVar sigId) (EVar varIdent))
+        f signatureVar commitmentsIds acc ((nr, sigType), var) = 
+          case sigType of
+            TCUInt x ->
+              let 
+                sigId = Ident $ unident signatureVar ++ sSigSuffix ++ show nr
+                varId = Ident $ (unident $ unvar var) ++ sIdSuffix
+              in
+                EAnd acc (EEq (EVar sigId) (EVar varId))
+            TUInt x ->
+              let
+                sigId = Ident $ unident signatureVar ++ sSigSuffix ++ show nr
+              in
+                EAnd acc (EEq (EVar sigId) var)
+                
       return $ foldl (f signatureVar (commitmentsIds world)) (EEq (EVar sigKey) key) (zip (zip [0..] sigTypes) vars)
     Nothing -> error $ show signatureVar ++ ": not found by findVarType"
 
@@ -748,7 +733,7 @@ verSendTAux modifyModule funName argsVals = do
        
       -- TODO: ta linijka chyba jest nie potrzebna w function_without_value
       let updates0 = [[(Ident $ (unident funName) ++ sValueSuffix ++ (show $ number mod), value)]]
-      let addAssignment acc (argName, argVal) = acc ++ [createAssignment (number mod) funName argName argVal]
+      let addAssignment acc (argName, argVal) = acc ++ createAssignments (number mod) funName argName argVal
       --TODO: Alive?
       let updates1 = [(foldl addAssignment (head updates0) $ zip argNames expArgsVals, [Alive])]
       
@@ -781,7 +766,7 @@ verSendCAux modifyModule funName expArgsVals = do
   case Map.lookup funName (funs world) of
     Just fun -> do
       let argNames = getArgNames fun
-      let addAssignment acc (argName, argVal) = acc ++ [createAssignment (number mod) funName argName argVal]
+      let addAssignment acc (argName, argVal) = acc ++ createAssignments (number mod) funName argName argVal
       --TODO: Alive?
       let updates1 = [(foldl addAssignment [] $ zip argNames expArgsVals, [Alive])]
       
@@ -800,16 +785,17 @@ verSendCAux modifyModule funName expArgsVals = do
     _ -> error $ "Function " ++ (unident funName) ++ " not found in (funs world)"
 
 -- TODO: adds function name in prefix of a variable name
-createAssignment :: Integer -> Ident -> Arg -> Exp -> (Ident, Exp)
-createAssignment playerNumber funName (Ar (TCUInt x) varName) (EVar argVal) =
-  (Ident $ unident varName ++ (show playerNumber) ++ sIdSuffix, EVar $ Ident $ unident argVal ++ sIdSuffix)
+createAssignments :: Integer -> Ident -> Arg -> Exp -> [(Ident, Exp)]
+createAssignments playerNumber funName (Ar (TCUInt x) varName) (EVar argVal) =
+  [(Ident $ unident varName ++ (show playerNumber), EVar $ Ident $ unident argVal),
+  (Ident $ unident varName ++ (show playerNumber) ++ sIdSuffix, EVar $ Ident $ unident argVal ++ sIdSuffix)]
 
-createAssignment playerNumber funName (Ar (TCUInt x) varName) (EArray argVal index) =
+createAssignments playerNumber funName (Ar (TCUInt x) varName) (EArray argVal index) =
   case index of 
     EInt x ->
-      createAssignment playerNumber funName (Ar (TCUInt x) varName) (EVar $ Ident $ unident argVal ++ "_" ++ show x)
+      createAssignments playerNumber funName (Ar (TCUInt x) varName) (EVar $ Ident $ unident argVal ++ "_" ++ show x)
     _ ->
       error $ (show index) ++ ": array index type not supported"
 
-createAssignment playerNumber funName (Ar _ varName) exp =
-  (createScenarioArgumentName funName varName playerNumber, exp)
+createAssignments playerNumber funName (Ar _ varName) exp =
+  [(createScenarioArgumentName "" funName varName playerNumber, exp)]

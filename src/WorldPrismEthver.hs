@@ -269,15 +269,15 @@ clearCondRandoms = do
   put (world {condRandoms = Set.empty, condRandomArrays = Map.empty, lazyRandoms = Set.empty})
 
 -- TODO: adds function name as a prefix of a variable name
-createScenarioArgumentName :: Ident -> Ident -> Integer -> Ident
-createScenarioArgumentName (Ident funName) (Ident varName) playerName = 
+createScenarioArgumentName :: String -> Ident -> Ident -> Integer -> Ident
+createScenarioArgumentName suffix (Ident funName) (Ident varName) playerName = 
     --Ident $ funName ++ "_" ++ varName ++ (show playerName)
-    Ident $ varName ++ (show playerName)
+    Ident $ varName ++ (show playerName) ++ suffix
 
 -- TODO: does not add function name as a prefix
-createCoArgumentName :: Ident -> Ident -> Ident
-createCoArgumentName (Ident funName) (Ident varName) = 
-    Ident $ varName
+createCoArgumentName :: String -> Ident -> Ident -> Ident
+createCoArgumentName suffix (Ident funName) (Ident varName) = 
+    Ident $ varName ++ suffix
 
 -- TODO: with prefix or not? Now: funName ignored
 addNoPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
@@ -288,7 +288,7 @@ addNoPlayerArg modifyModule (Ident funName) (Ar typ varName) = do
 addPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
 addPlayerArg modifyModule funName (Ar typ varName) = do
   mod <- modifyModule id
-  addVar modifyModule typ $ createScenarioArgumentName funName varName (number mod)
+  addVar modifyModule typ $ createScenarioArgumentName "" funName varName (number mod)
 
 addContrArgument :: Ident -> Arg -> VerRes ()
 addContrArgument funName arg = do

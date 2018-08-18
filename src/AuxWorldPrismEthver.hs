@@ -141,6 +141,14 @@ toVar (EVar v) = return $ EVar v
 
 toVar (EArray arrIdent index) = varFromArray (EArray arrIdent index)
 
+toVar ESender = do
+  world <- get
+  case senderNumber world of
+    Just x -> return $ EInt x
+    _ -> error $ "senderNumber world not defined"
+
+toVar exp = error $ "toVar '" ++ show exp ++ "' not implemented"
+
 -----------
 -- Users --
 -----------
@@ -212,17 +220,23 @@ addFirstTransToModule :: Trans -> Module -> Module
 addFirstTransToModule tr mod =
   mod {transs = (transs mod) ++ [tr]}
 
+-- TODO: similar things are in verFunExecute for contract
 addCommunicateOnePlayer :: Ident -> [Arg] -> Integer -> VerRes ()
 addCommunicateOnePlayer funName args playerNumber = do
   mod <- modifyCommunication id
-  let newState = numStates mod + 1 
-
-  let updates0 = [[(iCommSender, EInt playerNumber)]]
-  let addAssignment acc (Ar _ varName) = acc ++
-        [(createCoArgumentName funName varName, 
-          EVar $ createScenarioArgumentName funName varName playerNumber)]
+  let 
+    newState = numStates mod + 1 
+    updates0 = [[(iCommSender, EInt playerNumber)]]
+    addAssignment acc (Ar (TCUInt _) varName) = acc
+        ++ [(createCoArgumentName sIdSuffix funName varName, 
+              EVar $ createScenarioArgumentName sIdSuffix funName varName playerNumber)]
+        ++ [(createCoArgumentName "" funName varName, 
+              EVar $ createScenarioArgumentName "" funName varName playerNumber)]
+    addAssignment acc (Ar _ varName) = acc ++
+        [(createCoArgumentName "" funName varName, 
+          EVar $ createScenarioArgumentName "" funName varName playerNumber)]
   -- TODO: Alive?
-  let updates = [(foldl addAssignment (head updates0) args, [Alive])]
+    updates = [(foldl addAssignment (head updates0) args, [Alive])]
 
   addCustomTrans
     modifyCommunication
@@ -315,7 +329,7 @@ advUpdates withVal number funName args valList =
     let varNames = prefix (map (\(Ar _ (Ident ident)) -> ident) args) in
       [   
         map 
-          (\(varName, v) -> (createScenarioArgumentName funName (Ident varName) number, v)) 
+          (\(varName, v) -> (createScenarioArgumentName "" funName (Ident varName) number, v)) 
           (zip varNames valList)
       ]   
 

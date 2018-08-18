@@ -144,15 +144,20 @@ verFunExecute modifyModule (Fun name args stms) = do
   --TODO: argumenty
   mod <- modifyModule id
 
-  let updates0 = [[
+  let 
+    updates0 = [[
         (iContrSender, EInt $ number mod), 
         (iValue, EVar $ Ident $ unident name ++ sValueSuffix 
           ++ (show $ number mod)), (Ident $ unident name ++ sStatusSuffix 
           ++ (show $ number mod), EVar (Ident sTExecuted))]]
-  let addAssignment acc (Ar _ varName) = acc ++ 
-        [(createCoArgumentName name varName, EVar $ createScenarioArgumentName name varName $ number mod)]
+    addAssignment acc (Ar (TCUInt _) varName) = acc 
+        ++ [(createCoArgumentName sIdSuffix name varName, 
+          EVar $ createScenarioArgumentName sIdSuffix name varName $ number mod)] 
+        ++ [(createCoArgumentName "" name varName, EVar $ createScenarioArgumentName "" name varName $ number mod)]
+    addAssignment acc (Ar _ varName) = acc ++ 
+        [(createCoArgumentName "" name varName, EVar $ createScenarioArgumentName "" name varName $ number mod)]
   -- TODO: Alive?
-  let updates = [(foldl addAssignment (head updates0) args, [Alive])]
+    updates = [(foldl addAssignment (head updates0) args, [Alive])]
 
   addTransNoState
     modifyBlockchain 
