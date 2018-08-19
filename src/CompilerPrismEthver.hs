@@ -92,10 +92,19 @@ verCommunication (Comm _ funs) = do
 
 verDecl :: ModifyModuleType -> Decl -> VerRes ()
 
-verDecl modifyModule (Dec (TCUInt range) ident) = do
-  _ <- modifyModule (addVarToModule (TCUInt range) ident)
-  addInitialValue modifyModule ident (EInt $ range + 1)
-  addVar modifyModule (TCUInt range) ident
+verDecl modifyModule (Dec (TCUInt range) varIdent) = do
+  world <- get
+  let 
+    nr = fromIntegral $ Map.size $ commitmentsIds world
+    idIdent = Ident $ unident varIdent ++ sIdSuffix
+  put (world {commitmentsIds = Map.insert varIdent nr $ commitmentsIds world,
+    commitmentsNames = commitmentsNames world ++ [varIdent]})
+
+  _ <- modifyModule (addVarToModule (TCUInt range) varIdent)
+  addInitialValue modifyModule varIdent (EInt $ range + 1)
+  addCmtIdVar modifyModule varIdent range
+  addInitialValue modifyModule idIdent (EInt nr)
+
 
 verDecl modifyModule (Dec typ ident) = do
   addVar modifyModule typ ident

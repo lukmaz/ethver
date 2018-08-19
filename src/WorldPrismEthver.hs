@@ -216,15 +216,11 @@ addSignatureVarAux modifyModule varIdent (nr, typ) = do
 addCmtIdVar :: ModifyModuleType -> Ident -> Integer -> VerRes ()
 addCmtIdVar modifyModule varIdent _ = do
   world <- get
-  let nr = fromIntegral $ Map.size $ commitmentsIds world
-  put (world {commitmentsIds = Map.insert varIdent nr $ commitmentsIds world,
-    commitmentsNames = commitmentsNames world ++ [varIdent]})
   case Map.lookup (Ident sMaxCommitments) (constants world) of
     Nothing -> error $ sMaxCommitments ++ " constant definition not found in the source file."
     Just maxCommitments -> do
       let idIdent = Ident $ unident varIdent ++ sIdSuffix
       addVar modifyModule (TUInt maxCommitments) idIdent
-      addInitialValue modifyModule idIdent (EInt nr)
   
 addInitialValue :: ModifyModuleType -> Ident -> Exp -> VerRes ()
 addInitialValue modifyModule ident exp = do
