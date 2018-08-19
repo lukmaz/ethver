@@ -27,7 +27,6 @@ contract Micropay {
   uint(3) deposit = 2;
 
   function release(cmt_uint(2) rel_c, uint(2) rel_rU) {
-    // honest case:
     if (checkCommitment(rel_c, rel_rU)) {
       if (winning_tickets < 2) {
         winning_tickets = winning_tickets + 1;

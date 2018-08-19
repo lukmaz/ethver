@@ -6,7 +6,7 @@ import AbsEthver
 -- NUMBERS --
 -------------
 
-nMaxRuns = 1
+nMaxRuns = 2
 
 nUndefModuleNumber = 42
 nWrongExp = 43

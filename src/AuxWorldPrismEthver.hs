@@ -244,6 +244,14 @@ addCommunicateOnePlayer funName args playerNumber = do
     1   
     newState
     []  
+    [([], [Alive])]
+
+  addCustomTrans
+    modifyCommunication
+    ""
+    newState
+    (newState + 1)
+    []
     updates
 
 
@@ -392,14 +400,17 @@ addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunV (Ident fu
   let valName = Ident $ funName  ++ sValueSuffix ++ (show $ number mod)
   maxValVal <- maxRealValue valName
   let maxValsList = generateValsList maxValVal args
-  generateAdvTranss modifyModule whichPrefix whichState True funName args maxValsList
+  generateAdvTranss modifyModule whichPrefix whichState True (-1) funName args maxValsList
 
-addAdversarialTranssToPlayer modifyModule whichPrefix whichState (Fun (Ident funName) args _) = do
+addAdversarialTranssToPlayer modifyModule whichPrefix whichState (Fun (Ident funName) args x) = 
+  addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunL (-1) (Ident funName) args x)
+
+addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunL limit (Ident funName) args _) = do
   let maxValsList = generateValsListNoVal args
-  generateAdvTranss modifyModule whichPrefix whichState False funName args maxValsList
+  generateAdvTranss modifyModule whichPrefix whichState False limit funName args maxValsList
 
-generateAdvTranss :: ModifyModuleType -> String -> Ident -> Bool -> String -> [Arg] -> [[Exp]] -> VerRes ()
-generateAdvTranss modifyModule whichPrefix whichState withVal funName args maxes = do
+generateAdvTranss :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> [[Exp]] -> VerRes ()
+generateAdvTranss modifyModule whichPrefix whichState withVal limit funName args maxes = do
   mod <- modifyModule id
   case maxes of
     [] ->
@@ -422,17 +433,20 @@ generateAdvTranss modifyModule whichPrefix whichState withVal funName args maxes
         (\vals -> addTransNoState
           modifyModule
           (whichPrefix ++ funName ++ (show $ number mod))
-          [
-            -- critical section
-            -- ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
-            EEq (EVar iContrState) (EInt 1),
-            EEq (EVar iCommState) (EInt 1),
-            EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1)),
-            ELt (EVar runsIdent) (EInt nMaxRuns)
-          ]
+          (
+            [
+              -- critical section
+              -- ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
+              EEq (EVar iContrState) (EInt 1),
+              EEq (EVar iCommState) (EInt 1),
+              EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
+            ]
+            ++ 
+            (if (limit > -1) then [ELt (EVar runsIdent) (EInt limit)] else [])
+          )
           -- TODO: Alive?
           (map 
-            (\x -> (x ++ [(runsIdent, EAdd (EVar runsIdent) (EInt 1))], [Alive]))
+            (\x -> (x ++ (if (limit > -1) then [(runsIdent, EAdd (EVar runsIdent) (EInt 1))] else []), [Alive]))
             (advUpdates withVal (number mod) (Ident funName) args vals)
           )
         )

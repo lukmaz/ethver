@@ -135,6 +135,9 @@ verFunBroadcast :: ModifyModuleType -> Function -> VerRes ()
 verFunBroadcast modifyModule (FunV name args stms) = 
   verFunBroadcast modifyModule (Fun name args stms)
 
+verFunBroadcast modifyModule (FunL _ name args stms) =
+  verFunBroadcast modifyModule (Fun name args stms)
+
 verFunBroadcast modifyModule (Fun name args stms) = do
   --TODO: argumenty
   mod <- modifyModule id
@@ -157,6 +160,9 @@ verFunBroadcast modifyModule (Fun name args stms) = do
 verFunExecute :: ModifyModuleType -> Function -> VerRes ()
 
 verFunExecute modifyModule (FunV name args stms) =
+  verFunExecute modifyModule (Fun name args stms)
+
+verFunExecute modifyModule (FunL _ name args stms) =
   verFunExecute modifyModule (Fun name args stms)
 
 verFunExecute modifyModule (Fun name args stms) = do
@@ -253,15 +259,22 @@ verDFSFunContractOrCommunication modifyModule commonFun fun = do
 -------------------------------------
 
 verOldFunContractOrCommunication :: ModifyModuleType -> (Function -> VerRes ()) -> Function -> VerRes ()
-verOldFunContractOrCommunication modifyModule commonfun (FunV name args stm) =
-  verOldFunContractOrCommunication modifyModule commonfun (Fun name args stm)
 
-verOldFunContractOrCommunication modifyModule commonFun fun@(Fun name args stms) = do
+verOldFunContractOrCommunication modifyModule commonfun (FunV name args stm) =
+  verOldFunContractOrCommunication modifyModule commonfun (FunL (-1)  name args stm)
+
+verOldFunContractOrCommunication modifyModule commonfun (Fun name args stm) =
+  verOldFunContractOrCommunication modifyModule commonfun (FunL (-1)  name args stm)
+
+verOldFunContractOrCommunication modifyModule commonFun fun@(FunL limit name args stms) = do
   commonFun fun
 
   -- limit number of runs of each function
-  addVar modifyPlayer0 (TUInt (nMaxRuns + 1)) (Ident $ unident name ++ sRunsSuffix ++ "0") 
-  addVar modifyPlayer1 (TUInt (nMaxRuns + 1)) (Ident $ unident name ++ sRunsSuffix ++ "1") 
+  if limit > 0 then do
+    addVar modifyPlayer0 (TUInt (limit + 1)) (Ident $ unident name ++ sRunsSuffix ++ "0") 
+    addVar modifyPlayer1 (TUInt (limit + 1)) (Ident $ unident name ++ sRunsSuffix ++ "1") 
+  else
+    return ()
 
 
 -- TO DZISIAJ NAPISALEM (07.08.2018), ale gdzies wczesniej juz jest ten mechanizm
@@ -302,6 +315,9 @@ verOldFunContractOrCommunication modifyModule commonFun fun@(Fun name args stms)
 
 -- common for OLD, SMART and DFS
 commonVerFunContract :: Function -> VerRes ()
+commonVerFunContract (FunL _ name args stms) =
+  commonVerFunContract (Fun name args stms)
+
 commonVerFunContract (Fun name args stms) = do
   addFun (Fun name args stms)
   addContractFun (Fun name args stms)
@@ -346,6 +362,10 @@ verOldFunContract fun = verOldFunContractOrCommunication modifyContract commonVe
 
 -- common for OLD, SMART and DFS
 commonVerFunCommunication :: Function -> VerRes ()
+
+commonVerFunCommunication (FunL _ funName args stms) =
+  commonVerFunCommunication (Fun funName args stms)
+
 commonVerFunCommunication (Fun funName args stms) = do
   addFun (Fun funName args stms)
 
@@ -356,7 +376,7 @@ commonVerFunCommunication (Fun funName args stms) = do
   addCommunicateOnePlayer funName args 1
   
   mod <- modifyCommunication id
-  let newState = numStates mod + 1
+  let newState = numStates mod + 2
   _ <- modifyCommunication (setCurrState newState)
   _ <- modifyCommunication (setNumStates newState)
 
