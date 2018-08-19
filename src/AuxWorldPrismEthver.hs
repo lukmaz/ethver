@@ -415,7 +415,8 @@ generateAdvTranss modifyModule whichPrefix whichState withVal funName args maxes
         ]
         -- TODO: Alive?
         [([], [Alive])]
-    maxValsList ->
+    maxValsList -> do
+      let runsIdent = Ident $ funName ++ sRunsSuffix ++ (show $ number mod)
       forM_
         maxValsList
         (\vals -> addTransNoState
@@ -426,11 +427,12 @@ generateAdvTranss modifyModule whichPrefix whichState withVal funName args maxes
             -- ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
             EEq (EVar iContrState) (EInt 1),
             EEq (EVar iCommState) (EInt 1),
-            EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
+            EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1)),
+            ELt (EVar runsIdent) (EInt nMaxRuns)
           ]
           -- TODO: Alive?
           (map 
-            (\x -> (x, [Alive]))
+            (\x -> (x ++ [(runsIdent, EAdd (EVar runsIdent) (EInt 1))], [Alive]))
             (advUpdates withVal (number mod) (Ident funName) args vals)
           )
         )

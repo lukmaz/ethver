@@ -6,6 +6,8 @@ import AbsEthver
 -- NUMBERS --
 -------------
 
+nMaxRuns = 1
+
 nUndefModuleNumber = 42
 nWrongExp = 43
 nInitContractState = 1
@@ -55,6 +57,7 @@ sStatusSuffix = "_status"
 sSigSuffix = "_sig"
 sKeySuffix = "_key"
 sIdSuffix = "_id"
+sRunsSuffix = "_runs"
 sEmptyState = "empty_state"
 sEmptySender = "empty_sender"
 sTimeElapsed = "time_elapsed"

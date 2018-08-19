@@ -27,20 +27,6 @@ contract Micropay {
   uint(3) deposit = 2;
 
   function release(cmt_uint(2) rel_c, uint(2) rel_rU) {
-    // adversary case:
-    /*
-    if (msg.sender == 0 && randU[0] == commitmentM[0]) {
-      if (winning_tickets < 2) {
-        winning_tickets = winning_tickets + 1;
-      }
-      if (pot > 0 && ver(0, sigma[0], (commitmentM[0], randU[0], receiver[0]))) {
-        receiver[0].send(1);
-        pot = pot - 1;
-      }
-    }
-    */
-
-
     // honest case:
     if (checkCommitment(rel_c, rel_rU)) {
       if (winning_tickets < 2) {
@@ -51,7 +37,6 @@ contract Micropay {
         pot = pot - 1;
       }
     } 
-
   }
 
   function burn() {
@@ -91,7 +76,9 @@ communication {
   }
 
   function payment_request() {
-    commitmentM[msg.sender].randomCommitment();
+    if (commitmentM[msg.sender] == 3) { // todo: ladna nazwa
+      commitmentM[msg.sender].randomCommitment();
+    }
   }
 
   function payment_issuance(cmt_uint(2) pay_c, uint(2) pay_r, uint(2) pay_a) {
@@ -129,12 +116,14 @@ scenario M {
   wait(is_signedU, 1);
   if (is_signedU && time_elapsed < 1) {
     copy_signature.sendCommunication();
-    open.sendCommunication();
-    if (commitmentM[1] == randU) { // moze niepotrzebne? Moze nie trzeba trzymac randU w globalu?
-      release.sendTransaction(commitmentM[1], randU, {from: "M", value: 0});
-      wait(balance1 >= 1, 1);
-      if ((balance1 < 1) && (winning_tickets >= 2)) {
-        burn.sendTransaction({from: "M", value: 0});
+    if (sigma_1_sig0 == 1 && sigma_1_sig1 == randU && sigma_1_sig2 == 1) {
+      open.sendCommunication();
+      if (commitmentM[1] == randU) { // moze niepotrzebne? Moze nie trzeba trzymac randU w globalu?
+        release.sendTransaction(commitmentM[1], randU, {from: "M", value: 0});
+        wait(balance1 >= 1, 1);
+        if ((balance1 < 1) && (winning_tickets >= 2)) {
+          burn.sendTransaction({from: "M", value: 0});
+        }
       }
     }
   }

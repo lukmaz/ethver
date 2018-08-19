@@ -259,6 +259,10 @@ verOldFunContractOrCommunication modifyModule commonfun (FunV name args stm) =
 verOldFunContractOrCommunication modifyModule commonFun fun@(Fun name args stms) = do
   commonFun fun
 
+  -- limit number of runs of each function
+  addVar modifyPlayer0 (TUInt (nMaxRuns + 1)) (Ident $ unident name ++ sRunsSuffix ++ "0") 
+  addVar modifyPlayer1 (TUInt (nMaxRuns + 1)) (Ident $ unident name ++ sRunsSuffix ++ "1") 
+
 
 -- TO DZISIAJ NAPISALEM (07.08.2018), ale gdzies wczesniej juz jest ten mechanizm
 -- MOZE BEZPOSREDNIO W OBSLUDZE TABLIC?
@@ -313,7 +317,7 @@ commonVerFunContract (Fun name args stms) = do
 
   addVar modifyPlayer0 (TUInt (maxValue + 1)) $ Ident $ unident name ++ sValueSuffix ++ "0"
   addVar modifyPlayer1 (TUInt (maxValue + 1)) $ Ident $ unident name ++ sValueSuffix ++ "1"
-
+  
   mod <- modifyContract id
   -- adds a command that the transaction is being broadcast
   addCustomTrans
