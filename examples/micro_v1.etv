@@ -14,6 +14,7 @@ USER1_BALANCE_INIT = 0;
 MAX_VALUE = 1;
 MAX_TIME = 2;
 MAX_SIGNATURES = 3;
+MAX_COMMITMENTS = 2;
 
 // c1, r1 - values in honest mode, recipient = 1
 // c0, r0 - values in adversarial mode, recipient = 0
@@ -23,39 +24,51 @@ MAX_SIGNATURES = 3;
 contract Micropay {
   uint(2) pot = 1;
 
-  function release() {
-    if (pot > 0 && is_signedU && has_revealedM && commitmentM == randU
-        && ver(0, sigma, (commitmentM, randU, receiver))) {
-      receiver.send(1);
-      pot = pot - 1;
+  function_limit 2 release(cmt_uint(2) rel_c, uint(2) rel_rU) {
+    if (checkCommitment(rel_c, rel_rU)) {
+      if (pot > 0 && ver(0, sigma[msg.sender], (rel_c, rel_rU, msg.sender))) {
+        msg.sender.send(1);
+        pot = pot - 1;
+      }
     }
   }
 }    
 
 communication {
-  cmt_uint_signable(2) commitmentM;
-  bool is_committedM;
-  bool has_revealedM;
-  bool is_signedU;
-  uint_signable(2) randU;
-  uint_signable(2) receiver;
-  signature(3) sigma;
+  cmt_uint(2) commitmentM[2];
+  bool is_signedU; // wyluskac z podpisu
+  uint(2) randU;
+  signature(cmt_uint(2), uint(2), uint(2)) sigma[2];
+
+  function copy_signature() {
+    if (msg.sender == 0) {
+      sigma_0_sig_key = sigma_1_sig_key;
+      sigma_0_sig0 = sigma_1_sig0;
+      sigma_0_sig1 = sigma_1_sig1;
+      sigma_0_sig2 = sigma_1_sig2;
+    }
+    else {
+      sigma_1_sig_key = sigma_0_sig_key;
+      sigma_1_sig0 = sigma_0_sig0;
+      sigma_1_sig1 = sigma_0_sig1;
+      sigma_1_sig2 = sigma_0_sig2;
+    }
+  }
 
   function payment_request() {
-    commitmentM.randomCommitment();
-    is_committedM = true;
-    receiver = msg.sender;
+    if (commitmentM[msg.sender] == 3) { // todo: ladna nazwa
+      commitmentM[msg.sender].randomCommitment();
+    }
   }
 
-  function payment_issuance(uint(2) r) {
-    randU = r;
+  function payment_issuance(cmt_uint(2) pay_c, uint(2) pay_r, uint(2) pay_a) {
+    randU = pay_r;
     is_signedU = true;
-    sigma = sign(commitmentM, randU, receiver);
+    sigma[msg.sender] = sign(pay_c, pay_r, pay_a);
   }
   function open() {
-    if (msg.sender == 1 && !has_revealedM) {
-      commitmentM.openCommitment();
-      has_revealedM = true;
+    if (msg.sender == 1 && commitmentM[msg.sender] == 2) {
+      commitmentM[msg.sender].openCommitment();
     }
   }
 }
@@ -64,24 +77,31 @@ scenario U {
   uint(2) rand0;
   bool endU;
 
-  wait(is_committedM, 1);
-  if (is_committedM) {
+  wait(commitmentM[1] < 3, 1);
+  if (commitmentM[1] < 3) {
     rand0 = random(2);
-    payment_issuance.sendCommunication(rand0);
+    payment_issuance.sendCommunication(commitmentM[1], rand0, 1);
   }
 
   endU = true;
 }
 
 scenario M {
+  bool win;
+  uint(2) rand1;
   bool endM;
 
   payment_request.sendCommunication();
   wait(is_signedU, 1);
   if (is_signedU && time_elapsed < 1) {
-    open.sendCommunication();
-    if (commitmentM == randU) {
-      release.sendTransaction({from: "M", value: 0});
+    rand1 = randU;
+    copy_signature.sendCommunication();
+    if (sigma_1_sig0 == 1 && sigma_1_sig1 == rand1 && sigma_1_sig2 == 1) {
+      open.sendCommunication();
+      if (commitmentM[1] == rand1) {
+        win = true;
+        release.sendTransaction(commitmentM[1], rand1, {from: "M", value: 0});
+      }
     }
   }
   endM = true;

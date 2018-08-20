@@ -48,7 +48,7 @@ that M reveals his winning ticket and gets paid}, we are computing \emph{the max
 his winning ticket and does not get paid}.
 This is only because the second property is easier expressible in PRISM properties language.
 
-After verifying these properties in PRISM it turns out that in the first three properties 
+After verifying these properties in PRISM it turns out that the first three properties 
 evaluate to the correct value of $1/2$, however the last one evaluates to 1.
 In order to investigate the problem, we will use the method known from the previous section for generating
 a witness for unwanted path in PRISM.
@@ -61,7 +61,7 @@ After verifying this property in PRISM, it turns out, the property is true and m
 following interleaving for the witness:
 \begin{itemize}
 \item merchant M executes \lstinline{payment_request}
-\item user U executes \lstinline{payment issuance}
+\item user U executes \lstinline{payment_issuance}
 \item merchant M executes \lstinline{open}
 \item user U calls \lstinline{release} contract function
 \item merchant M calls \lstinline{release} contract function
