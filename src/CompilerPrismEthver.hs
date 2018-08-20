@@ -277,10 +277,7 @@ verOldFunContractOrCommunication modifyModule commonFun fun@(FunL limit name arg
     return ()
 
 
--- TO DZISIAJ NAPISALEM (07.08.2018), ale gdzies wczesniej juz jest ten mechanizm
--- MOZE BEZPOSREDNIO W OBSLUDZE TABLIC?
-
-
+  -- one if for msg.sender
   mod <- modifyModule id
   let actualSender = whichSender mod
 

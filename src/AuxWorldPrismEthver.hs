@@ -236,22 +236,24 @@ addCommunicateOnePlayer funName args playerNumber = do
         [(createCoArgumentName "" funName varName, 
           EVar $ createScenarioArgumentName "" funName varName playerNumber)]
   -- TODO: Alive?
-    updates = [(foldl addAssignment (head updates0) args, [Alive])]
+    updates = [(foldl addAssignment [] args, [Alive])]
 
+  -- first trans to set sender
   addCustomTrans
     modifyCommunication
     (sCommunicatePrefix ++ (unident funName) ++ (show playerNumber))
     1   
     newState
     []  
-    [([], [Alive])]
+    [(head updates0, [Alive])]
 
+  -- second trans to set arguments
   addCustomTrans
     modifyCommunication
     ""
     newState
     (newState + 1)
-    []
+    [EEq (EVar iCommSender) (EInt playerNumber)]
     updates
 
 
