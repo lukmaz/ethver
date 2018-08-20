@@ -391,12 +391,15 @@ addAdversarialCommTranss :: Communication -> VerRes ()
 addAdversarialCommTranss (Comm _ funs) =
   addAdversarialTranss funs sCommunicatePrefix iCommState
 
+
 addAdversarialTranss :: [Function] -> String -> Ident -> VerRes ()
 addAdversarialTranss funs whichPrefix whichState = do
   mapM_ (addAdversarialTranssToPlayer modifyPlayer0 whichPrefix whichState) funs
   mapM_ (addAdversarialTranssToPlayer modifyPlayer1 whichPrefix whichState) funs
 
+
 addAdversarialTranssToPlayer :: ModifyModuleType -> String -> Ident -> Function -> VerRes ()
+
 addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunV (Ident funName) args _) = do
   mod <- modifyModule id  
   let valName = Ident $ funName  ++ sValueSuffix ++ (show $ number mod)
@@ -411,25 +414,30 @@ addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunL limit (Id
   let maxValsList = generateValsListNoVal args
   generateAdvTranss modifyModule whichPrefix whichState False limit funName args maxValsList
 
+
 generateAdvTranss :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> [[Exp]] -> VerRes ()
 generateAdvTranss modifyModule whichPrefix whichState withVal limit funName args maxes = do
   mod <- modifyModule id
+  let runsIdent = Ident $ funName ++ sRunsSuffix ++ (show $ number mod)
   case maxes of
     [] ->
       addTransNoState
         modifyModule
         (whichPrefix ++ funName ++ (show $ number mod))
-        [   
-          -- critical section
-          -- ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
-          EEq (EVar iContrState) (EInt 1), 
-          EEq (EVar iCommState) (EInt 1), 
-          EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
-        ]
+        (
+          [   
+            -- critical section
+            -- ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
+            EEq (EVar iContrState) (EInt 1), 
+            EEq (EVar iCommState) (EInt 1), 
+            EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
+          ]
+          ++ 
+          (if (limit > -1) then [ELt (EVar runsIdent) (EInt limit)] else [])
+        )
         -- TODO: Alive?
-        [([], [Alive])]
+        [(if (limit > -1) then [(runsIdent, EAdd (EVar runsIdent) (EInt 1))] else [], [Alive])]
     maxValsList -> do
-      let runsIdent = Ident $ funName ++ sRunsSuffix ++ (show $ number mod)
       forM_
         maxValsList
         (\vals -> addTransNoState

@@ -26,7 +26,7 @@ contract Micropay {
   uint(2) pot = 1;
   uint(3) deposit = 2;
 
-  function release(cmt_uint(2) rel_c, uint(2) rel_rU) {
+  function_limit 1 release(cmt_uint(2) rel_c, uint(2) rel_rU) {
     if (checkCommitment(rel_c, rel_rU)) {
       if (winning_tickets < 2) {
         winning_tickets = winning_tickets + 1;
@@ -46,7 +46,7 @@ contract Micropay {
   }
 
   function release_deposit() {
-    if (time_elapsed >= 2) {
+    if (time_elapsed >= 2 && deposit >= 2) {
       0.send(2);
       deposit = deposit - 2;
     }
