@@ -38,14 +38,14 @@ contract Micropay {
     } 
   }
 
-  function_limit 1 burn() {
+  function burn() {
     if ((winning_tickets >= 2) && (deposit >= 2)) {
       "null".send(2);
       deposit = deposit - 2;
     }
   }
 
-  function_limit 1 release_deposit() {
+  function release_deposit() {
     if (time_elapsed >= 2 && deposit >= 2) {
       0.send(2);
       deposit = deposit - 2;

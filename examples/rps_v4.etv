@@ -8,6 +8,7 @@ USER0_BALANCE_INIT = 1;
 USER1_BALANCE_INIT = 2;
 MAX_VALUE = 1;
 MAX_TIME = 2;
+MAX_COMMITMENTS = 2;
 
 contract RPS {
   uint(3) num_players;
