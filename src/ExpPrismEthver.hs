@@ -360,8 +360,26 @@ verFullAss modifyModule (SAss varIdent exp) = do
                     verStm modifyModule (SAss newIdent (EVar rIdent))
         _ -> error $ show exp ++ ": r-value for signature can only be a sign(...) function"
 
+    
     _ -> do
-      (guards, updates) <- generateSimpleAss modifyModule (SAss varIdent exp)
+      let 
+        (newVarIdent, newExp) = 
+          case varTyp of
+            Just (TCUInt x) ->
+              case exp of
+                EVar rightIdent -> 
+                  (Ident $ unident varIdent ++ sIdSuffix, EVar $ Ident $ unident rightIdent ++ sIdSuffix)
+                ERand _ ->
+                  (varIdent, exp)
+                EInt _ ->
+                  (varIdent, exp)
+                _ -> 
+                  error $ (show exp)
+                    ++ ": RHS of assignment to cmt can only be a cmt variable or ERand (in openCommitment)"
+                    ++ " or EInt (in randomCommitment)"
+            _ -> (varIdent, exp)
+        
+      (guards, updates) <- generateSimpleAss modifyModule (SAss newVarIdent newExp)
       
       addTransToNewState
         modifyModule
