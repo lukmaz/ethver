@@ -111,16 +111,18 @@ scenario U {
 scenario M {
   bool win;
   bool endM;
+  uint(2) rand1;
 
   payment_request.sendCommunication();
   wait(is_signedU, 1);
   if (is_signedU && time_elapsed < 1) {
+    rand1 = randU;
     copy_signature.sendCommunication();
-    if (sigma_1_sig0 == 1 && sigma_1_sig1 == randU && sigma_1_sig2 == 1) {
+    if (sigma_1_sig0 == 1 && sigma_1_sig1 == rand1 && sigma_1_sig2 == 1) {
       open.sendCommunication();
-      if (commitmentM[1] == randU) { // moze niepotrzebne? Moze nie trzeba trzymac randU w globalu?
+      if (commitmentM[1] == rand1) { // moze niepotrzebne? Moze nie trzeba trzymac randU w globalu?
         win = true;
-        release.sendTransaction(commitmentM[1], randU, {from: "M", value: 0});
+        release.sendTransaction(commitmentM[1], rand1, {from: "M", value: 0});
         wait(balance1 >= 1, 1);
         if ((balance1 < 1) && (winning_tickets >= 2)) {
           burn.sendTransaction({from: "M", value: 0});
