@@ -62,13 +62,16 @@ following interleaving for the witness:
 \begin{itemize}
 \item merchant M executes \lstinline{payment_request}
 \item user U executes \lstinline{payment_issuance}
+\item merchant M executes \lstinline{copy_signature}
+\item \textbf{user U executes \lstinline{payment_issuance}}
 \item merchant M executes \lstinline{open}
 \item user U calls \lstinline{release} contract function
 \item merchant M calls \lstinline{release} contract function
 \end{itemize}
 This illustrates a real flaw in the protocol: a front-running attack.
 In this attack a malicious user U can produce a winning ticket by simulating
-the merchant protocol and broadcast his version of \lstinline{release} transaction which can be processed 
+the merchant protocol and generating the second \lstinline{payment_issuance} with an argument of his choice.
+He can then broadcast his version of \lstinline{release} transaction which can be processed 
 before the \lstinline{release} transaction created by merchant M.
 Moreover, user U can monitor the network and wait until M's transaction appears in the network and only then
 react with broadcasting his own transaction.
