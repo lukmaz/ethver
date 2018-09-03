@@ -11,12 +11,12 @@ MAX_TIME = 2;
 
 contract RPS {
   uint(3) num_players;
-  uint(2) player_address[2];
+  address player_address[2];
   uint(3) player_choice[2];
   uint(3) p0;
   uint(3) p1;
   uint(3) reward;
-
+  
   function_with_value player_input(uint(3) choice) {
     if (num_players < 2 && msg.value == 1) {
       reward = reward + msg.value;
@@ -25,7 +25,8 @@ contract RPS {
       num_players = num_players + 1;
     }
   }
-
+  
+  
   function finalize() {
     p0 = player_choice[0];
     p1 = player_choice[1];
@@ -40,6 +41,7 @@ contract RPS {
       player_address[1].send(reward/2);
     }
   }
+  
 }
 
 communication {

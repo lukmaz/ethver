@@ -39,37 +39,22 @@ run v p f s = let ts = myLLexer s in case p ts of
                           exitFailure
            Ok  tree -> do putStrLn "\nParse Successful!"
                           showTree v tree
-                          let (contr, scen) = ethTree tree
-                          {-putStrLn ("Writing file " ++ (contrFileName f))
+                          let contr = ethTree tree
+                          putStrLn ("Writing file " ++ (contrFileName f))
                           writeFile
                             (contrFileName f)
                             contr
-                          putStrLn ("Writing file " ++ (scenFileName f))
-                          writeFile
-                            (scenFileName f)
-                            scen-}
-                          let (ver, props) = verTree tree
+                          {-let ver = verTree tree
                           putStrLn ("Writing file " ++ (verFileName f))
                           writeFile
                             (verFileName f)
-                            ver
-                          {-putStrLn ("Writing file " ++ (propsFileName f))
-                          writeFile
-                            (propsFileName f)
-                            props
-                          exitSuccess-}
+                            ver-}
 
 contrFileName :: String -> String
 contrFileName = (++ "sol") . reverse . drop 3 . reverse
 
-scenFileName :: String -> String
-scenFileName = (++ "web3") . reverse . drop 3 . reverse
-
 verFileName :: String -> String
 verFileName = (++ "prism") . reverse . drop 3 . reverse
-
-propsFileName :: String -> String
-propsFileName = (++ "props") . reverse . drop 3 . reverse
 
 showTree :: (Show a, Print a) => Int -> a -> IO ()
 showTree v tree

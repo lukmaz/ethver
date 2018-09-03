@@ -111,6 +111,7 @@ TUInt.   Type ::= "uint" "(" Integer ")" ;
 TBool.   Type ::= "bool" ;
 TCUInt.  Type ::= "cmt_uint" "(" Integer ")" ;
 TSig.    Type ::= "signature" "(" [Type] ")" ;
+TAddr.   Type ::= "address" ;
 
 separator Type "," ;
 

@@ -16,10 +16,10 @@ import WorldPrismEthver
 
 
 -- generates (prism model code, prism properties)
-verTree :: Program -> (String, String)
+verTree :: Program -> String
 verTree prog =
   let (a, world) = (runState (verProgram prog)) emptyVerWorld
-  in (generatePrism world, props world)
+  in generatePrism world
 
 verProgram :: Program -> VerRes ()
 verProgram (Prog users constants contract communication scenarios) = do
