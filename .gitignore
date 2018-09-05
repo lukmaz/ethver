@@ -40,4 +40,5 @@ paper/*.bbl
 paper/*.blg
 paper/*.toc
 paper/*.synctex.gz
+paper/*.out
 .DS_Store

@@ -2,6 +2,15 @@
 
 \section{Case study: Micropay protocol}
 
+\section{Introduction}
+
+In this section we present a MICROPAY protocol from \emph{Rafael Pass, abhi shelat, 
+Micropayments for Decentralized Currencies} \cite{CCS:PasShe15}.
+The protocol was originally published at the \emph{22nd ACM SIGSAC Conference on Computer and 
+Communications Security} and it was vulnerable to so called \emph{front-running attack}.
+The bug was pointed out by Joseph Bonneau and the authors published the fixed version of the protocol
+which mitigates this attack \cite{EPRINT:Passhe16}.
+
 \subsection{Original contract code}
 
 \lstinputlisting[caption=Contract code for the original Micropay protocol, label=lst:micro_v1]{../examples/micro_v1.etv}
