@@ -2,14 +2,82 @@
 
 \section{Case study: Rock-Paper-Scissors}
 
+\subsection{Introduction}
+
+In this section we present a case study of running EthVer on a real life example of a Rock-Paper-Scissors contract 
+from \emph{Delmolino et al., Step by Step Towards Creating a Safe Smart Contract: Lessons and
+Insights from a Cryptocurrency Lab} \cite{delmolino}.
+I this paper the authors describe smart contracts created by the attendees of an undergrad lab and focus on
+the bugs introduced while designing the contracts.
+
+The Rock-Paper-Scissors is a protocol in which two players choose their inputs from $\{R, P, S\}$ and bet
+$x$ ETH each. The reward of $2x$ goes to the winner according to the standard rules of the game or is split
+between the players in case of a draw.
+The students created an Ethereum contract code for this protocol and the authors point out the following
+bugs in the code:
+\begin{itemize}
+\item if any player sends different amount of money than the fixed bet, his money is lost,
+\item if any player joins the game as the third player, his money is also lost,
+\item a malicious player can wait until his opponent makes his move and then he can get to know the opponent's
+choice (since it is a publicly visible variable in the network) and make his own move accordingly to guarantee
+a victory.
+\end{itemize}
+All of them are typical bugs that may arise during smart contract creation and they can be prevented by careful 
+programming.
+However, turns out that EthVer could help the programmer
+to find and correct every of these bugs automatically  and in this section we present a step by step analysis 
+of the contract with EthVer which leads to the final, correct and secure code of the contract.
+
+
 %%%%%%%%%%%%%%%
-\subsection{Initial code}
+\subsection{Original, buggy code of the contract}
 %%%%%%%%%%%%%%%
 
-\lstinputlisting[caption=RPS v1]{../examples/rps_v1.etv}
+\lstinputlisting[caption=RPS v1, label=lst:rps_v1]{../examples/rps_v1.etv}
 %\begin{lstlisting}
 %RPS v1
 %\end{lstlisting}
+
+Listing \ref{lst:rps_v1} depicts the original, buggy code of the Rock-Paper-Scissors contract.
+It is written in a special EthVer input syntax which is similar to Solidity (a programming language for contracts
+in Ethereum) enriched by some elements needed for PRISM verification like, e.g., bounded integer types.
+This code can be passed as a source code to EthVer to generate a PRISM model for it which can be used
+to verify PRISM properties.
+
+In order to create the PRISM properties to verify, we must first define, what real properties are we expecting from
+the model.
+In the real Rock-Paper-Scissors game an honest player has 1/3 probability of winning, 1/3 probability of losing and
+1/3 probability of a draw.
+The protocol is modelled in PRISM as a Markov Decision Process (MDP) and PRISM allows us to verify
+the \emph{minimum probability} and the \emph{maximum probability} properties, where the probability is taken 
+over all random choices of the model and the minimum/maximum is taken over all the non-deterministic choices
+of the model.
+Therefore, we can construct the following PRISM properties to verify\footnote{here and later we omit the symmetric
+properties for player 1}:
+\begin{lstlisting}
+Pmin=? [F endA & balance0 = 2]
+Pmax=? [F endA & balance0 = 2]
+Pmin=? [F endA & balance0 = 1]
+Pmax=? [F endA & balance0 = 1]
+Pmin=? [F endA & balance0 = 0]
+Pmax=? [F endA & balance0 = 0]
+\end{lstlisting}
+All the properties above should evaluate to 1/3.
+After we run the verification of these properties on the generated model in PRISM, it turns out that the properties
+indeed evaluates to 1/3 each.
+This means that in case of a game between two honest players, each of them has equal chances
+of winning, losing and a draw.
+
+In order to fully verify the correctness and security of a contract, we must consider a game between an honest
+player and a malicious player and assure that the malicious player cannot increase his chances of winning or a draw.
+This can be simplified to two properties for a game between an honest player 0 and a malicious player 1:
+\begin{itemize}
+\item the probability of winning by player 0 is at least equal to 1/3,
+\item the probability of winning by player 0 or a draw is at least equal to 2/3.
+\end{itemize}
+These properties can be written as PRISM properties and then verified in the honest mode 
+(\lstinline{ADVERSARY = -1}) and in the adversarial mode (\lstinline{ADVERSARY = 1}).
+The results of the verification are shown in the table below:
 
 \lstinputlisting[caption=Properties for RPS v1, label=prop:rps_v1]{../examples/rps_v1.props}
 
@@ -23,8 +91,11 @@ property & target & \shortstack{result \\ (honest mode)} & \shortstack{result \\
 \hline
 \end{tabular}
 
-\subsection{Debugging RPS v1}
-We can start debugging RPS v1 with verifying if the final distribution of money corresponds to the chosen values 
+\subsection{Early interruption of the protocol}
+We have seen that the contract code presented in the previous section is secure in the honest mode, however
+it contains some bugs which make it vulnerable to attacks by the malicious player.
+In order to find the bugs, we can start debugging RPS v1 with verifying if the final distribution of money corresponds 
+to the chosen values 
 of \lstinline{p0}, \lstinline{p1}.
 PRISM provides a useful tool for generating a witness/counterexample for reachability properties.
 In order to use it, we must formulate a property describing an unwanted state, e.g., 

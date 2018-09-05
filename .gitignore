@@ -33,8 +33,11 @@ src/SkelEthver.hs
 src/TestEthver.hs
 src/TestEthver
 examples/*.prism
+examples/*.sol
 examples/old
 old
+paper/*.bbl
+paper/*.blg
 paper/*.toc
 paper/*.synctex.gz
 .DS_Store
