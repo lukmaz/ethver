@@ -11,7 +11,7 @@ MAX_TIME = 2;
 
 contract RPS {
   uint(3) num_players;
-  uint(2) player_address[2];
+  address player_address[2];
   uint(3) player_choice[2];
   uint(3) p0;
   uint(3) p1;

@@ -114,6 +114,11 @@ ethFun (FunR ident args ret stms) = do
 
 ethStm :: Stm -> EthRes ()
 
+ethStm (SBlock stms) = do
+  addContr "{\n"
+  mapM_ ethStm stms
+  addContr "}\n"
+
 ethStm (SAss ident exp) = do
   ethIdent ident
   addContr " = "
@@ -134,15 +139,16 @@ ethStm (SIf cond stm) = do
   addContr ")\n"
   ethStm stm
 
-ethStm (SBlock stms) = do
-  addContr "{\n"
-  mapM_ ethStm stms
-  addContr "}\n"
-
 ethStm (SReturn exp) = do
   addContr "return "
   ethExp exp
   addContr ";\n"
+
+ethStm (SSend receiver value) = do
+  ethExp receiver
+  addContr ".transfer("
+  ethExp value
+  addContr ");\n"
 
 ethStm stm = do
   error $ (show stm) ++ ": ethStm not implemented for this statement"
@@ -171,10 +177,18 @@ ethExp (EMul e1 e2) = ethBinOp "*" e1 e2
 ethExp (EDiv e1 e2) = ethBinOp "/" e1 e2
 ethExp (EMod e1 e2) = ethBinOp "%" e1 e2
 
-ethExp (EInt x) = ethInteger x
+ethExp (EArray ident index) = do
+  ethIdent ident
+  addContr "["
+  ethExp index
+  addContr "]"
 
-ethExp (ESender) = addContr "msg.sender"
 ethExp (EValue) = addContr "msg.value"
+ethExp (ESender) = addContr "msg.sender"
+
+ethExp (EInt x) = ethInteger x
+ethExp (ETrue) = addContr "true"
+ethExp (EFalse) = addContr "false"
 
 ethExp exp = do
   error $ (show exp) ++ ": ethExp not implemented for this expression"
