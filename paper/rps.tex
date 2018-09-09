@@ -7,26 +7,28 @@
 In this section we present a case study of running EthVer on a real life example of a Rock-Paper-Scissors contract 
 from \emph{Delmolino et al., Step by Step Towards Creating a Safe Smart Contract: Lessons and
 Insights from a Cryptocurrency Lab} \cite{FCW:DAKMS16}. 
-I this paper the authors describe smart contracts created by the attendees of an undergrad lab and focus on
-the bugs introduced while designing the contracts.
+In this paper the authors describe smart contracts created by the attendees of a cryptocurrency course
+for undergraduate students.
+The authors document the typical mistakes student made and suggest ways to avoid them when designing 
+a secure smart contract.
 
 The Rock-Paper-Scissors is a protocol in which two players choose their inputs from $\{R, P, S\}$ and bet
 $x$ ETH each. The reward of $2x$ goes to the winner according to the standard rules of the game or is split
 between the players in case of a draw.
-The students created an Ethereum contract code for this protocol and the authors point out the following
+The students created an Ethereum contract code for this protocol and the authors pointed out the following
 bugs in the code:
 \begin{itemize}
 \item if any player sends different amount of money than the fixed bet, his money is lost,
 \item if any player joins the game as the third player, his money is also lost,
 \item a malicious player can wait until his opponent makes his move and then he can get to know the opponent's
-choice (since it is a publicly visible variable in the network) and make his own move accordingly to guarantee
+choice (since it is a publicly visible variable in the network) and make an according move, which guarantees him
 a victory.
 \end{itemize}
 All of them are typical bugs that may arise during smart contract creation and they can be prevented by careful 
 programming.
-However, turns out that EthVer could help the programmer
+However, it turns out that EthVer could help the programmer
 to find and correct every of these bugs automatically  and in this section we present a step by step analysis 
-of the contract with EthVer which leads to the final, correct and secure code of the contract.
+of the contract with EthVer which leads to the final, correct and secure version of the code.
 
 
 %%%%%%%%%%%%%%%
@@ -98,7 +100,7 @@ In order to find the bugs, we can start debugging RPS v1 with verifying if the f
 to the chosen values 
 of \lstinline{p0}, \lstinline{p1}.
 PRISM provides a useful tool for generating a witness/counterexample for reachability properties.
-In order to use it, we must formulate a property describing an unwanted state, e.g., 
+In order to use it, we must formulate a reachability property describing an unwanted state, e.g., 
 \textit{eventually, the player 0 finishes with no money
 while the chosen values were the same}:
 \begin{equation}
@@ -123,7 +125,7 @@ The order of function contract function executions is as follows:
 
 Function \lstinline{finalize} is broadcast before player 0 has managed to broadcast his \lstinline{player_input} 
 function call.
-This is an obvious shortcoming of the contract --- calling \lstinline{finalize} function should not be allowed
+This is an obvious drawback of the contract --- calling \lstinline{finalize} function should not be allowed
 before both \lstinline{player_input} functions have been executed.
 
 \paragraph{Fix 1} 

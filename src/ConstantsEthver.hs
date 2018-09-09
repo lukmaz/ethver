@@ -46,6 +46,7 @@ sMaxValue = "MAX_VALUE"
 sMaxTime = "MAX_TIME"
 sMaxSignatures = "MAX_SIGNATURES"
 sMaxCommitments = "MAX_COMMITMENTS"
+sTimeDelta = "TIME_DELTA"
 
 sContrState = "contrstate"
 sCommState = "commstate"
@@ -93,6 +94,9 @@ sCommSender = "comm_sender"
 sValue = "value"
 
 sNull = "null"
+
+sContractStart = "contract_start"
+sNow = "now"
 
 -- transaction states
 sTNone = "T_NONE"

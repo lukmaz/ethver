@@ -5,6 +5,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
 import AbsEthver
+import AuxEthver
 import AuxPrismEthver
 import AuxWorldPrismEthver
 import CodePrismEthver

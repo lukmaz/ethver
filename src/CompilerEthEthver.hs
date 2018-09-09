@@ -4,6 +4,8 @@ import Control.Monad.State
 
 import AbsEthver
 import AuxEthEthver
+import AuxEthver
+import ConstantsEthver
 
 
 ethTree :: Program -> String
@@ -13,25 +15,48 @@ ethTree prog =
   
 
 ethProgram :: Program -> EthRes ()
-ethProgram (Prog _ _ contract communication scenarios) = do
+ethProgram (Prog _ constants contract communication scenarios) = do
   -- TODO: users?
   -- TODO: constants
   addContr "pragma solidity ^0.4.24;\n"
-  ethContract contract
+  ethContract constants contract
   addContr "\n"
 
 -- Contract
 
 -- TODO: UserDecl
-ethContract :: Contract -> EthRes ()
-ethContract (Contr ident decls funs) = do
+ethContract :: [ConstantDecl] -> Contract -> EthRes ()
+ethContract constants (Contr ident decls funs) = do
   addContr "contract "
   ethIdent ident
   addContr " {\n"
+  ethConstants constants
   mapM_ ethDecl decls
   addContr "\n"
+  ethConstructor
   mapM_ ethFun funs
   addContr "}"
+
+ethConstants :: [ConstantDecl] -> EthRes ()
+ethConstants constants = do
+  mapM_
+    (
+      \(Const ident val) -> 
+        if ident == (Ident sTimeDelta) 
+        then do
+          addContr $ "uint " ++ sContractStart ++ ";\n"
+          addContr $ "uint " ++ (unident ident) ++ " = "
+          ethInteger val
+          addContr ";\n"
+        else return ()
+    )
+    constants
+
+ethConstructor :: EthRes ()
+ethConstructor = do
+  addContr "constructor() public {\n"
+  addContr $ sContractStart ++ " = " ++ sNow ++ ";\n"
+  addContr $ "}\n"
 
 -- TODO
 ethCommunication :: Communication -> EthRes ()
@@ -160,7 +185,11 @@ ethStm stm = do
 
 ethExp :: Exp -> EthRes ()
 ethExp (EVar ident) = do
-  ethIdent ident
+  if ident == (Ident sTimeElapsed)
+  then
+      addContr $ "(" ++ sNow ++ " - " ++ sContractStart ++ ") / " ++ sTimeDelta
+  else
+      ethIdent ident
 
 -- MATH
 ethExp (EAnd e1 e2) = ethBinOp "&&" e1 e2

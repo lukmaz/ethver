@@ -6,6 +6,7 @@ import qualified Data.Set as Set
 
 import AbsEthver
 import AuxPrismEthver
+import AuxEthver
 import ConstantsEthver
 import WorldPrismEthver
 
