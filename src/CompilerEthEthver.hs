@@ -33,7 +33,6 @@ ethContract constants (Contr ident decls funs) = do
   ethConstants constants
   mapM_ ethDecl decls
   addContr "\n"
-  ethConstructor
   mapM_ ethFun funs
   addContr "}"
 
@@ -48,6 +47,7 @@ ethConstants constants = do
           addContr $ "uint " ++ (unident ident) ++ " = "
           ethInteger val
           addContr ";\n"
+          ethConstructor
         else return ()
     )
     constants
@@ -79,7 +79,9 @@ ethDecl (DecInit typ ident value) = do
 
 ethDecl (ArrDec typ ident size) = do
   ethType typ
-  addContr "[] "
+  addContr "["
+  ethInteger size
+  addContr "] "
   ethIdent ident
   addContr ";\n"
 
@@ -204,7 +206,7 @@ ethExp (EAdd e1 e2) = ethBinOp "+" e1 e2
 ethExp (ESub e1 e2) = ethBinOp "-" e1 e2
 ethExp (EMul e1 e2) = ethBinOp "*" e1 e2
 ethExp (EDiv e1 e2) = ethBinOp "/" e1 e2
-ethExp (EMod e1 e2) = ethBinOp "%" e1 e2
+ethExp (EMod e1 e2) = ethBinOpWithOnePar "%" e1 e2
 
 ethExp (EArray ident index) = do
   ethIdent ident
@@ -216,6 +218,10 @@ ethExp (EValue) = addContr "msg.value"
 ethExp (ESender) = addContr "msg.sender"
 
 ethExp (EInt x) = ethInteger x
+ethExp (EFinney x) = do
+  ethInteger x
+  addContr " finney"
+
 ethExp (ETrue) = addContr "true"
 ethExp (EFalse) = addContr "false"
 
@@ -224,6 +230,13 @@ ethExp exp = do
 
 
 -- ethExp aux
+
+-- TODO: hack only for %
+ethBinOpWithOnePar op e1 e2 = do
+  addContr "("
+  ethExp e1
+  addContr $ ") " ++ op ++ " "
+  ethExp e2
 
 ethBinOp op e1 e2 = do
   ethExp e1

@@ -89,6 +89,7 @@ EValue.  Exp7 ::= "msg" "." "value" ;
 ESender. Exp7 ::= "msg" "." "sender" ;
 EStr.    Exp7 ::= String ;
 EInt.    Exp7 ::= Integer ;
+EFinney. Exp7 ::= "finney" "(" Integer ")" ;
 ETrue.   Exp7 ::= "true" ;
 EFalse.  Exp7 ::= "false" ;
 
@@ -100,6 +101,7 @@ _. Exp4  ::= Exp5 ;
 _. Exp5  ::= Exp6 ;
 _. Exp6  ::= Exp7 ;
 _. Exp7  ::= Exp8 ;
+-- _. Exp8  ::= "(" Exp ")" ;
 
 coercions Exp 8 ;
 separator CallArg "," ;
