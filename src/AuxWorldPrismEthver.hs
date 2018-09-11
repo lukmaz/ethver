@@ -22,6 +22,7 @@ minValue ident = do
     Just (TCUInt x) -> return 0
     Just (TSig x) -> return 0
     Just TBool -> return 0
+    Just TAddr -> return 0
     Nothing -> error $ "Type of '" ++ (show ident) ++ "' not found"
 
 maxRealValue :: Ident -> VerRes Exp

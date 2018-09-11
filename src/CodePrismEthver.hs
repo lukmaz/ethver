@@ -186,6 +186,7 @@ prismShowType (TUInt x) = "[0.." ++ (show $ x - 1) ++ "]"
 prismShowType (TCUInt x) = "[0.." ++ (show $ x + 1) ++ "]"
 prismShowType (TSig x) = "[0.." ++ (show x) ++ "]"
 --prismShowType TSig = "[0.." ++ (show sMaxSignatures) ++ "]"
+prismShowType (TAddr) = "[0..1]" 
 prismShowType TBool = "bool"
 
 -- TODO: porównanie w PRISM jest =, a w Solidity jest ==. Ale chyba będą i tak dwie różne

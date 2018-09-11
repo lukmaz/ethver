@@ -19,7 +19,7 @@ contract RPS {
   uint(3) reward;
 
   function_with_value player_input(uint(3) choice) {
-    if (num_players < 2 && msg.value == 1) {
+    if (num_players < 2 && msg.value == finney(1)) {
       reward = reward + msg.value;
       player_address[num_players] = msg.sender;
       player_choice[num_players] = choice;

@@ -472,18 +472,21 @@ verExp modifyModule (EMod exp1 exp2) = verMathExp modifyModule (EMod exp1 exp2)
 
 verExp modifyModule (EVar ident) = verValExp modifyModule (EVar ident)
 verExp modifyModule (EArray ident exp) = verValExp modifyModule (EArray ident exp)
+verExp modifyModule (ERand exp) = verRandom modifyModule exp
+verExp modifyModule (ERandL exp) = verRandomLazy modifyModule exp
+
 verExp modifyModule EValue = verValExp modifyModule EValue
 verExp modifyModule ESender = verValExp modifyModule ESender
 verExp modifyModule (EInt x) = verValExp modifyModule (EInt x)
 verExp modifyModule (EStr s) = verValExp modifyModule (EStr s)
+verExp modifyModule (EFinney x) = verValExp modifyModule (EInt x)
 verExp modifyModule ETrue = verValExp modifyModule ETrue
 verExp modifyModule EFalse = verValExp modifyModule EFalse
 
-verExp modifyModule (ERand exp) = verRandom modifyModule exp
-verExp modifyModule (ERandL exp) = verRandomLazy modifyModule exp
-
 verExp modifyModule (EVer key signature vars) = verVer modifyModule key signature vars
 verExp modifyModule (ECheck cmt val) = verCheck modifyModule cmt val
+
+verExp _ exp = error $ (show exp) ++ ": not supported by verExp"
 
 -------------
 -- MathExp --

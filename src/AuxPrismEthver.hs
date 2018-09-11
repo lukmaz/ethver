@@ -22,6 +22,7 @@ maxTypeValueOfType :: Type -> Integer
 maxTypeValueOfType (TUInt x) = (x - 1)
 maxTypeValueOfType (TCUInt x) = (x + 1)
 maxTypeValueOfType TBool = 1
+maxTypeValueOfType TAddr = 1
 maxTypeValueOfType (TSig _) = error $ "maxTypeValueOfType should not be used with TSig _"
 
 -- identFromComp

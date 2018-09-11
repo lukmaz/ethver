@@ -44,11 +44,11 @@ run v p f s = let ts = myLLexer s in case p ts of
                           writeFile
                             (contrFileName f)
                             contr
-                          {-let ver = verTree tree
+                          let ver = verTree tree
                           putStrLn ("Writing file " ++ (verFileName f))
                           writeFile
                             (verFileName f)
-                            ver-}
+                            ver
 
 contrFileName :: String -> String
 contrFileName = (++ "sol") . reverse . drop 3 . reverse
