@@ -484,7 +484,7 @@ verExp modifyModule ETrue = verValExp modifyModule ETrue
 verExp modifyModule EFalse = verValExp modifyModule EFalse
 
 verExp modifyModule (EVer key signature vars) = verVer modifyModule key signature vars
-verExp modifyModule (ECheck cmt val) = verCheck modifyModule cmt val
+verExp modifyModule (ECheck val nonce hash) = verCheck modifyModule val nonce hash
 
 verExp _ exp = error $ (show exp) ++ ": not supported by verExp"
 
@@ -714,7 +714,20 @@ verVer modifyModule key (EArray arrIdent index) varsOrArrs = do
     _ -> error $ show index ++ ": not supported index for arrays"
 
 
-verCheck :: ModifyModuleType -> Exp -> Exp -> VerRes Exp
+
+
+
+
+
+TU TRZEBA ZMIENIC NA NOWE COMMITMENTY
+
+
+
+
+
+
+
+verCheck :: ModifyModuleType -> Exp -> Exp -> Exp -> VerRes Exp
 verCheck modifyModule cmtVar val = do
   world <- get
   let
@@ -726,6 +739,7 @@ verCheck modifyModule cmtVar val = do
   return $ EOr
     (EAnd (EEq cmtId (EInt 0)) r0)
     (EAnd (EEq cmtId (EInt 1)) r1)
+
 -----------------------------
 -- Call auxilary functions --
 -----------------------------

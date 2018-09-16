@@ -9,42 +9,44 @@ USER1_BALANCE_INIT = 2;
 MAX_VALUE = 1;
 MAX_TIME = 2;
 MAX_COMMITMENTS = 2;
+TIME_DELTA = 3600;
 
 contract RPS {
   uint(3) num_players;
   address player_address[2];
+  uint(3) player_choice[2];
   uint(3) p0; // player who first joined the game
   uint(3) p1;
   uint(3) reward;
   uint(2) player_num;
-  cmt_uint(3) commit[2];
+  hash commitment[2];
 
   bool committed[2]; // 0 - player who first joined the game
   bool has_revealed[2];
 
-  function_with_value player_input() {
+  function_with_value player_input(hash cmt) {
     if (num_players >= 2 || msg.value != finney(1)) {
       msg.sender.send(msg.value);
     }
     else if (num_players < 2 && msg.value == finney(1)) {
       reward = reward + msg.value;
       player_address[num_players] = msg.sender;
-      commit[num_players].randomCommitment();
+      commitment[num_players] = cmt;
       committed[num_players] = true; // TODO: potrzebne?
       num_players = num_players + 1;
     }
   }
 
-  function open() {
+  function open(uint(3) choice, nonce salt) {
     if (msg.sender == player_address[0]) {
       player_num = 0;
     }
     else if (msg.sender == player_address[1]) {
       player_num = 1;
     }
-    if (committed[player_num] && !has_revealed[player_num]) {
-      commit[player_num].openCommitment();
+    if (committed[player_num] && !has_revealed[player_num] && checkCommitment(choice, salt, commitment[player_num]) {
       has_revealed[player_num] = true;
+      player_choice[player_num] = choice;
     }
   }
 
@@ -53,8 +55,8 @@ contract RPS {
       player_address[0].send(1);
     }
     if (has_revealed[0] && has_revealed[1]) {
-      p0 = commit[0];
-      p1 = commit[1];
+      p0 = player_choice[0];
+      p1 = player_choice[1];
       if ((((3 + p0) - p1) % 3) == 1) {
         player_address[0].send(reward);
       }
@@ -75,10 +77,13 @@ communication {
 
 scenario A {
   bool endA;
-  player_input.sendTransaction({from: "A", value: 1});
+  cmt_uint(3) cmtA;
+  cmtA.randomCommitment();
+  player_input.sendTransaction(cmtA_hash, {from: "A", value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
-    open.sendTransaction({from: "A", value: 0});
+    cmtA.openCommitment();
+    open.sendTransaction(cmtA_val, cmtA_nonce, {from: "A", value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }
   finalize.sendTransaction({from: "A", value: 0});
@@ -87,10 +92,13 @@ scenario A {
 
 scenario B {
   bool endB;
-  player_input.sendTransaction({from: "B", value: 1});
+  cmt_uint(3) cmtB;
+  cmtB.randomCommitment();
+  player_input.sendTransaction(cmtB_hash, {from: "B", value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
-    open.sendTransaction({from: "A", value: 0});
+    cmtB.openCommitment();
+    open.sendTransaction(cmtB_val, cmtB_nonce, {from: "A", value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }
   finalize.sendTransaction({from: "B", value: 0});

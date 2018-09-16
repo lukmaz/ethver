@@ -83,7 +83,7 @@ ERand.   Exp7 ::= "random" "(" Exp ")" ;
 ERandL.  Exp7 ::= "random_lazy" "(" Exp ")" ;
 ESign.   Exp7 ::= "sign" "(" [Exp] ")" ;
 EVer.    Exp7 ::= "ver" "(" Exp "," Exp "," "(" [Exp] ")" ")" ;
-ECheck.  Exp7 ::= "checkCommitment" "(" Exp "," Exp ")" ;
+ECheck.  Exp7 ::= "checkCommitment" "(" Exp "," Exp "," Exp ")" ;
 EVar.    Exp7 ::= Ident ;
 EValue.  Exp7 ::= "msg" "." "value" ;
 ESender. Exp7 ::= "msg" "." "sender" ;
@@ -114,6 +114,8 @@ TBool.   Type ::= "bool" ;
 TCUInt.  Type ::= "cmt_uint" "(" Integer ")" ;
 TSig.    Type ::= "signature" "(" [Type] ")" ;
 TAddr.   Type ::= "address" ;
+TNonce.  Type ::= "nonce" ;
+THash.   Type ::= "hash" ;
 
 separator Type "," ;
 
