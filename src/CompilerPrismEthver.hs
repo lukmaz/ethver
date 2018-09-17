@@ -98,12 +98,19 @@ verDecl modifyModule (Dec (TCUInt range) varIdent) = do
   let 
     nr = fromIntegral $ Map.size $ commitmentsIds world
     idIdent = Ident $ unident varIdent ++ sIdSuffix
-  put (world {commitmentsIds = Map.insert varIdent nr $ commitmentsIds world,
-    commitmentsNames = commitmentsNames world ++ [varIdent]})
-
+    globalIdent = Ident $ sGlobalCommitments ++ "_" ++ show nr
+  put (world {commitmentsIds = Map.insert varIdent nr $ commitmentsIds world})
+  
+  -- add TCUInt variable with the exact given name
   _ <- modifyModule (addVarToModule (TCUInt range) varIdent)
-  addInitialValue modifyModule varIdent (EInt $ range + 1)
-  addCmtIdVar modifyModule varIdent range
+  -- addInitialValue modifyModule globalIdent (EInt $ range + 1)
+
+  -- add gloabl_commitment variable
+  _ <- modifyModule (addGlobalCommitment (TCUInt range) globalIdent)
+  addInitialValue modifyModule globalIdent (EInt $ range + 1)
+
+  -- auxiliary variable for id with the given name
+  addCmtIdVar modifyModule idIdent
   addInitialValue modifyModule idIdent (EInt nr)
 
 
@@ -394,6 +401,9 @@ verOldFunCommunication fun = verOldFunContractOrCommunication modifyCommunicatio
 verScenarios :: [Scenario] -> VerRes ()
 verScenarios [(Scen userName0 decls0 stms0), (Scen userName1 decls1 stms1)] = do
   --TODO: przepadają userName'y
+  mapM_ (verDecl modifyPlayer0) decls0
+  mapM_ (verDecl modifyPlayer1) decls1
+
   verScenario modifyPlayer0 decls0 stms0
   verScenario modifyPlayer1 decls1 stms1
 
@@ -401,7 +411,6 @@ verScenario :: ModifyModuleType -> [Decl] -> [Stm] -> VerRes ()
 verScenario modifyModule decls stms = do
   mod <- modifyModule id
 
-  mapM_ (verDecl modifyModule) decls
   mapM_ (verStm modifyModule) stms
 
   -- allow time elapse after scenario finish

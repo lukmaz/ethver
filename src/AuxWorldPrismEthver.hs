@@ -3,6 +3,7 @@ module AuxWorldPrismEthver where
 import Control.Monad.State
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import GHC.Stack
 
 import AbsEthver
 import AuxPrismEthver
@@ -23,7 +24,9 @@ minValue ident = do
     Just (TSig x) -> return 0
     Just TBool -> return 0
     Just TAddr -> return 0
-    Nothing -> error $ "Type of '" ++ (show ident) ++ "' not found"
+    Just THash -> return 0
+    Nothing -> do
+      error $ "Type of '" ++ (show ident) ++ "' not found"
 
 maxRealValue :: Ident -> VerRes Exp
 maxRealValue ident = do
@@ -51,6 +54,7 @@ findType (EValue) = do
 -- strings only used for players names
 findType (EStr _) = findType ESender
 
+{- OLD:
 findVarType :: Ident -> VerRes (Maybe Type)
 findVarType ident = do
   world <- get 
@@ -69,6 +73,27 @@ findVarType ident = do
                   case Map.lookup ident (vars $ player1 world) of
                     Just typ -> return (Just typ)
                     Nothing -> return Nothing
+-}
+
+findVarType :: Ident -> VerRes (Maybe Type)
+findVarType ident = do
+  world <- get
+  let
+    listFromModule :: (VerWorld -> Module) -> [(Ident, Type)]
+    listFromModule mod = (Map.toList $ vars $ mod world) ++ (Map.toList $ globalCommitments $ mod world)
+    l = foldl 
+      (\acc m -> acc ++ listFromModule m) 
+      []
+      [blockchain, contract, communication, player0, player1]
+    newMap = Map.fromList l
+  return $ Map.lookup ident newMap
+
+commitmentVarName :: Ident -> VerRes Ident
+commitmentVarName varIdent = do
+  world <- get
+  case Map.lookup varIdent (commitmentsIds world) of
+    Just id -> return $ Ident $ sGlobalCommitments ++ "_" ++ (show id)
+    _ -> error $ (show varIdent) ++ ": not found in commitmentsIds"
 
 nameOfFunction :: Function -> String
 nameOfFunction (Fun (Ident name) _ _) = name

@@ -253,40 +253,27 @@ verStm modifyModule (SSendC funExp args) = do
 --
 --------------------------------------
 
+verStm modifyModule (SRCmt (EVar cmtVar)) = do
+  typ <- findVarType cmtVar
+  case typ of
+    Just (TCUInt x) -> do
+      verWithCommitment modifyModule cmtVar (\globalName -> SAss globalName (EInt x))
+    _ -> 
+      error $ unident cmtVar ++ ": randomCommitment can be called on cmt_uint object only"
 
-verStm modifyModule (SRCmt exp) = do
-  case exp of
-    EVar ident -> do
-      typ <- findVarType ident
-      case typ of
-        Just (TCUInt x) -> verStm modifyModule (SAss ident (EInt x))
-        _ -> error $ unident ident ++ ": randomCommitment can be called on cmt_uint object only."
-    EArray ident ESender -> do
-      varExp <- toVar exp
-      verStm modifyModule (SRCmt varExp)
-    EArray ident index -> do
-      let varName0 = (unident ident) ++ "_0"
-      let varName1 = (unident ident) ++ "_1"
-      typ <- findVarType (Ident varName0)
-      case typ of
-        Just (TCUInt x) -> verStm modifyModule (SIfElse
-          (EEq index (EInt 0))
-          (SAss (Ident varName0) (EInt x))
-          (SAss (Ident varName1) (EInt x)))
-        _ -> error $ varName0 ++ " (0/1): randomCommitment can be called on cmt_uint object only."
-    _ -> error $ (show exp) ++ "randomCommitment can be called on cmt_uint object only."
+verStm modifyModule (SOCmt (EVar cmtVar)) = do
+  typ <- findVarType cmtVar
+  case typ of
+    Just (TCUInt x) -> do
+      verWithCommitment modifyModule cmtVar (\globalName -> SAss globalName (ERand (EInt x)))
 
-verStm modifyModule (SOCmt exp) = do
-  case exp of
-    EVar ident -> do
-      typ <- findVarType ident
-      case typ of
-        Just (TCUInt x) -> verStm modifyModule (SAss ident (ERand (EInt x)))
-        _ -> error $ unident ident ++ ": openCommitment can be called on cmt_uint object only."
-    EArray ident ESender -> do
+{- moze niepotrzebne? Jesli potrzebne, to jest szansa, ze dziala 
+verStm modifyModule (SOCmt (EArray ident index)) = do
+  case index of
+    ESender -> do
       varExp <- toVar exp
       verStm modifyModule (SOCmt varExp)
-    EArray ident index -> do
+    _ -> do
       let varName0 = (unident ident) ++ "_0"
       let varName1 = (unident ident) ++ "_1"
       typ <- findVarType (Ident varName0) -- TODO: sprawdzic, czy findVarType dziala na tablicach
@@ -300,7 +287,7 @@ verStm modifyModule (SOCmt exp) = do
             (EEq index (EInt 0))
             (SAss (Ident varName0) (ERand (EInt x)))
             (SAss (Ident varName1) (ERand (EInt x))))
-    _ -> error $ (show exp) ++ ": openCommitment can be called on cmt_uint object only."
+-}
 
 verStm modifyModule (SWait cond time) = do
   evalCond <- verExp modifyModule cond
@@ -324,12 +311,36 @@ verStm modifyModule (SWait cond time) = do
     -- TODO: Alive?
     [([], [Alive])]
   
+---------
+-- Cmt --
+---------
+
+-- auxiliary function for translating between cmt var names and global cmt names
+verWithCommitment :: ModifyModuleType -> Ident -> (Ident -> Stm) -> VerRes ()
+verWithCommitment modifyModule cmtVar stmFromIdent = do
+  let
+    cmtId = EVar $ Ident $ unident cmtVar ++ sIdSuffix
+    globalName0 = Ident $ sGlobalCommitments ++ "_0"
+    globalName1 = Ident $ sGlobalCommitments ++ "_1"
+  world <- get
+  case Map.lookup cmtVar $ commitmentsIds world of
+    Just 0 ->
+      verStm modifyModule (stmFromIdent globalName0)
+    Just 1 ->
+      verStm modifyModule (stmFromIdent globalName1)
+    Nothing ->
+      verStm modifyModule (SIfElse
+        (EEq cmtId (EInt 0))
+        (stmFromIdent globalName0)
+        (stmFromIdent globalName1))
 
 ---------
 -- Ass --
 ---------
 
 verFullAss :: ModifyModuleType -> Stm -> VerRes ()
+verFullAss modifyModule (SAss varIdent (EValOf (EVar cmtVar))) = do
+  verWithCommitment modifyModule cmtVar (\globalName -> SAss varIdent $ EVar globalName)
 
 verFullAss modifyModule (SAss varIdent exp) = do
   case exp of
@@ -475,6 +486,7 @@ verExp modifyModule (EArray ident exp) = verValExp modifyModule (EArray ident ex
 verExp modifyModule (ERand exp) = verRandom modifyModule exp
 verExp modifyModule (ERandL exp) = verRandomLazy modifyModule exp
 
+verExp modifyModule (EHashOf exp) = verValExp modifyModule (EHashOf exp)
 verExp modifyModule EValue = verValExp modifyModule EValue
 verExp modifyModule ESender = verValExp modifyModule ESender
 verExp modifyModule (EInt x) = verValExp modifyModule (EInt x)
@@ -483,8 +495,8 @@ verExp modifyModule (EFinney x) = verValExp modifyModule (EInt x)
 verExp modifyModule ETrue = verValExp modifyModule ETrue
 verExp modifyModule EFalse = verValExp modifyModule EFalse
 
-verExp modifyModule (EVer key signature vars) = verVer modifyModule key signature vars
-verExp modifyModule (ECheck val nonce hash) = verCheck modifyModule val nonce hash
+verExp modifyModule (EVerS key signature vars) = verVerSig modifyModule key signature vars
+verExp modifyModule (EVerC cmtVar hash) = verCmt modifyModule cmtVar hash
 
 verExp _ exp = error $ (show exp) ++ ": not supported by verExp"
 
@@ -577,7 +589,13 @@ verMathExp modifyModule (EMod exp1 exp2) = do
 verValExp :: ModifyModuleType -> Exp -> VerRes Exp
 
 verValExp modifyModule (EVar ident) = do
-  return (EVar ident)
+  typ <- findVarType ident
+  case typ of
+    Just (TCUInt x) -> do
+      cmtVar <- commitmentVarName ident
+      return $ EVar $ cmtVar
+    _ ->
+      return (EVar ident)
 
 verValExp modifyModule (EArray (Ident ident) index) = do
   mod <- modifyModule id
@@ -617,6 +635,13 @@ verValExp modifyModule (EArray (Ident ident) index) = do
       let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
       verExp modifyModule $ EVar indexVar
       return $ EVar $ indexVar
+
+verValExp modifyModule (EHashOf (EVar cmtVar)) = do
+  world <- get
+  case Map.lookup cmtVar $ commitmentsIds world of
+    Just x -> return $ EInt x
+    Nothing -> error $ (show cmtVar) ++ 
+      " not found in commitmentSIds. hashOf should not be called outside scenario"
 
 verValExp modifyModule EValue = do
   return EValue
@@ -673,8 +698,8 @@ verRandomLazy modifyModule (EInt range) = do
 -- Signatures --
 ----------------
 
-verVer :: ModifyModuleType -> Exp -> Exp -> [Exp] -> VerRes Exp
-verVer modifyModule key (EVar signatureVar) varsOrArrs = do
+verVerSig :: ModifyModuleType -> Exp -> Exp -> [Exp] -> VerRes Exp
+verVerSig modifyModule key (EVar signatureVar) varsOrArrs = do
   sigMaybeTyp <- findVarType signatureVar
   vars <- mapM toVar varsOrArrs
   case sigMaybeTyp of
@@ -700,50 +725,42 @@ verVer modifyModule key (EVar signatureVar) varsOrArrs = do
       return $ foldl (f signatureVar (commitmentsIds world)) (EEq (EVar sigKey) key) (zip (zip [0..] sigTypes) vars)
     Nothing -> error $ show signatureVar ++ ": not found by findVarType"
 
-verVer modifyModule key (EArray arrIdent index) varsOrArrs = do
+verVerSig modifyModule key (EArray arrIdent index) varsOrArrs = do
   case index of
     EInt x ->
-      verVer modifyModule key (EVar $ Ident $ unident arrIdent ++ "_" ++ (show x)) varsOrArrs
+      verVerSig modifyModule key (EVar $ Ident $ unident arrIdent ++ "_" ++ (show x)) varsOrArrs
     ESender -> do
       world <- get
       case senderNumber world of
         Just nr ->
-          verVer modifyModule key (EVar $ Ident $ unident arrIdent ++ "_" ++ (show $ nr)) varsOrArrs
+          verVerSig modifyModule key (EVar $ Ident $ unident arrIdent ++ "_" ++ (show $ nr)) varsOrArrs
         _ ->
           error $ "senderNumber world not defined"
     _ -> error $ show index ++ ": not supported index for arrays"
 
-
-
-
-
-
-
-TU TRZEBA ZMIENIC NA NOWE COMMITMENTY
-
-
-
-
-
-
-
-verCheck :: ModifyModuleType -> Exp -> Exp -> Exp -> VerRes Exp
-verCheck modifyModule cmtVar val = do
+verCmt :: ModifyModuleType -> Exp -> Exp -> VerRes Exp
+verCmt modifyModule cmtVar hash = do 
+  evalHash <- verExp modifyModule hash
   world <- get
   let
     cmtId = EVar $ Ident $ unident (unvar cmtVar) ++ sIdSuffix
-    cmtName0 = (commitmentsNames world) !! 0
-    cmtName1 = (commitmentsNames world) !! 1
-    r0 = EEq (EVar cmtName0) val
-    r1 = EEq (EVar cmtName1) val
+  return $ EEq cmtId evalHash
+
+  {-  OLD, to delete:
+    cmtName0 = Ident $ sGlobalCommitments ++ "_0"
+    cmtName1 = Ident $ sGlobalCommitments ++ "_1"
+    r0 = EEq (EVar cmtName0) evalHash
+    r1 = EEq (EVar cmtName1) evalHash
   return $ EOr
     (EAnd (EEq cmtId (EInt 0)) r0)
     (EAnd (EEq cmtId (EInt 1)) r1)
+  -}
 
 -----------------------------
 -- Call auxilary functions --
 -----------------------------
-
+-- TODO: nie uzywam
+{-
 -- TODO: chyba powinno być najpierw kopiowanie coVars i scVars (?) na lokalne
 verCallAux :: ModifyModuleType -> Ident -> [CallArg] -> VerRes Exp
 verCallAux modifyModule funName argsVals = do
@@ -763,7 +780,7 @@ verFunCall modifyModule (FunR name args ret stms) argsVals = do
   removeReturnVar
   return (EVar retVarIdent)
 --TODO: to jest przepisane z verScFunSendT
-
+-}
 -------------
 -- ScSendT --
 -------------
@@ -775,8 +792,10 @@ verSendTAux modifyModule funName argsVals = do
   case Map.lookup funName (funs world) of
     Just fun -> do
       let argNames = getArgNames fun
-      let expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
       -- TODO: olewamy "from", bo sender jest wiadomy ze scenariusza
+      let expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
+      evalArgsVals <- mapM (evalArg modifyModule) expArgsVals
+      --evalArgsNames <- mapM (evalArgName modifyModule) argNames
       
       let (value, guards1) = case (last argsVals) of (ABra _ value) -> (value, [])
        
@@ -784,7 +803,7 @@ verSendTAux modifyModule funName argsVals = do
       let updates0 = [[(Ident $ (unident funName) ++ sValueSuffix ++ (show $ number mod), value)]]
       let addAssignment acc (argName, argVal) = acc ++ createAssignments (number mod) funName argName argVal
       --TODO: Alive?
-      let updates1 = [(foldl addAssignment (head updates0) $ zip argNames expArgsVals, [Alive])]
+      let updates1 = [(foldl addAssignment (head updates0) $ zip argNames evalArgsVals, [Alive])]
       
 
       addTransToNewState 
@@ -815,9 +834,11 @@ verSendCAux modifyModule funName expArgsVals = do
   case Map.lookup funName (funs world) of
     Just fun -> do
       let argNames = getArgNames fun
+      evalArgsVals <- mapM (evalArg modifyModule) expArgsVals
+      --evalArgsNames <- mapM (evalArgName modifyModule) argNames
       let addAssignment acc (argName, argVal) = acc ++ createAssignments (number mod) funName argName argVal
       --TODO: Alive?
-      let updates1 = [(foldl addAssignment [] $ zip argNames expArgsVals, [Alive])]
+      let updates1 = [(foldl addAssignment [] $ zip argNames evalArgsVals, [Alive])]
       
       addTransToNewState
         modifyModule
@@ -835,7 +856,10 @@ verSendCAux modifyModule funName expArgsVals = do
 
 -- TODO: adds function name in prefix of a variable name
 createAssignments :: Integer -> Ident -> Arg -> Exp -> [(Ident, Exp)]
-createAssignments playerNumber funName (Ar (TCUInt x) varName) (EVar argVal) =
+createAssignments playerNumber funName (Ar (TCUInt _) varName) (EInt x) =
+  [(Ident $ unident varName ++ (show playerNumber) ++ sIdSuffix, EInt x)]
+
+createAssignments playerNumber funName (Ar (TCUInt _) varName) (EVar argVal) =
   [(Ident $ unident varName ++ (show playerNumber) ++ sIdSuffix, EVar $ Ident $ unident argVal ++ sIdSuffix)]
 
 createAssignments playerNumber funName (Ar (TCUInt x) varName) (EArray argVal index) =
@@ -847,3 +871,29 @@ createAssignments playerNumber funName (Ar (TCUInt x) varName) (EArray argVal in
 
 createAssignments playerNumber funName (Ar _ varName) exp =
   [(createScenarioArgumentName "" funName varName playerNumber, exp)]
+
+evalArg :: ModifyModuleType -> Exp -> VerRes Exp
+evalArg modifyModule exp = 
+  do
+    case exp of
+      EHashOf (EVar varIdent) -> idOfCmt varIdent
+      EVar varIdent -> do
+        typ <- findVarType varIdent
+        case typ of
+          Just (TCUInt _) -> idOfCmt varIdent
+          _ -> return exp
+      _ -> return exp
+  where
+    idOfCmt :: Ident -> VerRes Exp
+    idOfCmt varIdent = do
+      world <- get
+      case Map.lookup varIdent $ commitmentsIds world of
+        Just x -> return $ EInt x
+        _ -> error $ show varIdent ++ " not found in commitmentsIds"
+{-
+evalArgName :: ModifyModuleType -> Arg -> VerRes Arg
+evalArgName modifyModule (Ar (TCUInt x) varName) = 
+  return $ Ar (TCUInt x) (Ident $ unident varName ++ sIdSuffix)
+
+evalArgName modifyModule arg = return arg
+-}  

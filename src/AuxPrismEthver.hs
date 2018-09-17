@@ -8,8 +8,10 @@ import ConstantsEthver
 
 maxRealValueOfType :: Type -> Exp
 maxRealValueOfType (TUInt x) = EInt (x - 1)
-maxRealValueOfType (TCUInt x) = EInt (x - 1)
+-- TODO: only for 2 commitments, take from MAX_COMMITMENTS constant
+maxRealValueOfType (TCUInt x) = EInt 1
 maxRealValueOfType TBool = ETrue
+maxRealValueOfType THash = EInt 1
 maxRealValueOfType (TSig _) = error $ "maxRealValueOfType should not be used with TSig _"
 
 maxTypeExpOfType :: Type -> Exp
@@ -23,6 +25,7 @@ maxTypeValueOfType (TUInt x) = (x - 1)
 maxTypeValueOfType (TCUInt x) = (x + 1)
 maxTypeValueOfType TBool = 1
 maxTypeValueOfType TAddr = 1
+maxTypeValueOfType THash = 1
 maxTypeValueOfType (TSig _) = error $ "maxTypeValueOfType should not be used with TSig _"
 
 -- identFromComp

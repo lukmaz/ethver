@@ -23,33 +23,35 @@ contract RPS {
 
   bool committed[2]; // 0 - player who first joined the game
   bool has_revealed[2];
-
-  function_with_value player_input(hash cmt) {
+  
+  
+  function_with_value player_input(hash h) {
     if (num_players >= 2 || msg.value != finney(1)) {
       msg.sender.send(msg.value);
     }
     else if (num_players < 2 && msg.value == finney(1)) {
       reward = reward + msg.value;
       player_address[num_players] = msg.sender;
-      commitment[num_players] = cmt;
+      commitment[num_players] = h;
       committed[num_players] = true; // TODO: potrzebne?
       num_players = num_players + 1;
     }
   }
-
-  function open(uint(3) choice, nonce salt) {
+  
+  function open(cmt_uint(3) cmt) {
+    
     if (msg.sender == player_address[0]) {
       player_num = 0;
     }
     else if (msg.sender == player_address[1]) {
       player_num = 1;
     }
-    if (committed[player_num] && !has_revealed[player_num] && checkCommitment(choice, salt, commitment[player_num]) {
+    if (committed[player_num] && !has_revealed[player_num] && verCommitment(cmt, commitment[player_num])) {
       has_revealed[player_num] = true;
-      player_choice[player_num] = choice;
+      player_choice[player_num] = valueOf(cmt);
     }
   }
-
+  
 	function finalize() {
     if (time_elapsed > 0 && num_players == 1) {
       player_address[0].send(1);
@@ -69,6 +71,7 @@ contract RPS {
       }
     }
   }
+  
 }
 
 communication {
@@ -79,28 +82,32 @@ scenario A {
   bool endA;
   cmt_uint(3) cmtA;
   cmtA.randomCommitment();
-  player_input.sendTransaction(cmtA_hash, {from: "A", value: 1});
+  
+  player_input.sendTransaction(hashOf(cmtA), {from: "A", value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
     cmtA.openCommitment();
-    open.sendTransaction(cmtA_val, cmtA_nonce, {from: "A", value: 0});
+    open.sendTransaction(cmtA, {from: "A", value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }
   finalize.sendTransaction({from: "A", value: 0});
   endA = true;
+  
 }
 
 scenario B {
   bool endB;
   cmt_uint(3) cmtB;
   cmtB.randomCommitment();
-  player_input.sendTransaction(cmtB_hash, {from: "B", value: 1});
+  
+  player_input.sendTransaction(hashOf(cmtB), {from: "B", value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
     cmtB.openCommitment();
-    open.sendTransaction(cmtB_val, cmtB_nonce, {from: "A", value: 0});
+    open.sendTransaction(cmtB, {from: "A", value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }
   finalize.sendTransaction({from: "B", value: 0});
   endB = true;
+  
 }

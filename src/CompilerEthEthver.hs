@@ -86,6 +86,17 @@ ethDecl (ArrDec typ ident size) = do
   addContr ";\n"
 
 ethArg :: Arg -> EthRes ()
+ethArg (Ar (TCUInt x) ident) = do
+  ethType (TUInt x)
+  addContr " "
+  ethIdent ident
+  addContr sCommitmentValSuffix
+  addContr ", "
+  addContr "bytes32"
+  addContr " "
+  ethIdent ident
+  addContr sCommitmentNonceSuffix
+
 ethArg (Ar typ ident) = do
   ethType typ
   addContr " "
@@ -98,8 +109,16 @@ ethType :: Type -> EthRes ()
 ethType (TUInt x) = do
   addContr "uint"
 
+ethType TBool = do
+  addContr "bool"
+
 ethType (TAddr) = do
   addContr "address"
+
+ethType (THash) = do
+  addContr "bytes32"
+
+ethType t = error $ (show t) ++ ": not supported in ethType"
 
 ethIdent :: Ident -> EthRes ()
 ethIdent (Ident ident) = do
@@ -166,6 +185,14 @@ ethStm (SIf cond stm) = do
   addContr ")\n"
   ethStm stm
 
+ethStm (SIfElse cond stm1 stm2) = do
+  addContr "if ("
+  ethExp cond
+  addContr ")\n"
+  ethStm stm1
+  addContr "else\n"
+  ethStm stm2
+
 ethStm (SReturn exp) = do
   addContr "return "
   ethExp exp
@@ -186,13 +213,6 @@ ethStm stm = do
 ---------
 
 ethExp :: Exp -> EthRes ()
-ethExp (EVar ident) = do
-  if ident == (Ident sTimeElapsed)
-  then
-      addContr $ "(" ++ sNow ++ " - " ++ sContractStart ++ ") / " ++ sTimeDelta
-  else
-      ethIdent ident
-
 -- MATH
 ethExp (EAnd e1 e2) = ethBinOp "&&" e1 e2
 ethExp (EOr e1 e2) = ethBinOp "||" e1 e2
@@ -207,12 +227,35 @@ ethExp (ESub e1 e2) = ethBinOp "-" e1 e2
 ethExp (EMul e1 e2) = ethBinOp "*" e1 e2
 ethExp (EDiv e1 e2) = ethBinOp "/" e1 e2
 ethExp (EMod e1 e2) = ethBinOpWithOnePar "%" e1 e2
+ethExp (ENeg e) = ethUnOp "-" e
+ethExp (ENot e) = ethUnOp "!" e
 
 ethExp (EArray ident index) = do
   ethIdent ident
   addContr "["
   ethExp index
   addContr "]"
+
+ethExp (EVerC (EVar cmtVar) hash) = do
+  let
+    valVar = Ident $ unident cmtVar ++ sCommitmentValSuffix
+    nonceVar = Ident $ unident cmtVar ++ sCommitmentNonceSuffix
+  addContr "sha256("
+  ethIdent valVar
+  addContr ", "
+  ethIdent nonceVar
+  addContr ") == "
+  ethExp hash
+
+ethExp (EValOf (EVar cmtVar)) = do
+  ethIdent $ Ident $ unident cmtVar ++ sCommitmentValSuffix
+
+ethExp (EVar ident) = do
+  if ident == (Ident sTimeElapsed)
+  then
+      addContr $ "(" ++ sNow ++ " - " ++ sContractStart ++ ") / " ++ sTimeDelta
+  else
+      ethIdent ident
 
 ethExp (EValue) = addContr "msg.value"
 ethExp (ESender) = addContr "msg.sender"
@@ -230,6 +273,10 @@ ethExp exp = do
 
 
 -- ethExp aux
+
+ethUnOp op e = do
+  addContr $ op ++ " "
+  ethExp e
 
 -- TODO: hack only for %
 ethBinOpWithOnePar op e1 e2 = do
