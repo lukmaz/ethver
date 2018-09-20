@@ -65,13 +65,13 @@ ethCommunication _ = return ()
 ethDecl :: Decl -> EthRes ()
 ethDecl (Dec typ ident) = do
   ethType typ
-  addContr " "
+  addContr " public "
   ethIdent ident
   addContr ";\n"
 
 ethDecl (DecInit typ ident value) = do
   ethType typ
-  addContr " "
+  addContr " public "
   ethIdent ident
   addContr " = "
   ethExp value
@@ -81,18 +81,17 @@ ethDecl (ArrDec typ ident size) = do
   ethType typ
   addContr "["
   ethInteger size
-  addContr "] "
+  addContr "] public "
   ethIdent ident
   addContr ";\n"
 
 ethArg :: Arg -> EthRes ()
 ethArg (Ar (TCUInt x) ident) = do
-  ethType (TUInt x)
-  addContr " "
+  addContr "uint8 "
   ethIdent ident
   addContr sCommitmentValSuffix
   addContr ", "
-  addContr "bytes32"
+  addContr "string"
   addContr " "
   ethIdent ident
   addContr sCommitmentNonceSuffix
@@ -240,11 +239,11 @@ ethExp (EVerC (EVar cmtVar) hash) = do
   let
     valVar = Ident $ unident cmtVar ++ sCommitmentValSuffix
     nonceVar = Ident $ unident cmtVar ++ sCommitmentNonceSuffix
-  addContr "sha256("
+  addContr "keccak256(abi.encodePacked(48 + "
   ethIdent valVar
   addContr ", "
   ethIdent nonceVar
-  addContr ") == "
+  addContr ")) == "
   ethExp hash
 
 ethExp (EValOf (EVar cmtVar)) = do

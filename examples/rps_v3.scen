@@ -1,0 +1,18 @@
+choice0 = "1"
+"1"
+nonce0 = "alama"
+"alama"
+input0 = web3.fromAscii(choice0) + web3.fromAscii(nonce0).substring(2)
+"0x31616c616d61"
+hash0 = web3.sha3(input0, {encoding: 'hex'})
+"0xec312721d2c2b2b08849577b8b49cdde6b78ec8553d567ab838310f72f5e1588"
+
+
+choice1 = "2"
+"2"
+nonce1 = "kota"
+"kota"
+input1 = web3.fromAscii(choice1) + web3.fromAscii(nonce1).substring(2)
+"0x326b6f7461"
+hash1 = web3.sha3(input1, {encoding: 'hex'})
+"0xc2a0ec243fa22847aad8552bf31872e4ca3b1d80d6f9b435d3735ef52fd68298"
