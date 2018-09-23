@@ -23,8 +23,7 @@ contract RPS {
 
   bool committed[2]; // 0 - player who first joined the game
   bool has_revealed[2];
-  
-  
+
   function_with_value player_input(hash h) {
     if (num_players >= 2 || msg.value != finney(1)) {
       msg.sender.send(msg.value);
@@ -37,9 +36,8 @@ contract RPS {
       num_players = num_players + 1;
     }
   }
-  
+
   function open(cmt_uint(3) cmt) {
-    
     if (msg.sender == player_address[0]) {
       player_num = 0;
     }
@@ -51,7 +49,7 @@ contract RPS {
       player_choice[player_num] = valueOf(cmt);
     }
   }
-  
+
 	function finalize() {
     if (time_elapsed > 0 && num_players == 1) {
       player_address[0].send(1);
@@ -71,7 +69,6 @@ contract RPS {
       }
     }
   }
-  
 }
 
 communication {
@@ -82,7 +79,7 @@ scenario A {
   bool endA;
   cmt_uint(3) cmtA;
   cmtA.randomCommitment();
-  
+
   player_input.sendTransaction(hashOf(cmtA), {from: "A", value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
@@ -92,14 +89,13 @@ scenario A {
   }
   finalize.sendTransaction({from: "A", value: 0});
   endA = true;
-  
 }
 
 scenario B {
   bool endB;
   cmt_uint(3) cmtB;
   cmtB.randomCommitment();
-  
+
   player_input.sendTransaction(hashOf(cmtB), {from: "B", value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
@@ -109,5 +105,4 @@ scenario B {
   }
   finalize.sendTransaction({from: "B", value: 0});
   endB = true;
-  
 }
