@@ -103,7 +103,7 @@ scenario B {
   wait(num_players == 2, 1);
   if (num_players == 2) {
     cmtB.openCommitment();
-    open.sendTransaction(cmtB, {from: "A", value: 0});
+    open.sendTransaction(cmtB, {from: "B", value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }
   finalize.sendTransaction({from: "B", value: 0});

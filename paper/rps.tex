@@ -308,7 +308,7 @@ This is a realistic scenario when a malicious player 1 waits until player 0 open
 \paragraph{Fix 5}
 
 To prevent from this behavior, we can introduce another refund mechanism, which transfers all the reward
-to one player in case his opponent refuses to open his commitment within a given time frame (two timelock steps):
+to one player in case his opponent refuses to open his commitment within a given time frame (two time steps):
 \begin{lstlisting}
 function finalize() {
   if (time_elapsed > 1 && has_revealed0 && !has_revealed1) {
@@ -336,7 +336,7 @@ property & target & \shortstack{result \\ (honest mode)} & \shortstack{result \\
 \end{tabular}
 \]
 We can see that the second property evaluates to the desired probability of 2/3, but the first property evaluates to 0.
-Recall, that the first property can be read as \emph{player 0 wins with probability at least 1/3}.
+Recall that the first property can be read as \emph{player 0 wins with probability at least 1/3}.
 The value of 0 follows from the fact, that player 1 can interrupt the protocol before sending any money to the contract.
 In such case, the \emph{refund} mechanism pays back to player 0 only his own bet of value 1 and this is ok.
 What we really want to verify is what is the minimal probability of winning of player 0 \emph{assuming that
@@ -354,7 +354,7 @@ yet}.\footnote{The \lstinline{filter(op, prop, states)} syntax of PRISM is used 
 for all paths starting from set of initial states \lstinline{states} and return the result aggregated using \lstinline{op}
 operator over all the paths.
 The \lstinline{!has_revealed0} and \lstinline{!has_revealed1} conditions for initial states are necessary in order
-to ensure that initial states the random choices are not yet done.
+to ensure that in the initial states the random choices are not yet done.
 Otherwise the property will include the paths starting from the states after the choices are already done
 and player 1 wins.}
 This property indeed evaluates to 1/3, so after all the fixes we finally reached the version of contract which 
