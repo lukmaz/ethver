@@ -798,7 +798,8 @@ verFunCall modifyModule (FunR name args ret stms) argsVals = do
 -------------
 -- ScSendT --
 -------------
-
+-- Assumption: If there is a cmt argument, the function  must be called when it's in "committed" state
+-- and it automatically opens it.
 verSendTAux :: ModifyModuleType -> Ident -> [CallArg] -> VerRes ()
 verSendTAux modifyModule funName argsVals = do
   world <- get
@@ -817,14 +818,18 @@ verSendTAux modifyModule funName argsVals = do
       let updates0 = [[(Ident $ (unident funName) ++ sValueSuffix ++ (show $ number mod), value)]]
       let addAssignment acc (argName, argVal) = acc ++ createAssignments (number mod) funName argName argVal
       --TODO: Alive?
-      let updates1 = [(foldl addAssignment (head updates0) $ zip argNames evalArgsVals, [Alive])]
+      let updates1Root = foldl addAssignment (head updates0) $ zip argNames evalArgsVals
       
+      -- simplification: only one commitment/player allowed so open this commitment
+      let cmtVar = Ident $ sGlobalCommitments ++ "_" ++ (show $ number mod)
+      typ <- findVarType cmtVar
+      let updates2 = modifyUpdatesIfCmtInArgs cmtVar typ fun updates1Root
 
       addTransToNewState 
         modifyModule 
         (sBroadcastPrefix ++ (unident funName) ++ (show $ number mod)) 
         guards1
-        updates1
+        updates2
 
       addTransToNewState
         modifyModule
@@ -836,6 +841,28 @@ verSendTAux modifyModule funName argsVals = do
         ]
         --TODO: Alive?
         [([], [Alive])]
+
+{- KOPIA
+verStm modifyModule (SOCmt (EVar cmtVar)) = do
+  typ <- findVarType cmtVar
+  case typ of
+    Just (TCUInt range) -> do
+      if (init $ unident cmtVar) == (sGlobalCommitments ++ "_")
+      then do
+        mod <- modifyModule id
+        addTransToNewState 
+          modifyModule 
+          ""
+          []
+          -- TODO: Alive?
+          (foldl
+            (\acc x -> acc ++ [([(cmtVar, EInt x)], [Alive])])
+            []
+            [0..(range - 1)]
+          )
+      else do
+        verWithCommitment modifyModule cmtVar (\globalName -> SOCmt $ EVar $ globalName)
+-}
 
 -----------
 -- SendC --

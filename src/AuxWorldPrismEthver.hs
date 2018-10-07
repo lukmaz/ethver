@@ -191,6 +191,22 @@ addUser (UDec name) = do
 applyToBranch :: ([(Ident, Exp)] -> [(Ident, Exp)]) -> Branch -> Branch
 applyToBranch f (br, liv) = (f br, liv)
 
+
+modifyUpdatesIfCmtInArgs :: Ident -> Maybe Type -> Function -> [(Ident, Exp)] -> [([(Ident, Exp)], [Liveness])]
+modifyUpdatesIfCmtInArgs cmtVar typ fun updatesRoot = 
+  if commitmentInArguments fun
+    then 
+      case typ of
+        Just (TCUInt range) -> 
+          (foldl
+            (\acc x -> acc ++ [(updatesRoot ++ [(cmtVar, EInt x)], [Alive])])
+            []
+            [0..(range - 1)]
+          )
+    else
+      [(updatesRoot, [Alive])]
+
+
 -----------
 -- Trans --
 -----------
@@ -430,23 +446,53 @@ addAdversarialTranssToPlayer :: ModifyModuleType -> String -> Ident -> Function 
 addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunV (Ident funName) args stms) = do
   addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunVL (-1) (Ident funName) args stms)
 
+addAdversarialTranssToPlayer modifyModule whichPrefix whichState (Fun (Ident funName) args x) = 
+  addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunL (-1) (Ident funName) args x)
+
 addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunVL limit (Ident funName) args _) = do
   mod <- modifyModule id  
   let valName = Ident $ funName  ++ sValueSuffix ++ (show $ number mod)
   maxValVal <- maxRealValue valName
   let maxValsList = generateValsList maxValVal args
-  generateAdvTranss modifyModule whichPrefix whichState True limit funName args maxValsList
-
-addAdversarialTranssToPlayer modifyModule whichPrefix whichState (Fun (Ident funName) args x) = 
-  addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunL (-1) (Ident funName) args x)
+  generateAdvTranssOld modifyModule whichPrefix whichState True limit funName args maxValsList
 
 addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunL limit (Ident funName) args _) = do
   let maxValsList = generateValsListNoVal args
-  generateAdvTranss modifyModule whichPrefix whichState False limit funName args maxValsList
+  generateAdvTranssOld modifyModule whichPrefix whichState False limit funName args maxValsList
 
 
-generateAdvTranss :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> [[Exp]] -> VerRes ()
-generateAdvTranss modifyModule whichPrefix whichState withVal limit funName args maxes = do
+-- TODO: NOT IMPLEMENTED YET
+generateAdvTranssNEW :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> [[Exp]] ->  VerRes ()
+generateAdvTranssNEW modifyModule whichPrefix whichState withVal limit funName args maxes = do
+  if commitmentInArguments (Fun (Ident "") args []) 
+  then do
+    mod <- modifyModule id
+    let cmtVar = Ident $ sGlobalCommitments ++ "_" ++ (show $ number mod)
+    typ <- findVarType cmtVar
+    case typ of 
+      Just (TCUInt range) -> do
+        -- 1st option: random open if already committed 
+        generateAdvTranssAux
+          modifyModule 
+          whichPrefix 
+          whichState 
+          withVal 
+          limit 
+          funName 
+          (args ++ [Ar (TUInt range) cmtVar])
+          (maxes) 
+          [EEq (EVar cmtVar) (EInt $ range + 1)] 
+          [] 
+        -- 2nd option: any open if not committed
+        generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args maxes [] [] 
+      else
+        generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args maxes [] [] 
+
+generateAdvTranssOld modifyModule whichPrefix whichState withVal limit funName args maxes = do
+  generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args maxes [] [] 
+
+generateAdvTranssAux :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> [[Exp]] -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args maxes extraGuards extraUpdates = do
   mod <- modifyModule id
   let runsIdent = Ident $ funName ++ sRunsSuffix ++ (show $ number mod)
   case maxes of
@@ -463,10 +509,12 @@ generateAdvTranss modifyModule whichPrefix whichState withVal limit funName args
             EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
           ]
           ++ 
+          extraGuards
+          ++ 
           (if (limit > -1) then [ELt (EVar runsIdent) (EInt limit)] else [])
         )
         -- TODO: Alive?
-        [(if (limit > -1) then [(runsIdent, EAdd (EVar runsIdent) (EInt 1))] else [], [Alive])]
+        [(extraUpdates ++ (if (limit > -1) then [(runsIdent, EAdd (EVar runsIdent) (EInt 1))] else []), [Alive])]
     maxValsList -> do
       forM_
         maxValsList
@@ -482,14 +530,18 @@ generateAdvTranss modifyModule whichPrefix whichState withVal limit funName args
               EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
             ]
             ++ 
+            extraGuards
+            ++
             (if (limit > -1) then [ELt (EVar runsIdent) (EInt limit)] else [])
           )
           -- TODO: Alive?
           (map 
-            (\x -> (x ++ (if (limit > -1) then [(runsIdent, EAdd (EVar runsIdent) (EInt 1))] else []), [Alive]))
+            (\x -> (x ++ extraUpdates ++ (if (limit > -1) then [(runsIdent, EAdd (EVar runsIdent) (EInt 1))] else []), [Alive]))
             (advUpdates withVal (number mod) (Ident funName) args vals)
           )
         )
+
+-- To delete; should be fused into open/commit function
 
 addAdversarialRCmt :: VerRes ()
 addAdversarialRCmt = do
@@ -558,6 +610,7 @@ advTransAux modifyModule guards updates = do
       EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
     ] ++ guards)
     updates
+
 
 ---------------------
 -- MONEY TRANSFERS --

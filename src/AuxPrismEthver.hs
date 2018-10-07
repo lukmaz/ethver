@@ -156,3 +156,19 @@ expFromInt x = EInt x
 intFromExp :: Exp -> Maybe Integer
 intFromExp (EInt x) = Just x
 intFromExp _ = Nothing
+
+commitmentInArguments :: Function -> Bool
+
+commitmentInArguments (FunV name args stms) = commitmentInArguments (Fun name args stms)
+commitmentInArguments (FunL _ name args stms) = commitmentInArguments (Fun name args stms)
+commitmentInArguments (FunVL _ name args stms) = commitmentInArguments (Fun name args stms)
+
+commitmentInArguments (Fun _ args _) = 
+  any 
+    (\arg -> case arg of
+      Ar (TCUInt _) _ -> True
+      _ -> False
+    )
+    args
+
+
