@@ -376,7 +376,7 @@ advUpdates withVal number funName args valList =
         (zip varNames valList)
     ]   
 
--- moved from verScenarios
+-- adds a single trans to Blockchain module to disallow time step when a transaction is being broadcast
 addAdversarialBlockchainTranss :: VerRes()
 addAdversarialBlockchainTranss = do
   world <- get
@@ -427,12 +427,15 @@ addAdversarialTranss funs whichPrefix whichState = do
 
 addAdversarialTranssToPlayer :: ModifyModuleType -> String -> Ident -> Function -> VerRes ()
 
-addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunV (Ident funName) args _) = do
+addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunV (Ident funName) args stms) = do
+  addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunVL (-1) (Ident funName) args stms)
+
+addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunVL limit (Ident funName) args _) = do
   mod <- modifyModule id  
   let valName = Ident $ funName  ++ sValueSuffix ++ (show $ number mod)
   maxValVal <- maxRealValue valName
   let maxValsList = generateValsList maxValVal args
-  generateAdvTranss modifyModule whichPrefix whichState True (-1) funName args maxValsList
+  generateAdvTranss modifyModule whichPrefix whichState True limit funName args maxValsList
 
 addAdversarialTranssToPlayer modifyModule whichPrefix whichState (Fun (Ident funName) args x) = 
   addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunL (-1) (Ident funName) args x)
@@ -488,6 +491,73 @@ generateAdvTranss modifyModule whichPrefix whichState withVal limit funName args
           )
         )
 
+addAdversarialRCmt :: VerRes ()
+addAdversarialRCmt = do
+  addAdversarialRCmtToPlayer modifyPlayer0
+  addAdversarialRCmtToPlayer modifyPlayer1
+
+addAdversarialRCmtToPlayer :: ModifyModuleType -> VerRes ()
+addAdversarialRCmtToPlayer modifyModule = do
+  mod <- modifyModule id
+  mapM_
+    (\var -> addAdvGlobFunction modifyModule var globFunRCmt)
+    (Map.keys $ vars mod)
+
+addAdversarialOCmt :: VerRes ()
+addAdversarialOCmt = do
+  addAdversarialOCmtToPlayer modifyPlayer0
+  addAdversarialOCmtToPlayer modifyPlayer1
+
+addAdversarialOCmtToPlayer :: ModifyModuleType -> VerRes ()
+addAdversarialOCmtToPlayer modifyModule = do
+  mod <- modifyModule id
+  mapM_
+    (\var -> addAdvGlobFunction modifyModule var globFunOCmt)
+    (Map.keys $ vars mod)
+
+addAdvGlobFunction :: ModifyModuleType -> Ident -> (ModifyModuleType -> Ident -> Integer -> VerRes ()) -> VerRes ()
+addAdvGlobFunction modifyModule varIdent globFun = do
+  typ <- findVarType varIdent
+  case typ of
+    Just (TCUInt range) -> do
+      world <- get
+      case Map.lookup varIdent (commitmentsIds world) of
+        Just nr -> do
+          let globalVarName = Ident $ sGlobalCommitments ++ "_" ++ show nr
+          globFun modifyModule globalVarName range
+        _ -> error $ (show $ unident varIdent) ++ " not found in commitmentsIds"
+    _ -> return ()
+
+globFunRCmt :: ModifyModuleType -> Ident -> Integer -> VerRes ()
+globFunRCmt modifyModule globalVarName range = do
+  advTransAux 
+    modifyModule 
+    [EEq (EVar globalVarName) (EInt $ range + 1)] 
+    [([(globalVarName, EInt range)], [Alive])]
+
+globFunOCmt :: ModifyModuleType -> Ident -> Integer -> VerRes ()
+globFunOCmt modifyModule globalVarName range = do
+  advTransAux
+    modifyModule
+    [EEq (EVar globalVarName) (EInt range)]
+    (foldl
+      (\acc x -> acc ++ [([(globalVarName, EInt x)], [Alive])])
+      []
+      [0..(range - 1)]
+    )
+
+advTransAux :: ModifyModuleType -> [Exp] -> [Branch] -> VerRes ()
+advTransAux modifyModule guards updates = do
+  mod <- modifyModule id
+  addTransNoState
+    modifyModule
+    ""
+    ([
+      EEq (EVar iContrState) (EInt 1),
+      EEq (EVar iCommState) (EInt 1),
+      EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
+    ] ++ guards)
+    updates
 
 ---------------------
 -- MONEY TRANSFERS --

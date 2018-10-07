@@ -39,6 +39,9 @@ verProgram (Prog users constants contract communication scenarios) = do
   addAdversarialContrTranss contract
   addAdversarialCommTranss communication
   addAdversarialBlockchainTranss
+  
+  addAdversarialRCmt
+  addAdversarialOCmt
 
 verContractDecl :: Contract -> VerRes ()
 verContractDecl (Contr _ decls _) = do
@@ -146,6 +149,9 @@ verFunBroadcast modifyModule (FunV name args stms) =
 verFunBroadcast modifyModule (FunL _ name args stms) =
   verFunBroadcast modifyModule (Fun name args stms)
 
+verFunBroadcast modifyModule (FunVL _ name args stms) =
+  verFunBroadcast modifyModule (Fun name args stms)
+
 verFunBroadcast modifyModule (Fun name args stms) = do
   --TODO: argumenty
   mod <- modifyModule id
@@ -171,6 +177,9 @@ verFunExecute modifyModule (FunV name args stms) =
   verFunExecute modifyModule (Fun name args stms)
 
 verFunExecute modifyModule (FunL _ name args stms) =
+  verFunExecute modifyModule (Fun name args stms)
+
+verFunExecute modifyModule (FunVL _ name args stms) =
   verFunExecute modifyModule (Fun name args stms)
 
 verFunExecute modifyModule (Fun name args stms) = do
@@ -273,6 +282,9 @@ verOldFunContractOrCommunication modifyModule commonfun (FunV name args stm) =
 
 verOldFunContractOrCommunication modifyModule commonfun (Fun name args stm) =
   verOldFunContractOrCommunication modifyModule commonfun (FunL (-1)  name args stm)
+
+verOldFunContractOrCommunication modifyModule commonfun (FunVL limit name args stm) =
+  verOldFunContractOrCommunication modifyModule commonfun (FunL limit  name args stm)
 
 verOldFunContractOrCommunication modifyModule commonFun fun@(FunL limit name args stms) = do
   commonFun fun

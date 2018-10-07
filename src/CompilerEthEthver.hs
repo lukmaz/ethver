@@ -153,6 +153,12 @@ ethFun (FunR ident args ret stms) = do
   mapM_ ethStm stms
   addContr "}\n"
 
+ethFun (FunL limit ident args stms) =
+  ethFun (Fun ident args stms)
+
+ethFun (FunVL limit ident args stms) =
+  ethFun (Fun ident args stms)
+
 ---------
 -- Stm --
 ---------

@@ -36,6 +36,7 @@ Scen.  Scenario ::= "scenario" Ident "{" [Decl] [Stm] "}" ;
 Fun.      Function ::= "function" Ident "(" [Arg] ")" "{" [Stm] "}" ;
 FunL.     Function ::= "function_limit" Integer Ident "(" [Arg] ")" "{" [Stm] "}" ;
 FunV.     Function ::= "function_with_value" Ident "(" [Arg] ")" "{" [Stm] "}" ;
+FunVL.    Function ::= "function_with_value_limit" Integer Ident "(" [Arg] ")" "{" [Stm] "}" ;
 FunR.     Function ::= "function" Ident "(" [Arg] ")" "returns" "(" Type ")" 
                        "{" [Stm] "}" ;
 

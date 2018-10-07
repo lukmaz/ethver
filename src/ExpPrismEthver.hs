@@ -264,8 +264,22 @@ verStm modifyModule (SRCmt (EVar cmtVar)) = do
 verStm modifyModule (SOCmt (EVar cmtVar)) = do
   typ <- findVarType cmtVar
   case typ of
-    Just (TCUInt x) -> do
-      verWithCommitment modifyModule cmtVar (\globalName -> SAss globalName (ERand (EInt x)))
+    Just (TCUInt range) -> do
+      if (init $ unident cmtVar) == (sGlobalCommitments ++ "_")
+      then do
+        mod <- modifyModule id
+        addTransToNewState 
+          modifyModule 
+          ""
+          []
+          -- TODO: Alive?
+          (foldl
+            (\acc x -> acc ++ [([(cmtVar, EInt x)], [Alive])])
+            []
+            [0..(range - 1)]
+          )
+      else do
+        verWithCommitment modifyModule cmtVar (\globalName -> SOCmt $ EVar $ globalName)
 
 {- moze niepotrzebne? Jesli potrzebne, to jest szansa, ze dziala 
 verStm modifyModule (SOCmt (EArray ident index)) = do
