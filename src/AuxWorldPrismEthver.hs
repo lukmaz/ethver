@@ -459,18 +459,27 @@ addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunVL limit (I
 addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunL limit (Ident funName) args _) = do
   generateAdvTranssNew modifyModule whichPrefix whichState False limit funName args
 
-
--- TODO: NOT IMPLEMENTED YET
 generateAdvTranssNew :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> VerRes ()
-generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName args = do
+generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName argsOrig = do
   mod <- modifyModule id
   let cmtVar = Ident $ sGlobalCommitments ++ "_" ++ (show $ number mod)
   typ <- findVarType cmtVar
-  if commitmentInArguments (Fun (Ident "") args []) 
+  let 
+    args = filter 
+      (\x -> case x of
+        Ar (TCUInt _) _ -> False
+        _ -> True
+      )
+      argsOrig
+  if commitmentInArguments (Fun (Ident "") argsOrig []) 
     then do
+      let 
+        cmtArgVar = 
+          Ident $ (unident $ commitmentFromArguments (Fun (Ident "") argsOrig [])) 
+            ++ (show $ number mod) ++ sIdSuffix
       case typ of 
         Just (TCUInt range) -> do
-          -- only option: random open if already committed 
+          -- only option: leave the same if already decided 
           generateAdvTranssAux
             modifyModule 
             whichPrefix 
@@ -480,7 +489,7 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
             funName 
             (args)
             [ELt (EVar cmtVar) (EInt $ range)] 
-            [] 
+            [(cmtArgVar, EInt $ number mod)] 
           -- TODO: 2nd option: random open if committed?
 
     else if hashInArguments (Fun (Ident "") args [])
@@ -566,7 +575,7 @@ generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName a
           )
         )
 
--- To delete; should be fused into open/commit function
+-- To delete? Currently both fused, but maybe unfuse RCmt? (Micro case)
 
 addAdversarialRCmt :: VerRes ()
 addAdversarialRCmt = do

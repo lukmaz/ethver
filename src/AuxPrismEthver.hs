@@ -171,6 +171,22 @@ commitmentInArguments (Fun _ args _) =
     )
     args
 
+commitmentFromArguments :: Function -> Ident
+
+commitmentFromArguments (FunV name args stms) = commitmentFromArguments (Fun name args stms)
+commitmentFromArguments (FunL _ name args stms) = commitmentFromArguments (Fun name args stms)
+commitmentFromArguments (FunVL _ name args stms) = commitmentFromArguments (Fun name args stms)
+
+commitmentFromArguments (Fun _ args _) = 
+  case filter 
+    (\arg -> case arg of
+      Ar (TCUInt _) _ -> True
+      _ -> False
+    )
+    args
+    of
+      [Ar _ varName] -> varName
+
 hashInArguments :: Function -> Bool
 
 hashInArguments (FunV name args stms) = hashInArguments (Fun name args stms)
