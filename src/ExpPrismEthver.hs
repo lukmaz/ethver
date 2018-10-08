@@ -824,7 +824,7 @@ verSendTAux modifyModule funName argsVals = do
       let cmtVar = Ident $ sGlobalCommitments ++ "_" ++ (show $ number mod)
       typ <- findVarType cmtVar
       let updates2 = modifyUpdatesIfCmtInArgs cmtVar typ fun updates1Root
-
+      
       addTransToNewState 
         modifyModule 
         (sBroadcastPrefix ++ (unident funName) ++ (show $ number mod)) 
@@ -842,28 +842,6 @@ verSendTAux modifyModule funName argsVals = do
         --TODO: Alive?
         [([], [Alive])]
 
-{- KOPIA
-verStm modifyModule (SOCmt (EVar cmtVar)) = do
-  typ <- findVarType cmtVar
-  case typ of
-    Just (TCUInt range) -> do
-      if (init $ unident cmtVar) == (sGlobalCommitments ++ "_")
-      then do
-        mod <- modifyModule id
-        addTransToNewState 
-          modifyModule 
-          ""
-          []
-          -- TODO: Alive?
-          (foldl
-            (\acc x -> acc ++ [([(cmtVar, EInt x)], [Alive])])
-            []
-            [0..(range - 1)]
-          )
-      else do
-        verWithCommitment modifyModule cmtVar (\globalName -> SOCmt $ EVar $ globalName)
--}
-
 -----------
 -- SendC --
 -----------
@@ -879,13 +857,18 @@ verSendCAux modifyModule funName expArgsVals = do
       --evalArgsNames <- mapM (evalArgName modifyModule) argNames
       let addAssignment acc (argName, argVal) = acc ++ createAssignments (number mod) funName argName argVal
       --TODO: Alive?
-      let updates1 = [(foldl addAssignment [] $ zip argNames evalArgsVals, [Alive])]
+      let updates1Root = foldl addAssignment [] $ zip argNames evalArgsVals
       
+      -- simplification: only one commitment/player allowed so open this commitment
+      let cmtVar = Ident $ sGlobalCommitments ++ "_" ++ (show $ number mod)
+      typ <- findVarType cmtVar
+      let updates2 = modifyUpdatesIfCmtInArgs cmtVar typ fun updates1Root
+
       addTransToNewState
         modifyModule
         ""
         []
-        updates1
+        updates2
 
       addTransToNewState
         modifyModule

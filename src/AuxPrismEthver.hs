@@ -171,4 +171,19 @@ commitmentInArguments (Fun _ args _) =
     )
     args
 
+hashInArguments :: Function -> Bool
+
+hashInArguments (FunV name args stms) = hashInArguments (Fun name args stms)
+hashInArguments (FunL _ name args stms) = hashInArguments (Fun name args stms)
+hashInArguments (FunVL _ name args stms) = hashInArguments (Fun name args stms)
+
+hashInArguments (Fun _ args _) = 
+  any 
+    (\arg -> case arg of
+      Ar (THash) _ -> True
+      _ -> False
+    )
+    args
+
+
 

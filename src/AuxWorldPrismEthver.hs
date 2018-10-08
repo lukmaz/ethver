@@ -203,8 +203,12 @@ modifyUpdatesIfCmtInArgs cmtVar typ fun updatesRoot =
             []
             [0..(range - 1)]
           )
-    else
-      [(updatesRoot, [Alive])]
+    else if hashInArguments fun
+      then 
+        case typ of 
+          Just (TCUInt range) ->
+            [(updatesRoot ++ [(cmtVar, EInt range)], [Alive])]
+      else [(updatesRoot, [Alive])]
 
 
 -----------
@@ -450,50 +454,71 @@ addAdversarialTranssToPlayer modifyModule whichPrefix whichState (Fun (Ident fun
   addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunL (-1) (Ident funName) args x)
 
 addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunVL limit (Ident funName) args _) = do
-  mod <- modifyModule id  
-  let valName = Ident $ funName  ++ sValueSuffix ++ (show $ number mod)
-  maxValVal <- maxRealValue valName
-  let maxValsList = generateValsList maxValVal args
-  generateAdvTranssOld modifyModule whichPrefix whichState True limit funName args maxValsList
+  generateAdvTranssNew modifyModule whichPrefix whichState True limit funName args
 
 addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunL limit (Ident funName) args _) = do
-  let maxValsList = generateValsListNoVal args
-  generateAdvTranssOld modifyModule whichPrefix whichState False limit funName args maxValsList
+  generateAdvTranssNew modifyModule whichPrefix whichState False limit funName args
 
 
 -- TODO: NOT IMPLEMENTED YET
-generateAdvTranssNEW :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> [[Exp]] ->  VerRes ()
-generateAdvTranssNEW modifyModule whichPrefix whichState withVal limit funName args maxes = do
-  if commitmentInArguments (Fun (Ident "") args []) 
-  then do
-    mod <- modifyModule id
-    let cmtVar = Ident $ sGlobalCommitments ++ "_" ++ (show $ number mod)
-    typ <- findVarType cmtVar
-    case typ of 
-      Just (TCUInt range) -> do
-        -- 1st option: random open if already committed 
-        generateAdvTranssAux
-          modifyModule 
-          whichPrefix 
-          whichState 
-          withVal 
-          limit 
-          funName 
-          (args ++ [Ar (TUInt range) cmtVar])
-          (maxes) 
-          [EEq (EVar cmtVar) (EInt $ range + 1)] 
-          [] 
-        -- 2nd option: any open if not committed
-        generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args maxes [] [] 
-      else
-        generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args maxes [] [] 
-
-generateAdvTranssOld modifyModule whichPrefix whichState withVal limit funName args maxes = do
-  generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args maxes [] [] 
-
-generateAdvTranssAux :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> [[Exp]] -> [Exp] -> [(Ident, Exp)] -> VerRes ()
-generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args maxes extraGuards extraUpdates = do
+generateAdvTranssNew :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> VerRes ()
+generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName args = do
   mod <- modifyModule id
+  let cmtVar = Ident $ sGlobalCommitments ++ "_" ++ (show $ number mod)
+  typ <- findVarType cmtVar
+  if commitmentInArguments (Fun (Ident "") args []) 
+    then do
+      case typ of 
+        Just (TCUInt range) -> do
+          -- only option: random open if already committed 
+          generateAdvTranssAux
+            modifyModule 
+            whichPrefix 
+            whichState 
+            withVal 
+            limit 
+            funName 
+            (args)
+            [ELt (EVar cmtVar) (EInt $ range)] 
+            [] 
+          -- TODO: 2nd option: random open if committed?
+
+    else if hashInArguments (Fun (Ident "") args [])
+      then do
+        case typ of
+          Just (TCUInt range) -> do
+            mapM_
+              (\x -> generateAdvTranssAux
+                modifyModule 
+                whichPrefix 
+                whichState 
+                withVal 
+                limit 
+                funName 
+                (args)
+                [] 
+                [(cmtVar, EInt x)]
+              )
+              [0 .. (range - 1)]
+      else
+        generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args [] [] 
+
+
+
+generateAdvTranssOld :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] ->  VerRes ()
+generateAdvTranssOld modifyModule whichPrefix whichState withVal limit funName args = do
+  generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args [] [] 
+
+generateAdvTranssAux :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args extraGuards extraUpdates = do
+  mod <- modifyModule id
+  let valName = Ident $ funName ++ sValueSuffix ++ (show $ number mod)
+  maxValVal <- maxRealValue valName
+  let 
+    maxes = if withVal
+      then generateValsList maxValVal args
+      else generateValsListNoVal args
+
   let runsIdent = Ident $ funName ++ sRunsSuffix ++ (show $ number mod)
   case maxes of
     [] ->

@@ -41,8 +41,8 @@ verProgram (Prog users constants contract communication scenarios) = do
   addAdversarialBlockchainTranss
   
   --Should be fused into open.sendTransaction() etc.
-  addAdversarialRCmt
-  addAdversarialOCmt
+  --addAdversarialRCmt
+  --addAdversarialOCmt - already fused
 
 verContractDecl :: Contract -> VerRes ()
 verContractDecl (Contr _ decls _) = do

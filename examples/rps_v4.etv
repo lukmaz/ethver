@@ -24,7 +24,6 @@ contract RPS {
   //bool committed[2]; // 0 - player who first joined the game
   bool has_revealed[2];
   bool in_game[2];
-  //bool open_fail[2];
 
   function_with_value player_input(hash h) {
     if (num_players >= 2 || msg.value != finney(1) || time_elapsed > 0) {
@@ -51,10 +50,6 @@ contract RPS {
       has_revealed[player_num] = true;
       player_choice[player_num] = valueOf(cmt);
     }
-    //else {
-    //  open_fail[msg.sender] = true;
-    //}
-    
   }
   
 
@@ -96,7 +91,7 @@ communication {
 scenario A {
   bool endA;
   cmt_uint(3) cmtA;
-  cmtA.randomCommitment();
+  //cmtA.randomCommitment();
 
   player_input.sendTransaction(hashOf(cmtA), {from: "A", value: 1});
   wait(num_players == 2, 1);
@@ -112,7 +107,7 @@ scenario A {
 scenario B {
   bool endB;
   cmt_uint(3) cmtB;
-  cmtB.randomCommitment();
+  //cmtB.randomCommitment();
 
   player_input.sendTransaction(hashOf(cmtB), {from: "B", value: 1});
   wait(num_players == 2, 1);
