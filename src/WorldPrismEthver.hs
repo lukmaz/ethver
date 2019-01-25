@@ -53,9 +53,9 @@ data VerWorld = VerWorld {
   lazyRandoms :: Set.Set Ident,
   addedGuards :: [Exp],
   senderNumber :: Maybe Integer,
-  commitmentsIds :: Map.Map Ident Integer,
-  commitmentsNames :: [Ident]
-  -- commitmentsNr :: Integer
+  commitmentsIds :: Map.Map Ident Integer
+  --commitmentsNames :: [Ident]
+  --commitmentsNr :: Integer
   }
 
 data Module = Module {
@@ -69,7 +69,8 @@ data Module = Module {
   numStates :: Integer,
   breakStates :: [Integer],
   transs :: [Trans],
-  whichSender :: Ident
+  whichSender :: Ident,
+  globalCommitments :: Map.Map Ident Type
   }
   
 
@@ -98,8 +99,8 @@ emptyVerWorld = VerWorld {
   lazyRandoms = Set.empty,
   addedGuards = [],
   senderNumber = Nothing,
-  commitmentsIds = Map.empty,
-  commitmentsNames = []
+  commitmentsIds = Map.empty
+  --commitmentsNames = []
   --commitmentsNr = 0
   } 
 
@@ -107,7 +108,8 @@ emptyModule :: Module
 emptyModule = Module {number = nUndefModuleNumber, stateVar = sEmptyState, moduleName = sEmptyModule, 
   vars = Map.empty, varsInitialValues = Map.empty, numLocals = 0, currState = 1, numStates = 1,
   breakStates = [],
-  transs = [], whichSender = Ident sEmptySender}
+  transs = [], whichSender = Ident sEmptySender,
+  globalCommitments = Map.empty}
 
 
 addAutoVars :: VerRes ()
@@ -192,7 +194,7 @@ addVar modifyModule typ ident = do
       _ <- modifyModule (addVarToModule typ ident)
       addSignatureVar modifyModule types ident
     TCUInt range -> do
-      addCmtIdVar modifyModule ident range
+      addCmtIdVar modifyModule ident 
     _ -> do
       _ <- modifyModule (addVarToModule typ ident)
       return ()
@@ -214,13 +216,12 @@ addSignatureVarAux modifyModule varIdent (nr, typ) = do
     TUInt x -> 
       addVar modifyModule typ newIdent
 
-addCmtIdVar :: ModifyModuleType -> Ident -> Integer -> VerRes ()
-addCmtIdVar modifyModule varIdent _ = do
+addCmtIdVar :: ModifyModuleType -> Ident -> VerRes ()
+addCmtIdVar modifyModule idIdent = do
   world <- get
   case Map.lookup (Ident sMaxCommitments) (constants world) of
     Nothing -> error $ sMaxCommitments ++ " constant definition not found in the source file."
     Just maxCommitments -> do
-      let idIdent = Ident $ unident varIdent ++ sIdSuffix
       addVar modifyModule (TUInt maxCommitments) idIdent
   
 addInitialValue :: ModifyModuleType -> Ident -> Exp -> VerRes ()
@@ -283,11 +284,23 @@ createCoArgumentName suffix (Ident funName) (Ident varName) =
 
 -- TODO: with prefix or not? Now: funName ignored
 addNoPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
+addNoPlayerArg modifyModule (Ident funName) (Ar (TCUInt x) varName) = do
+  let
+    idIdent = Ident $ unident varName ++ sIdSuffix
+  addCmtIdVar modifyModule idIdent
+
 addNoPlayerArg modifyModule (Ident funName) (Ar typ varName) = do
   addVar modifyModule typ varName
 
 -- TODO: with prefix of not?
 addPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
+addPlayerArg modifyModule funName (Ar (TCUInt x) varName) = do
+  mod <- modifyModule id
+  let
+    numberedName = createScenarioArgumentName "" funName varName (number mod)
+    idIdent = Ident $ unident numberedName ++ sIdSuffix
+  addCmtIdVar modifyModule idIdent
+
 addPlayerArg modifyModule funName (Ar typ varName) = do
   mod <- modifyModule id
   addVar modifyModule typ $ createScenarioArgumentName "" funName varName (number mod)
@@ -414,10 +427,13 @@ addVarToModule :: Type -> Ident -> Module -> Module
 addVarToModule typ ident mod = do
   mod {vars = Map.insert ident typ (vars mod)}
 
-
 addInitialValueToModule :: Ident -> Exp -> Module -> Module
 addInitialValueToModule ident exp mod = do
   mod {varsInitialValues = Map.insert ident exp (varsInitialValues mod)}
+
+addGlobalCommitment :: Type -> Ident -> Module -> Module
+addGlobalCommitment typ ident mod = do
+  mod {globalCommitments = Map.insert ident typ (globalCommitments mod)}
 
 modifyBlockchain :: (Module -> Module) -> VerRes Module
 modifyBlockchain fun = do

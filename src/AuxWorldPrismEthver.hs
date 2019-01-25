@@ -3,6 +3,7 @@ module AuxWorldPrismEthver where
 import Control.Monad.State
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import GHC.Stack
 
 import AbsEthver
 import AuxPrismEthver
@@ -23,7 +24,9 @@ minValue ident = do
     Just (TSig x) -> return 0
     Just TBool -> return 0
     Just TAddr -> return 0
-    Nothing -> error $ "Type of '" ++ (show ident) ++ "' not found"
+    Just THash -> return 0
+    Nothing -> do
+      error $ "Type of '" ++ (show ident) ++ "' not found"
 
 maxRealValue :: Ident -> VerRes Exp
 maxRealValue ident = do
@@ -51,6 +54,7 @@ findType (EValue) = do
 -- strings only used for players names
 findType (EStr _) = findType ESender
 
+{- OLD:
 findVarType :: Ident -> VerRes (Maybe Type)
 findVarType ident = do
   world <- get 
@@ -69,6 +73,27 @@ findVarType ident = do
                   case Map.lookup ident (vars $ player1 world) of
                     Just typ -> return (Just typ)
                     Nothing -> return Nothing
+-}
+
+findVarType :: Ident -> VerRes (Maybe Type)
+findVarType ident = do
+  world <- get
+  let
+    listFromModule :: (VerWorld -> Module) -> [(Ident, Type)]
+    listFromModule mod = (Map.toList $ vars $ mod world) ++ (Map.toList $ globalCommitments $ mod world)
+    l = foldl 
+      (\acc m -> acc ++ listFromModule m) 
+      []
+      [blockchain, contract, communication, player0, player1]
+    newMap = Map.fromList l
+  return $ Map.lookup ident newMap
+
+commitmentVarName :: Ident -> VerRes Ident
+commitmentVarName varIdent = do
+  world <- get
+  case Map.lookup varIdent (commitmentsIds world) of
+    Just id -> return $ Ident $ sGlobalCommitments ++ "_" ++ (show id)
+    _ -> error $ (show varIdent) ++ ": not found in commitmentsIds"
 
 nameOfFunction :: Function -> String
 nameOfFunction (Fun (Ident name) _ _) = name
@@ -165,6 +190,26 @@ addUser (UDec name) = do
 
 applyToBranch :: ([(Ident, Exp)] -> [(Ident, Exp)]) -> Branch -> Branch
 applyToBranch f (br, liv) = (f br, liv)
+
+
+modifyUpdatesIfCmtInArgs :: Ident -> Maybe Type -> Function -> [(Ident, Exp)] -> [([(Ident, Exp)], [Liveness])]
+modifyUpdatesIfCmtInArgs cmtVar typ fun updatesRoot = 
+  if commitmentInArguments fun
+    then 
+      case typ of
+        Just (TCUInt range) -> 
+          (foldl
+            (\acc x -> acc ++ [(updatesRoot ++ [(cmtVar, EInt x)], [Alive])])
+            []
+            [0..(range - 1)]
+          )
+    else if hashInArguments fun
+      then 
+        case typ of 
+          Just (TCUInt range) ->
+            [(updatesRoot ++ [(cmtVar, EInt range)], [Alive])]
+      else [(updatesRoot, [Alive])]
+
 
 -----------
 -- Trans --
@@ -351,7 +396,7 @@ advUpdates withVal number funName args valList =
         (zip varNames valList)
     ]   
 
--- moved from verScenarios
+-- adds a single trans to Blockchain module to disallow time step when a transaction is being broadcast
 addAdversarialBlockchainTranss :: VerRes()
 addAdversarialBlockchainTranss = do
   world <- get
@@ -402,24 +447,87 @@ addAdversarialTranss funs whichPrefix whichState = do
 
 addAdversarialTranssToPlayer :: ModifyModuleType -> String -> Ident -> Function -> VerRes ()
 
-addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunV (Ident funName) args _) = do
-  mod <- modifyModule id  
-  let valName = Ident $ funName  ++ sValueSuffix ++ (show $ number mod)
-  maxValVal <- maxRealValue valName
-  let maxValsList = generateValsList maxValVal args
-  generateAdvTranss modifyModule whichPrefix whichState True (-1) funName args maxValsList
+addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunV (Ident funName) args stms) = do
+  addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunVL (-1) (Ident funName) args stms)
 
 addAdversarialTranssToPlayer modifyModule whichPrefix whichState (Fun (Ident funName) args x) = 
   addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunL (-1) (Ident funName) args x)
 
+addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunVL limit (Ident funName) args _) = do
+  generateAdvTranssNew modifyModule whichPrefix whichState True limit funName args
+
 addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunL limit (Ident funName) args _) = do
-  let maxValsList = generateValsListNoVal args
-  generateAdvTranss modifyModule whichPrefix whichState False limit funName args maxValsList
+  generateAdvTranssNew modifyModule whichPrefix whichState False limit funName args
 
-
-generateAdvTranss :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> [[Exp]] -> VerRes ()
-generateAdvTranss modifyModule whichPrefix whichState withVal limit funName args maxes = do
+generateAdvTranssNew :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> VerRes ()
+generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName argsOrig = do
   mod <- modifyModule id
+  let cmtVar = Ident $ sGlobalCommitments ++ "_" ++ (show $ number mod)
+  typ <- findVarType cmtVar
+  let 
+    args = filter 
+      (\x -> case x of
+        Ar (TCUInt _) _ -> False
+        _ -> True
+      )
+      argsOrig
+  if commitmentInArguments (Fun (Ident "") argsOrig []) 
+    then do
+      let 
+        cmtArgVar = 
+          Ident $ (unident $ commitmentFromArguments (Fun (Ident "") argsOrig [])) 
+            ++ (show $ number mod) ++ sIdSuffix
+      case typ of 
+        Just (TCUInt range) -> do
+          -- only option: leave the same if already decided 
+          generateAdvTranssAux
+            modifyModule 
+            whichPrefix 
+            whichState 
+            withVal 
+            limit 
+            funName 
+            (args)
+            [ELt (EVar cmtVar) (EInt $ range)] 
+            [(cmtArgVar, EInt $ number mod)] 
+          -- TODO: 2nd option: random open if committed?
+
+    else if hashInArguments (Fun (Ident "") args [])
+      then do
+        case typ of
+          Just (TCUInt range) -> do
+            mapM_
+              (\x -> generateAdvTranssAux
+                modifyModule 
+                whichPrefix 
+                whichState 
+                withVal 
+                limit 
+                funName 
+                (args)
+                [] 
+                [(cmtVar, EInt x)]
+              )
+              [0 .. (range - 1)]
+      else
+        generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args [] [] 
+
+
+
+generateAdvTranssOld :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] ->  VerRes ()
+generateAdvTranssOld modifyModule whichPrefix whichState withVal limit funName args = do
+  generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args [] [] 
+
+generateAdvTranssAux :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> [Exp] -> [(Ident, Exp)] -> VerRes ()
+generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args extraGuards extraUpdates = do
+  mod <- modifyModule id
+  let valName = Ident $ funName ++ sValueSuffix ++ (show $ number mod)
+  maxValVal <- maxRealValue valName
+  let 
+    maxes = if withVal
+      then generateValsList maxValVal args
+      else generateValsListNoVal args
+
   let runsIdent = Ident $ funName ++ sRunsSuffix ++ (show $ number mod)
   case maxes of
     [] ->
@@ -435,10 +543,12 @@ generateAdvTranss modifyModule whichPrefix whichState withVal limit funName args
             EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
           ]
           ++ 
+          extraGuards
+          ++ 
           (if (limit > -1) then [ELt (EVar runsIdent) (EInt limit)] else [])
         )
         -- TODO: Alive?
-        [(if (limit > -1) then [(runsIdent, EAdd (EVar runsIdent) (EInt 1))] else [], [Alive])]
+        [(extraUpdates ++ (if (limit > -1) then [(runsIdent, EAdd (EVar runsIdent) (EInt 1))] else []), [Alive])]
     maxValsList -> do
       forM_
         maxValsList
@@ -454,14 +564,86 @@ generateAdvTranss modifyModule whichPrefix whichState withVal limit funName args
               EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
             ]
             ++ 
+            extraGuards
+            ++
             (if (limit > -1) then [ELt (EVar runsIdent) (EInt limit)] else [])
           )
           -- TODO: Alive?
           (map 
-            (\x -> (x ++ (if (limit > -1) then [(runsIdent, EAdd (EVar runsIdent) (EInt 1))] else []), [Alive]))
+            (\x -> (x ++ extraUpdates ++ (if (limit > -1) then [(runsIdent, EAdd (EVar runsIdent) (EInt 1))] else []), [Alive]))
             (advUpdates withVal (number mod) (Ident funName) args vals)
           )
         )
+
+-- To delete? Currently both fused, but maybe unfuse RCmt? (Micro case)
+
+addAdversarialRCmt :: VerRes ()
+addAdversarialRCmt = do
+  addAdversarialRCmtToPlayer modifyPlayer0
+  addAdversarialRCmtToPlayer modifyPlayer1
+
+addAdversarialRCmtToPlayer :: ModifyModuleType -> VerRes ()
+addAdversarialRCmtToPlayer modifyModule = do
+  mod <- modifyModule id
+  mapM_
+    (\var -> addAdvGlobFunction modifyModule var globFunRCmt)
+    (Map.keys $ vars mod)
+
+addAdversarialOCmt :: VerRes ()
+addAdversarialOCmt = do
+  addAdversarialOCmtToPlayer modifyPlayer0
+  addAdversarialOCmtToPlayer modifyPlayer1
+
+addAdversarialOCmtToPlayer :: ModifyModuleType -> VerRes ()
+addAdversarialOCmtToPlayer modifyModule = do
+  mod <- modifyModule id
+  mapM_
+    (\var -> addAdvGlobFunction modifyModule var globFunOCmt)
+    (Map.keys $ vars mod)
+
+addAdvGlobFunction :: ModifyModuleType -> Ident -> (ModifyModuleType -> Ident -> Integer -> VerRes ()) -> VerRes ()
+addAdvGlobFunction modifyModule varIdent globFun = do
+  typ <- findVarType varIdent
+  case typ of
+    Just (TCUInt range) -> do
+      world <- get
+      case Map.lookup varIdent (commitmentsIds world) of
+        Just nr -> do
+          let globalVarName = Ident $ sGlobalCommitments ++ "_" ++ show nr
+          globFun modifyModule globalVarName range
+        _ -> error $ (show $ unident varIdent) ++ " not found in commitmentsIds"
+    _ -> return ()
+
+globFunRCmt :: ModifyModuleType -> Ident -> Integer -> VerRes ()
+globFunRCmt modifyModule globalVarName range = do
+  advTransAux 
+    modifyModule 
+    [EEq (EVar globalVarName) (EInt $ range + 1)] 
+    [([(globalVarName, EInt range)], [Alive])]
+
+globFunOCmt :: ModifyModuleType -> Ident -> Integer -> VerRes ()
+globFunOCmt modifyModule globalVarName range = do
+  advTransAux
+    modifyModule
+    [EEq (EVar globalVarName) (EInt range)]
+    (foldl
+      (\acc x -> acc ++ [([(globalVarName, EInt x)], [Alive])])
+      []
+      [0..(range - 1)]
+    )
+
+advTransAux :: ModifyModuleType -> [Exp] -> [Branch] -> VerRes ()
+advTransAux modifyModule guards updates = do
+  mod <- modifyModule id
+  addTransNoState
+    modifyModule
+    ""
+    ([
+      EEq (EVar iContrState) (EInt 1),
+      EEq (EVar iCommState) (EInt 1),
+      EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
+    ] ++ guards)
+    updates
 
 
 ---------------------

@@ -64,6 +64,9 @@ sEmptySender = "empty_sender"
 sTimeElapsed = "time_elapsed"
 sTimelockStep = "timelock_step"
 sNextState = "next_state"
+sCommitmentValSuffix = "_val"
+sCommitmentNonceSuffix = "_nonce"
+sGlobalCommitments = "global_commitments"
 
 sEmptyModule = "emptyModule"
 

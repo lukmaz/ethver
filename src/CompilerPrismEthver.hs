@@ -39,6 +39,10 @@ verProgram (Prog users constants contract communication scenarios) = do
   addAdversarialContrTranss contract
   addAdversarialCommTranss communication
   addAdversarialBlockchainTranss
+  
+  --Should be fused into open.sendTransaction() etc.
+  --addAdversarialRCmt
+  --addAdversarialOCmt - already fused
 
 verContractDecl :: Contract -> VerRes ()
 verContractDecl (Contr _ decls _) = do
@@ -98,12 +102,19 @@ verDecl modifyModule (Dec (TCUInt range) varIdent) = do
   let 
     nr = fromIntegral $ Map.size $ commitmentsIds world
     idIdent = Ident $ unident varIdent ++ sIdSuffix
-  put (world {commitmentsIds = Map.insert varIdent nr $ commitmentsIds world,
-    commitmentsNames = commitmentsNames world ++ [varIdent]})
-
+    globalIdent = Ident $ sGlobalCommitments ++ "_" ++ show nr
+  put (world {commitmentsIds = Map.insert varIdent nr $ commitmentsIds world})
+  
+  -- add TCUInt variable with the exact given name
   _ <- modifyModule (addVarToModule (TCUInt range) varIdent)
-  addInitialValue modifyModule varIdent (EInt $ range + 1)
-  addCmtIdVar modifyModule varIdent range
+  -- addInitialValue modifyModule globalIdent (EInt $ range + 1)
+
+  -- add gloabl_commitment variable
+  _ <- modifyModule (addGlobalCommitment (TCUInt range) globalIdent)
+  addInitialValue modifyModule globalIdent (EInt $ range + 1)
+
+  -- auxiliary variable for id with the given name
+  addCmtIdVar modifyModule idIdent
   addInitialValue modifyModule idIdent (EInt nr)
 
 
@@ -139,6 +150,9 @@ verFunBroadcast modifyModule (FunV name args stms) =
 verFunBroadcast modifyModule (FunL _ name args stms) =
   verFunBroadcast modifyModule (Fun name args stms)
 
+verFunBroadcast modifyModule (FunVL _ name args stms) =
+  verFunBroadcast modifyModule (Fun name args stms)
+
 verFunBroadcast modifyModule (Fun name args stms) = do
   --TODO: argumenty
   mod <- modifyModule id
@@ -164,6 +178,9 @@ verFunExecute modifyModule (FunV name args stms) =
   verFunExecute modifyModule (Fun name args stms)
 
 verFunExecute modifyModule (FunL _ name args stms) =
+  verFunExecute modifyModule (Fun name args stms)
+
+verFunExecute modifyModule (FunVL _ name args stms) =
   verFunExecute modifyModule (Fun name args stms)
 
 verFunExecute modifyModule (Fun name args stms) = do
@@ -249,15 +266,18 @@ verExecTransaction modifyModule = do
 -------------------------------------
 -- verDFSContract/Communication --
 -------------------------------------
-
+{-
 verDFSFunContractOrCommunication :: ModifyModuleType -> (Function -> VerRes ()) -> Function -> VerRes ()
 verDFSFunContractOrCommunication modifyModule commonFun fun = do
   commonFun fun
   verDFSFun modifyModule fun
+-}
 
--------------------------------------
+----------------------------------
 -- verOldContract/Communication --
--------------------------------------
+-- limit, big if for sender,    --
+-- all statements               --
+----------------------------------
 
 verOldFunContractOrCommunication :: ModifyModuleType -> (Function -> VerRes ()) -> Function -> VerRes ()
 
@@ -266,6 +286,9 @@ verOldFunContractOrCommunication modifyModule commonfun (FunV name args stm) =
 
 verOldFunContractOrCommunication modifyModule commonfun (Fun name args stm) =
   verOldFunContractOrCommunication modifyModule commonfun (FunL (-1)  name args stm)
+
+verOldFunContractOrCommunication modifyModule commonfun (FunVL limit name args stm) =
+  verOldFunContractOrCommunication modifyModule commonfun (FunL limit  name args stm)
 
 verOldFunContractOrCommunication modifyModule commonFun fun@(FunL limit name args stms) = do
   commonFun fun
@@ -312,16 +335,20 @@ verOldFunContractOrCommunication modifyModule commonFun fun@(FunL limit name arg
 -----------------
 
 -- common for OLD, SMART and DFS
+-- arguments are handled here
 commonVerFunContract :: Function -> VerRes ()
 commonVerFunContract (FunL _ name args stms) =
   commonVerFunContract (Fun name args stms)
 
 commonVerFunContract (Fun name args stms) = do
+  -- adds fun ident to two maps in World
   addFun (Fun name args stms)
   addContractFun (Fun name args stms)
+  -- variables for status of the transaction
   addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStatusSuffix ++ "0" 
   addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStatusSuffix ++ "1"
 
+  -- add arguments variables to World
   mapM_ (addContrArgument name) args
 
   -- TODO: skąd wziąć zakres val - rozwiązane na razie jednym MAX_VALUE
@@ -329,11 +356,12 @@ commonVerFunContract (Fun name args stms) = do
   let maxValue = case Map.lookup (Ident sMaxValue) $ constants world of
         Just value -> value
 
+  -- add arguments for value to players modules
   addVar modifyPlayer0 (TUInt (maxValue + 1)) $ Ident $ unident name ++ sValueSuffix ++ "0"
   addVar modifyPlayer1 (TUInt (maxValue + 1)) $ Ident $ unident name ++ sValueSuffix ++ "1"
   
   mod <- modifyContract id
-  -- adds a command that the transaction is being broadcast
+  -- adds a command to Contract module that the transaction is being broadcast
   addCustomTrans
     modifyContract
     (sBroadcastPrefix ++ (unident name))
@@ -348,8 +376,8 @@ commonVerFunContract (Fun name args stms) = do
   return ()
 
 -- DFS
-verDFSFunContract :: Function -> VerRes ()
-verDFSFunContract fun = verDFSFunContractOrCommunication modifyContract commonVerFunContract fun
+--verDFSFunContract :: Function -> VerRes ()
+--verDFSFunContract fun = verDFSFunContractOrCommunication modifyContract commonVerFunContract fun
 
 verOldFunContract :: Function -> VerRes ()
 verOldFunContract fun = verOldFunContractOrCommunication modifyContract commonVerFunContract fun
@@ -381,9 +409,10 @@ commonVerFunCommunication (Fun funName args stms) = do
   return ()
 
 -- DFS
-verDFSFunCommunication :: Function -> VerRes ()
-verDFSFunCommunication fun = verDFSFunContractOrCommunication modifyCommunication commonVerFunCommunication fun
+-- verDFSFunCommunication :: Function -> VerRes ()
+-- verDFSFunCommunication fun = verDFSFunContractOrCommunication modifyCommunication commonVerFunCommunication fun
 
+-- OLD
 verOldFunCommunication :: Function -> VerRes ()
 verOldFunCommunication fun = verOldFunContractOrCommunication modifyCommunication commonVerFunCommunication fun
 
@@ -394,6 +423,9 @@ verOldFunCommunication fun = verOldFunContractOrCommunication modifyCommunicatio
 verScenarios :: [Scenario] -> VerRes ()
 verScenarios [(Scen userName0 decls0 stms0), (Scen userName1 decls1 stms1)] = do
   --TODO: przepadają userName'y
+  mapM_ (verDecl modifyPlayer0) decls0
+  mapM_ (verDecl modifyPlayer1) decls1
+
   verScenario modifyPlayer0 decls0 stms0
   verScenario modifyPlayer1 decls1 stms1
 
@@ -401,7 +433,6 @@ verScenario :: ModifyModuleType -> [Decl] -> [Stm] -> VerRes ()
 verScenario modifyModule decls stms = do
   mod <- modifyModule id
 
-  mapM_ (verDecl modifyModule) decls
   mapM_ (verStm modifyModule) stms
 
   -- allow time elapse after scenario finish
@@ -449,3 +480,4 @@ verScenario modifyModule decls stms = do
     (-1)
     []
     [([], [Alive])]
+

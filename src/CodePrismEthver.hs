@@ -32,7 +32,9 @@ generateModule moduleFun moduleName pream world =
   "\n\n/////////////////////\n" ++
   "\nmodule " ++ moduleName ++ "\n" ++
   pream ++ "\n" ++
-  (prismVars (whichSender $ moduleFun world) (vars $ moduleFun world) (varsInitialValues $ moduleFun world)) ++
+  (prismVars (whichSender $ moduleFun world) (vars $ moduleFun world) (varsInitialValues $ moduleFun world)
+    (commitmentsIds world)) ++
+  (prismGlobalCommitments (globalCommitments $ moduleFun world)) ++
   "\n" ++ 
   prismTranss (whichSender $ moduleFun world) (reverse $ transs $ moduleFun world) ++
   "endmodule\n\n\n"
@@ -103,24 +105,47 @@ generateNumStates world =
   (show $ numStates $ player1 world) ++
   ";\n\n"
 
-prismVars :: Ident -> Map.Map Ident Type -> Map.Map Ident Exp -> String
-prismVars senderIdent vars initialValues = 
+prismVars :: Ident -> Map.Map Ident Type -> Map.Map Ident Exp -> Map.Map Ident Integer -> String
+prismVars senderIdent vars initialValues commitmentsMap = 
   Map.foldlWithKey
     (\code ident typ ->
       case typ of
         TSig _ ->
           code
+        TCUInt x ->
+          code
+        {- Old, to delete
+        TCUInt x ->
+          let
+            globalIdent = case Map.lookup ident commitmentsMap of
+              Just nr -> Ident $ sGlobalCommitments ++ "_" ++ show nr
+              _ -> error $ unident ident ++ " not found in commitmentsIds"
+            initSuffix = " init " ++ (show $ maxTypeValueOfType (TCUInt x))
+          in
+            code ++ "  " ++ (unident globalIdent)
+              ++ " : " ++ (prismShowType typ) ++ initSuffix ++ ";\n"-}
         _ -> 
           let 
-            initSufix = 
+            initSuffix = 
               case Map.lookup ident initialValues of
                 Nothing -> ""
                 Just exp -> " init " ++ prismShowExp senderIdent exp
           in
             code ++ "  " ++ (unident ident)
-              ++ " : " ++ (prismShowType typ) ++ initSufix ++ ";\n")
+              ++ " : " ++ (prismShowType typ) ++ initSuffix ++ ";\n")
     "" 
     vars
+
+prismGlobalCommitments :: Map.Map Ident Type -> String
+prismGlobalCommitments globalCommitments =
+  Map.foldlWithKey
+    (\code ident typ ->
+      case typ of
+        TCUInt x ->
+          code ++ "  " ++ (unident ident) ++ " : " ++ (prismShowType typ) ++ " init " ++ show (x + 1) ++ ";\n")
+    ""
+    globalCommitments
+  
 
 -----------------
 -- prism Trans --
@@ -188,6 +213,7 @@ prismShowType (TSig x) = "[0.." ++ (show x) ++ "]"
 --prismShowType TSig = "[0.." ++ (show sMaxSignatures) ++ "]"
 prismShowType (TAddr) = "[0..1]" 
 prismShowType TBool = "bool"
+prismShowType THash = "[0..1]"
 
 -- TODO: porównanie w PRISM jest =, a w Solidity jest ==. Ale chyba będą i tak dwie różne
 -- funkcje w CompilerEth i CompilerPrism. Wspólny chcemy mieć tylko typ Exp.
