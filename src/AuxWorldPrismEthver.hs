@@ -463,7 +463,16 @@ generateAdvTranssNew :: ModifyModuleType -> String -> Ident -> Bool -> Integer -
 generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName argsOrig = do
   mod <- modifyModule id
   let cmtVar = Ident $ sGlobalCommitments ++ "_" ++ (show $ number mod)
+  world <- get
   typ <- findVarType cmtVar
+  error $ (show cmtVar) ++ " found by findVarType in verFullAss (SAss _ (EValOf _))\n" ++
+    (show $ globalCommitments $ player0 world) ++  "\n" ++
+    (show $ globalCommitments $ contract world) ++ "\n" ++
+    (show $ globalCommitments $ blockchain world) ++ "\n" ++
+    (show $ vars $ player0 world) ++ "\n" ++
+    (show $ vars $ contract world) ++ "\n" ++
+    (show $ vars $ blockchain world)
+
   let 
     args = filter 
       (\x -> case x of
@@ -576,7 +585,7 @@ generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName a
         )
 
 -- To delete? Currently both fused, but maybe unfuse RCmt? (Micro case)
-
+{-
 addAdversarialRCmt :: VerRes ()
 addAdversarialRCmt = do
   addAdversarialRCmtToPlayer modifyPlayer0
@@ -631,7 +640,7 @@ globFunOCmt modifyModule globalVarName range = do
       []
       [0..(range - 1)]
     )
-
+-}
 advTransAux :: ModifyModuleType -> [Exp] -> [Branch] -> VerRes ()
 advTransAux modifyModule guards updates = do
   mod <- modifyModule id

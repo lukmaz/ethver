@@ -253,15 +253,19 @@ verStm modifyModule (SSendC funExp args) = do
 --
 --------------------------------------
 
-verStm modifyModule (SRCmt (EVar cmtVar)) = do
+-- RCmt not used directly (fused with calling a function(hash)
+{- verStm modifyModule (SRCmt (EVar cmtVar)) = do
   typ <- findVarType cmtVar
   case typ of
     Just (TCUInt x) -> do
       verWithCommitment modifyModule cmtVar (\globalName -> SAss globalName (EInt x))
     _ -> 
       error $ unident cmtVar ++ ": randomCommitment can be called on cmt_uint object only"
+-}
 
-verStm modifyModule (SOCmt (EVar cmtVar)) = do
+
+-- SOCmt not used directly; moved to ValueOf
+{-verStm modifyModule (SOCmt (EVar cmtVar)) = do
   typ <- findVarType cmtVar
   case typ of
     Just (TCUInt range) -> do
@@ -280,6 +284,8 @@ verStm modifyModule (SOCmt (EVar cmtVar)) = do
           )
       else do
         verWithCommitment modifyModule cmtVar (\globalName -> SOCmt $ EVar $ globalName)
+-}
+
 
 {- moze niepotrzebne? Jesli potrzebne, to jest szansa, ze dziala 
 verStm modifyModule (SOCmt (EArray ident index)) = do
@@ -353,8 +359,38 @@ verWithCommitment modifyModule cmtVar stmFromIdent = do
 ---------
 
 verFullAss :: ModifyModuleType -> Stm -> VerRes ()
+-- (NEW) moved from SOCmt
 verFullAss modifyModule (SAss varIdent (EValOf (EVar cmtVar))) = do
-  verWithCommitment modifyModule cmtVar (\globalName -> SAss varIdent $ EVar globalName)
+  mod <- modifyModule id
+  let cmtId = Ident $ unident cmtVar ++ sIdSuffix
+  typ <- findVarType $ Ident $ sGlobalCommitments ++ "_0"
+  case typ of
+    Just (TCUInt range) -> do
+      let localVarIdent = Ident $ (moduleName mod) ++ sLocalSuffix ++ (show $ numLocals mod)
+      addLocal modifyModule (TCUInt range)
+      addTransToNewState 
+        modifyModule 
+        ""
+        []
+        -- TODO: Alive?
+        (foldl
+          (\acc x -> acc ++ [([(localVarIdent, EInt x)], [Alive])])
+          []
+          [0..(range - 1)]
+        )
+      
+      verWithCommitment modifyModule cmtVar (\globalName -> SAss globalName (EVar $ localVarIdent))
+    _ -> return ()
+    Nothing -> do
+      world <- get
+      error $ (show cmtVar) ++ " not found by findVarType in verFullAss (SAss _ (EValOf _))\n" ++
+        (show $ globalCommitments $ player0 world) ++  "\n" ++
+        (show $ globalCommitments $ contract world) ++ "\n" ++
+        (show $ globalCommitments $ blockchain world) ++ "\n" ++
+        (show $ vars $ player0 world) ++ "\n" ++
+        (show $ vars $ contract world) ++ "\n" ++
+        (show $ vars $ blockchain world)
+    --_ -> error $ (show typ) ++ " not supported by verFullAss (SAss _ (EValOf _))"
 
 verFullAss modifyModule (SAss varIdent exp) = do
   case exp of
@@ -798,8 +834,9 @@ verFunCall modifyModule (FunR name args ret stms) argsVals = do
 -------------
 -- ScSendT --
 -------------
--- Assumption: If there is a cmt argument, the function  must be called when it's in "committed" state
+-- (OLD) Assumption: If there is a cmt argument, the function  must be called when it's in "committed" state
 -- and it automatically opens it.
+-- (NEW) opening moved to ValueOf
 verSendTAux :: ModifyModuleType -> Ident -> [CallArg] -> VerRes ()
 verSendTAux modifyModule funName argsVals = do
   world <- get
@@ -820,10 +857,12 @@ verSendTAux modifyModule funName argsVals = do
       --TODO: Alive?
       let updates1Root = foldl addAssignment (head updates0) $ zip argNames evalArgsVals
       
-      -- simplification: only one commitment/player allowed so open this commitment
-      let cmtVar = Ident $ sGlobalCommitments ++ "_" ++ (show $ number mod)
-      typ <- findVarType cmtVar
-      let updates2 = modifyUpdatesIfCmtInArgs cmtVar typ fun updates1Root
+      -- (OLD) simplification: only one commitment/player allowed so open this commitment
+      -- (NEW) moved to ValueOf
+      -- let cmtVar = Ident $ sGlobalCommitments ++ "_" ++ (show $ number mod)
+      -- typ <- findVarType cmtVar
+      -- let updates2 = modifyUpdatesIfCmtInArgs cmtVar typ fun updates1Root
+      let updates2 = [(updates1Root, [Alive])]
       
       addTransToNewState 
         modifyModule 
@@ -859,10 +898,12 @@ verSendCAux modifyModule funName expArgsVals = do
       --TODO: Alive?
       let updates1Root = foldl addAssignment [] $ zip argNames evalArgsVals
       
-      -- simplification: only one commitment/player allowed so open this commitment
-      let cmtVar = Ident $ sGlobalCommitments ++ "_" ++ (show $ number mod)
-      typ <- findVarType cmtVar
-      let updates2 = modifyUpdatesIfCmtInArgs cmtVar typ fun updates1Root
+      -- (OLD) simplification: only one commitment/player allowed so open this commitment
+      -- (NEW) moved to ValueOf
+      -- let cmtVar = Ident $ sGlobalCommitments ++ "_" ++ (show $ number mod)
+      -- typ <- findVarType cmtVar
+      -- let updates2 = modifyUpdatesIfCmtInArgs cmtVar typ fun updates1Root
+      let updates2 = [(updates1Root, [Alive])]
 
       addTransToNewState
         modifyModule
