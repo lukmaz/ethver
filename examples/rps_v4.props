@@ -2,11 +2,3 @@ filter(min, Pmin=? [ F balance0>=2 ], in_game_0&committed_0&committed_1&!has_rev
 
 Pmin=? [ F endA&balance0>=1 ]
 
-filter(min, Pmin=? [ F endA ], committed_0&committed_1&global_commitments_0=3&global_commitments_1=1)
-
-Pmin=? [ F endA ]
-
-filter(min, Pmin=? [ F endA ], committed_0&committed_1&global_commitments_0=2&global_commitments_1=3)
-
-filter(min, Pmin=? [ F endA ], committed_0&committed_1&global_commitments_0=1&global_commitments_1=1)
-

@@ -505,7 +505,7 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
                 limit 
                 funName 
                 (args)
-                [] 
+                [EEq (EVar cmtVar) (EInt $ range + 1)] 
                 [(cmtVar, EInt x)]
               )
               [0 .. (range - 1)]
