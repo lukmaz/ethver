@@ -100,22 +100,32 @@ verDecl :: ModifyModuleType -> Decl -> VerRes ()
 verDecl modifyModule (Dec (TCUInt range) varIdent) = do
   world <- get
   let 
-    nr = fromIntegral $ Map.size $ commitmentsIds world
+    --nr = fromIntegral $ Map.size $ commitmentsIds world
     idIdent = Ident $ unident varIdent ++ sIdSuffix
-    globalIdent = Ident $ sGlobalCommitments ++ "_" ++ show nr
-  put (world {commitmentsIds = Map.insert varIdent nr $ commitmentsIds world})
+    --globalIdent = Ident $ sGlobalCommitments ++ "_" ++ show nr
+  --put (world {commitmentsIds = Map.insert varIdent nr $ commitmentsIds world})
   
   -- add TCUInt variable with the exact given name
-  _ <- modifyModule (addVarToModule (TCUInt range) varIdent)
+  
+  --
+  -- TODO: is it needed? since the value is already stored in global commitment? Temporarily removed
+  -- _ <- modifyModule (addVarToModule (TCUInt range) varIdent)
+  --
+
   -- addInitialValue modifyModule globalIdent (EInt $ range + 1)
 
   -- add gloabl_commitment variable
-  _ <- modifyModule (addGlobalCommitment (TCUInt range) globalIdent)
-  addInitialValue modifyModule globalIdent (EInt $ range + 1)
+  -- (OLD)
+  -- _ <- modifyModule (addGlobalCommitment (TCUInt range) globalIdent)
+  -- addInitialValue modifyModule globalIdent (EInt $ range + 1)
+  -- (NEW)
+  addGlobalCommitments range
 
   -- auxiliary variable for id with the given name
   addCmtIdVar modifyModule idIdent
-  addInitialValue modifyModule idIdent (EInt nr)
+
+  mod <- modifyModule id 
+  addInitialValue modifyModule idIdent (EInt $ number mod)
 
 
 verDecl modifyModule (Dec typ ident) = do

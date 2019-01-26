@@ -57,7 +57,8 @@ sStatePrefix = "state"
 sStatusSuffix = "_status"
 sSigSuffix = "_sig"
 sKeySuffix = "_key"
-sIdSuffix = "_id"
+-- TODO: To remove
+sIdSuffix = ""
 sRunsSuffix = "_runs"
 sEmptyState = "empty_state"
 sEmptySender = "empty_sender"
@@ -67,6 +68,7 @@ sNextState = "next_state"
 sCommitmentValSuffix = "_val"
 sCommitmentNonceSuffix = "_nonce"
 sGlobalCommitments = "global_commitments"
+sOpenCommitment = "open_commitment"
 
 sEmptyModule = "emptyModule"
 

@@ -52,8 +52,9 @@ data VerWorld = VerWorld {
   condRandomArrays :: Map.Map Ident (Set.Set Exp),
   lazyRandoms :: Set.Set Ident,
   addedGuards :: [Exp],
-  senderNumber :: Maybe Integer,
-  commitmentsIds :: Map.Map Ident Integer
+  senderNumber :: Maybe Integer
+  -- removed since commitments are tracked by cmtA_id etc. vars
+  --commitmentsIds :: Map.Map Ident Integer
   --commitmentsNames :: [Ident]
   --commitmentsNr :: Integer
   }
@@ -70,7 +71,8 @@ data Module = Module {
   breakStates :: [Integer],
   transs :: [Trans],
   whichSender :: Ident,
-  globalCommitments :: Map.Map Ident Type
+  globalCommitments :: Map.Map Ident Type,
+  openTransPresent :: Bool
   }
   
 
@@ -98,8 +100,8 @@ emptyVerWorld = VerWorld {
   condRandomArrays = Map.empty,
   lazyRandoms = Set.empty,
   addedGuards = [],
-  senderNumber = Nothing,
-  commitmentsIds = Map.empty
+  senderNumber = Nothing
+  --commitmentsIds = Map.empty
   --commitmentsNames = []
   --commitmentsNr = 0
   } 
@@ -109,7 +111,9 @@ emptyModule = Module {number = nUndefModuleNumber, stateVar = sEmptyState, modul
   vars = Map.empty, varsInitialValues = Map.empty, numLocals = 0, currState = 1, numStates = 1,
   breakStates = [],
   transs = [], whichSender = Ident sEmptySender,
-  globalCommitments = Map.empty}
+  globalCommitments = Map.empty,
+  openTransPresent = False
+  }
 
 
 addAutoVars :: VerRes ()
@@ -212,7 +216,10 @@ addSignatureVarAux modifyModule varIdent (nr, typ) = do
   case typ of
     TCUInt x -> do
       world <- get
-      addVar modifyModule (TUInt $ fromIntegral $ Map.size $ commitmentsIds world) newIdent
+      -- (OLD)
+      -- addVar modifyModule (TUInt $ fromIntegral $ Map.size $ commitmentsIds world) newIdent
+      -- (NEW)
+      addVar modifyModule (TUInt 2) newIdent
     TUInt x -> 
       addVar modifyModule typ newIdent
 
@@ -284,22 +291,24 @@ createCoArgumentName suffix (Ident funName) (Ident varName) =
 
 -- TODO: with prefix or not? Now: funName ignored
 addNoPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
-addNoPlayerArg modifyModule (Ident funName) (Ar (TCUInt x) varName) = do
+addNoPlayerArg modifyModule (Ident funName) (Ar (TCUInt range) varName) = do
   let
     idIdent = Ident $ unident varName ++ sIdSuffix
   addCmtIdVar modifyModule idIdent
+  addGlobalCommitments range
 
 addNoPlayerArg modifyModule (Ident funName) (Ar typ varName) = do
   addVar modifyModule typ varName
 
 -- TODO: with prefix of not?
 addPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
-addPlayerArg modifyModule funName (Ar (TCUInt x) varName) = do
+addPlayerArg modifyModule funName (Ar (TCUInt range) varName) = do
   mod <- modifyModule id
   let
     numberedName = createScenarioArgumentName "" funName varName (number mod)
     idIdent = Ident $ unident numberedName ++ sIdSuffix
   addCmtIdVar modifyModule idIdent
+  addGlobalCommitments range
 
 addPlayerArg modifyModule funName (Ar typ varName) = do
   mod <- modifyModule id
@@ -431,9 +440,11 @@ addInitialValueToModule :: Ident -> Exp -> Module -> Module
 addInitialValueToModule ident exp mod = do
   mod {varsInitialValues = Map.insert ident exp (varsInitialValues mod)}
 
+{-
 addGlobalCommitment :: Type -> Ident -> Module -> Module
 addGlobalCommitment typ ident mod = do
   mod {globalCommitments = Map.insert ident typ (globalCommitments mod)}
+-}
 
 modifyBlockchain :: (Module -> Module) -> VerRes Module
 modifyBlockchain fun = do
@@ -469,4 +480,115 @@ modifyPlayer1 fun = do
   put (world {player1 = fun $ player1 world})
   world <- get
   return $ player1 world
+
+-------------------
+-- applyToBranch --
+-------------------
+
+applyToBranch :: ([(Ident, Exp)] -> [(Ident, Exp)]) -> Branch -> Branch
+applyToBranch f (br, liv) = (f br, liv)
+
+
+-- Trans
+
+addTransToNewState :: ModifyModuleType -> String -> [Exp] -> [Branch] -> VerRes ()
+addTransToNewState modifyModule transName guards updates = do
+  mod <- modifyModule id
+  let newState = numStates mod + 1
+  addCustomTrans modifyModule transName (currState mod) newState guards updates
+  _ <- modifyModule (setCurrState newState)
+  _ <- modifyModule (setNumStates newState)
+  return ()
+
+addCustomTrans :: ModifyModuleType -> String -> Integer -> Integer -> [Exp] -> [Branch] -> VerRes ()
+addCustomTrans modifyModule transName fromState toState guards updates = do
+  mod <- modifyModule id
+  let newTrans = newCustomTrans (stateVar mod) transName fromState toState guards updates
+  _ <- modifyModule (addTransToModule newTrans)
+  return ()
+
+addFirstCustomTrans :: ModifyModuleType -> String -> Integer -> Integer -> [Exp] -> [Branch] -> VerRes ()
+addFirstCustomTrans modifyModule transName fromState toState guards updates = do
+  mod <- modifyModule id
+  let newTrans = newCustomTrans (stateVar mod) transName fromState toState guards updates
+  _ <- modifyModule (addFirstTransToModule newTrans)
+  return ()
+
+
+addTransNoState :: ModifyModuleType -> String -> [Exp] -> [Branch] -> VerRes ()
+addTransNoState modifyModule transName guards updates = do
+  mod <- modifyModule id
+  let newTrans = newTransNoState transName guards updates
+  _ <- modifyModule (addTransToModule newTrans)
+  return ()
+
+newCustomTrans :: String -> String -> Integer -> Integer -> [Exp] -> [Branch] -> Trans
+newCustomTrans stateVar transName fromState toState guards updates =
+  newTransNoState
+    transName
+    ((EEq (EVar (Ident stateVar)) (EInt fromState)):guards)
+    -- TODO: Alive?
+    (map (applyToBranch ((Ident stateVar, EInt toState):)) updates)
+  
+
+newTransNoState :: String -> [Exp] -> [Branch] -> Trans
+newTransNoState transName guards updates =
+  (transName, guards, updates)
+
+addTransToModule :: Trans -> Module -> Module
+addTransToModule tr mod = 
+  mod {transs = tr:(transs mod)}
+
+addFirstTransToModule :: Trans -> Module -> Module
+addFirstTransToModule tr mod =
+  mod {transs = (transs mod) ++ [tr]}
+
+
+-- Commitments  
+
+addOpenTrans :: ModifyModuleType -> Integer -> VerRes ()
+addOpenTrans modifyModule range = do
+  mod <- modifyModule id
+  let 
+    nr = show $ number mod
+    cmtIdent = Ident $ sGlobalCommitments ++ "_" ++ nr
+  
+  if openTransPresent mod  == False
+    then do
+      -- committed -> random
+      addTransNoState
+        modifyModule
+        (sOpenCommitment ++ nr)
+        [EEq (EVar cmtIdent) (EInt range)]
+        (foldl
+          (\acc x -> acc ++ [([(cmtIdent, EInt x)], [Alive])])
+          []
+          [0..(range - 1)]
+        )
+      
+      -- opened -> the same
+      addTransNoState
+        modifyModule
+        (sOpenCommitment ++ nr)
+        [ELt (EVar cmtIdent) (EInt range)]
+        [([], [Alive])]
+
+      _ <- modifyModule (\mod -> mod {openTransPresent = True})
+      return ()
+    else
+      return ()
+
+
+addGlobalCommitments :: Integer -> VerRes ()
+addGlobalCommitments range = do
+  let 
+    ident0 = Ident $ sGlobalCommitments ++ "_0"
+    ident1 = Ident $ sGlobalCommitments ++ "_1"
+    typ = TCUInt range
+  _ <- modifyPlayer0 (\p -> p {globalCommitments = Map.fromList [(ident0, typ)]})
+  _ <- modifyPlayer1 (\p -> p {globalCommitments = Map.fromList [(ident1, typ)]})
+  addOpenTrans modifyPlayer0 range
+  addOpenTrans modifyPlayer1 range
+  return ()
+
 

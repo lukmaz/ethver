@@ -32,8 +32,11 @@ generateModule moduleFun moduleName pream world =
   "\n\n/////////////////////\n" ++
   "\nmodule " ++ moduleName ++ "\n" ++
   pream ++ "\n" ++
-  (prismVars (whichSender $ moduleFun world) (vars $ moduleFun world) (varsInitialValues $ moduleFun world)
-    (commitmentsIds world)) ++
+  -- (OLD)
+  -- (prismVars (whichSender $ moduleFun world) (vars $ moduleFun world) (varsInitialValues $ moduleFun world)
+  --   (commitmentsIds world)) ++
+  -- (NEW)
+  (prismVars (whichSender $ moduleFun world) (vars $ moduleFun world) (varsInitialValues $ moduleFun world)) ++
   (prismGlobalCommitments (globalCommitments $ moduleFun world)) ++
   "\n" ++ 
   prismTranss (whichSender $ moduleFun world) (reverse $ transs $ moduleFun world) ++
@@ -105,8 +108,12 @@ generateNumStates world =
   (show $ numStates $ player1 world) ++
   ";\n\n"
 
-prismVars :: Ident -> Map.Map Ident Type -> Map.Map Ident Exp -> Map.Map Ident Integer -> String
-prismVars senderIdent vars initialValues commitmentsMap = 
+-- (OLD)
+--prismVars :: Ident -> Map.Map Ident Type -> Map.Map Ident Exp -> Map.Map Ident Integer -> String
+--prismVars senderIdent vars initialValues commitmentsMap = 
+-- (NEW)
+prismVars :: Ident -> Map.Map Ident Type -> Map.Map Ident Exp -> String
+prismVars senderIdent vars initialValues  = 
   Map.foldlWithKey
     (\code ident typ ->
       case typ of

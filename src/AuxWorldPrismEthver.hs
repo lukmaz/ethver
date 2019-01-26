@@ -26,7 +26,10 @@ minValue ident = do
     Just TAddr -> return 0
     Just THash -> return 0
     Nothing -> do
-      error $ "Type of '" ++ (show ident) ++ "' not found"
+      world <- get
+      error $ "Type of '" ++ (show ident) ++ "' not found" ++
+        "\n" ++ (show $ vars $ contract world) ++
+        (show callStack)
 
 maxRealValue :: Ident -> VerRes Exp
 maxRealValue ident = do
@@ -88,12 +91,18 @@ findVarType ident = do
     newMap = Map.fromList l
   return $ Map.lookup ident newMap
 
+{-
 commitmentVarName :: Ident -> VerRes Ident
 commitmentVarName varIdent = do
   world <- get
   case Map.lookup varIdent (commitmentsIds world) of
     Just id -> return $ Ident $ sGlobalCommitments ++ "_" ++ (show id)
     _ -> error $ (show varIdent) ++ ": not found in commitmentsIds"
+-}
+
+isGlobalCommitmentIdent :: Ident -> Bool
+isGlobalCommitmentIdent ident =
+  (init $ unident ident) == (sGlobalCommitments ++ "_")
 
 nameOfFunction :: Function -> String
 nameOfFunction (Fun (Ident name) _ _) = name
@@ -184,13 +193,6 @@ addUser :: UserDecl -> VerRes ()
 addUser (UDec name) = do
   addPlayer name
 
--------------------
--- applyToBranch --
--------------------
-
-applyToBranch :: ([(Ident, Exp)] -> [(Ident, Exp)]) -> Branch -> Branch
-applyToBranch f (br, liv) = (f br, liv)
-
 
 modifyUpdatesIfCmtInArgs :: Ident -> Maybe Type -> Function -> [(Ident, Exp)] -> [([(Ident, Exp)], [Liveness])]
 modifyUpdatesIfCmtInArgs cmtVar typ fun updatesRoot = 
@@ -214,58 +216,6 @@ modifyUpdatesIfCmtInArgs cmtVar typ fun updatesRoot =
 -----------
 -- Trans --
 -----------
-
-addTransToNewState :: ModifyModuleType -> String -> [Exp] -> [Branch] -> VerRes ()
-addTransToNewState modifyModule transName guards updates = do
-  mod <- modifyModule id
-  let newState = numStates mod + 1
-  addCustomTrans modifyModule transName (currState mod) newState guards updates
-  _ <- modifyModule (setCurrState newState)
-  _ <- modifyModule (setNumStates newState)
-  return ()
-
-addCustomTrans :: ModifyModuleType -> String -> Integer -> Integer -> [Exp] -> [Branch] -> VerRes ()
-addCustomTrans modifyModule transName fromState toState guards updates = do
-  mod <- modifyModule id
-  let newTrans = newCustomTrans (stateVar mod) transName fromState toState guards updates
-  _ <- modifyModule (addTransToModule newTrans)
-  return ()
-
-addFirstCustomTrans :: ModifyModuleType -> String -> Integer -> Integer -> [Exp] -> [Branch] -> VerRes ()
-addFirstCustomTrans modifyModule transName fromState toState guards updates = do
-  mod <- modifyModule id
-  let newTrans = newCustomTrans (stateVar mod) transName fromState toState guards updates
-  _ <- modifyModule (addFirstTransToModule newTrans)
-  return ()
-
-
-addTransNoState :: ModifyModuleType -> String -> [Exp] -> [Branch] -> VerRes ()
-addTransNoState modifyModule transName guards updates = do
-  mod <- modifyModule id
-  let newTrans = newTransNoState transName guards updates
-  _ <- modifyModule (addTransToModule newTrans)
-  return ()
-
-newCustomTrans :: String -> String -> Integer -> Integer -> [Exp] -> [Branch] -> Trans
-newCustomTrans stateVar transName fromState toState guards updates =
-  newTransNoState
-    transName
-    ((EEq (EVar (Ident stateVar)) (EInt fromState)):guards)
-    -- TODO: Alive?
-    (map (applyToBranch ((Ident stateVar, EInt toState):)) updates)
-  
-
-newTransNoState :: String -> [Exp] -> [Branch] -> Trans
-newTransNoState transName guards updates =
-  (transName, guards, updates)
-
-addTransToModule :: Trans -> Module -> Module
-addTransToModule tr mod = 
-  mod {transs = tr:(transs mod)}
-
-addFirstTransToModule :: Trans -> Module -> Module
-addFirstTransToModule tr mod =
-  mod {transs = (transs mod) ++ [tr]}
 
 -- TODO: similar things are in verFunExecute for contract
 addCommunicateOnePlayer :: Ident -> [Arg] -> Integer -> VerRes ()
@@ -465,13 +415,6 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
   let cmtVar = Ident $ sGlobalCommitments ++ "_" ++ (show $ number mod)
   world <- get
   typ <- findVarType cmtVar
-  error $ (show cmtVar) ++ " found by findVarType in verFullAss (SAss _ (EValOf _))\n" ++
-    (show $ globalCommitments $ player0 world) ++  "\n" ++
-    (show $ globalCommitments $ contract world) ++ "\n" ++
-    (show $ globalCommitments $ blockchain world) ++ "\n" ++
-    (show $ vars $ player0 world) ++ "\n" ++
-    (show $ vars $ contract world) ++ "\n" ++
-    (show $ vars $ blockchain world)
 
   let 
     args = filter 
@@ -641,6 +584,8 @@ globFunOCmt modifyModule globalVarName range = do
       [0..(range - 1)]
     )
 -}
+
+
 advTransAux :: ModifyModuleType -> [Exp] -> [Branch] -> VerRes ()
 advTransAux modifyModule guards updates = do
   mod <- modifyModule id
