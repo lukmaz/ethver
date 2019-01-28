@@ -6,7 +6,9 @@ import AbsEthver
 -- NUMBERS --
 -------------
 
-nMaxRuns = 2
+nMaxRuns = 2 -- ???
+
+nMaxCommitments = 2
 
 nUndefModuleNumber = 42
 nWrongExp = 43
@@ -45,7 +47,6 @@ sInitUser1Balance = "USER1_BALANCE_INIT"
 sMaxValue = "MAX_VALUE"
 sMaxTime = "MAX_TIME"
 sMaxSignatures = "MAX_SIGNATURES"
-sMaxCommitments = "MAX_COMMITMENTS"
 sTimeDelta = "TIME_DELTA"
 
 sContrState = "contrstate"
@@ -58,7 +59,6 @@ sStatusSuffix = "_status"
 sSigSuffix = "_sig"
 sKeySuffix = "_key"
 -- TODO: To remove
-sIdSuffix = ""
 sRunsSuffix = "_runs"
 sEmptyState = "empty_state"
 sEmptySender = "empty_sender"

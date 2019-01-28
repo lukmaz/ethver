@@ -347,7 +347,7 @@ verStm modifyModule (SWait cond time) = do
 verWithCommitment :: ModifyModuleType -> Ident -> (Ident -> Stm) -> VerRes ()
 verWithCommitment modifyModule cmtVar stmFromIdent = do
   let
-    cmtId = EVar $ Ident $ unident cmtVar ++ sIdSuffix
+    cmtId = EVar $ cmtVar
     globalName0 = Ident $ sGlobalCommitments ++ "_0"
     globalName1 = Ident $ sGlobalCommitments ++ "_1"
   world <- get
@@ -457,7 +457,7 @@ verFullAss modifyModule (SAss varIdent exp) = do
                   newIdent = Ident $ unident varIdent ++ sSigSuffix ++ show nr
                 case sigTyp of
                   TCUInt _ -> do
-                    verStm modifyModule (SAss newIdent $ EVar $ Ident $ unident rIdent ++ sIdSuffix)
+                    verStm modifyModule (SAss newIdent $ EVar rIdent)
                   TUInt x -> do
                     verStm modifyModule (SAss newIdent (EVar rIdent))
         _ -> error $ show exp ++ ": r-value for signature can only be a sign(...) function"
@@ -470,7 +470,7 @@ verFullAss modifyModule (SAss varIdent exp) = do
             Just (TCUInt x) ->
               case exp of
                 EVar rightIdent -> 
-                  (Ident $ unident varIdent ++ sIdSuffix, EVar $ Ident $ unident rightIdent ++ sIdSuffix)
+                  (varIdent, EVar rightIdent)
                 ERand _ ->
                   (varIdent, exp)
                 EInt _ ->
@@ -855,25 +855,11 @@ verVerSig modifyModule key (EArray arrIdent index) varsOrArrs = do
     _ -> error $ show index ++ ": not supported index for arrays"
 -}
 
-
-
-
-
-
-
-
-
-
-
-
-
 verCmt :: ModifyModuleType -> Exp -> Exp -> VerRes Exp
 verCmt modifyModule cmtVar hash = do 
   evalHash <- verExp modifyModule hash
   world <- get
-  let
-    cmtId = EVar $ Ident $ unident (unvar cmtVar) ++ sIdSuffix
-  return $ EEq cmtId evalHash
+  return $ EEq cmtVar evalHash
 
   {-  OLD, to delete:
     cmtName0 = Ident $ sGlobalCommitments ++ "_0"
@@ -1003,10 +989,10 @@ verSendCAux modifyModule funName expArgsVals = do
 -- TODO: adds function name in prefix of a variable name
 createAssignments :: Integer -> Ident -> Arg -> Exp -> [(Ident, Exp)]
 createAssignments playerNumber funName (Ar (TCUInt _) varName) (EInt x) =
-  [(Ident $ unident varName ++ (show playerNumber) ++ sIdSuffix, EInt x)]
+  [(Ident $ unident varName ++ (show playerNumber), EInt x)]
 
 createAssignments playerNumber funName (Ar (TCUInt _) varName) (EVar argVal) =
-  [(Ident $ unident varName ++ (show playerNumber) ++ sIdSuffix, EVar $ Ident $ unident argVal ++ sIdSuffix)]
+  [(Ident $ unident varName ++ (show playerNumber), EVar argVal)]
 
 createAssignments playerNumber funName (Ar (TCUInt x) varName) (EArray argVal index) =
   case index of 

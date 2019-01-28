@@ -39,10 +39,6 @@ verProgram (Prog users constants contract communication scenarios) = do
   addAdversarialCommTranss communication
   addAdversarialBlockchainTranss
   
-  --Should be fused into open.sendTransaction() etc.
-  --addAdversarialRCmt
-  --addAdversarialOCmt - already fused
-
 verContractDecl :: Contract -> VerRes ()
 verContractDecl (Contr _ decls _) = do
   mapM_ (verDecl modifyContract) decls
@@ -98,33 +94,13 @@ verDecl :: ModifyModuleType -> Decl -> VerRes ()
 
 verDecl modifyModule (Dec (TCUInt range) varIdent) = do
   world <- get
-  let 
-    --nr = fromIntegral $ Map.size $ commitmentsIds world
-    idIdent = Ident $ unident varIdent ++ sIdSuffix
-    --globalIdent = Ident $ sGlobalCommitments ++ "_" ++ show nr
-  --put (world {commitmentsIds = Map.insert varIdent nr $ commitmentsIds world})
-  
-  -- add TCUInt variable with the exact given name
-  
-  --
-  -- TODO: is it needed? since the value is already stored in global commitment? Temporarily removed
-  -- _ <- modifyModule (addVarToModule (TCUInt range) varIdent)
-  --
-
-  -- addInitialValue modifyModule globalIdent (EInt $ range + 1)
-
-  -- add gloabl_commitment variable
-  -- (OLD)
-  -- _ <- modifyModule (addGlobalCommitment (TCUInt range) globalIdent)
-  -- addInitialValue modifyModule globalIdent (EInt $ range + 1)
-  -- (NEW)
   addGlobalCommitments range
 
   -- auxiliary variable for id with the given name
-  addCmtIdVar modifyModule idIdent
+  addCmtIdVar modifyModule varIdent
 
   mod <- modifyModule id 
-  addInitialValue modifyModule idIdent (EInt $ number mod)
+  addInitialValue modifyModule varIdent (EInt $ number mod)
 
 
 verDecl modifyModule (Dec typ ident) = do
@@ -206,8 +182,8 @@ verFunExecute modifyModule (Fun name args stms) = do
           ++ (show $ number mod)), (Ident $ unident name ++ sStatusSuffix 
           ++ (show $ number mod), EVar (Ident sTExecuted))]]
     addAssignment acc (Ar (TCUInt _) varName) = acc 
-        ++ [(createCoArgumentName sIdSuffix name varName, 
-          EVar $ createScenarioArgumentName sIdSuffix name varName $ number mod)] 
+        ++ [(createCoArgumentName "" name varName, 
+          EVar $ createScenarioArgumentName "" name varName $ number mod)] 
         -- ++ [(createCoArgumentName "" name varName, EVar $ createScenarioArgumentName "" name varName $ number mod)]
     addAssignment acc (Ar _ varName) = acc ++ 
         [(createCoArgumentName "" name varName, EVar $ createScenarioArgumentName "" name varName $ number mod)]

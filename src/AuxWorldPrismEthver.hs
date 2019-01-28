@@ -225,10 +225,8 @@ addCommunicateOnePlayer funName args playerNumber = do
     newState = numStates mod + 1 
     updates0 = [[(iCommSender, EInt playerNumber)]]
     addAssignment acc (Ar (TCUInt _) varName) = acc
-        ++ [(createCoArgumentName sIdSuffix funName varName, 
-              EVar $ createScenarioArgumentName sIdSuffix funName varName playerNumber)]
-        -- ++ [(createCoArgumentName "" funName varName, 
-        --       EVar $ createScenarioArgumentName "" funName varName playerNumber)]
+        ++ [(createCoArgumentName "" funName varName, 
+              EVar $ createScenarioArgumentName "" funName varName playerNumber)]
     addAssignment acc (Ar _ varName) = acc ++
         [(createCoArgumentName "" funName varName, 
           EVar $ createScenarioArgumentName "" funName varName playerNumber)]
@@ -336,7 +334,7 @@ advUpdates withVal number funName args valList =
     prefix :: [(String, String)] -> [(String, String)]
     prefix x = if withVal then (unident funName ++ "_" ++ sValue, ""):x else x
     aux :: Arg -> (String, String)
-    aux (Ar (TCUInt _) (Ident ident)) = (ident, sIdSuffix)
+    aux (Ar (TCUInt _) (Ident ident)) = (ident, "")
     aux (Ar _ (Ident ident)) = (ident, "")
     varNames = prefix (map aux args) 
   in
@@ -428,7 +426,7 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
       let 
         cmtArgVar = 
           Ident $ (unident $ commitmentFromArguments (Fun (Ident "") argsOrig [])) 
-            ++ (show $ number mod) ++ sIdSuffix
+            ++ (show $ number mod)
       case typ of 
         Just (TCUInt range) -> do
           -- only option: leave the same if already decided 

@@ -54,10 +54,6 @@ data VerWorld = VerWorld {
   addedGuards :: [Exp],
   senderNumber :: Maybe Integer,
   cmtRange :: Maybe Integer
-  -- removed since commitments are tracked by cmtA_id etc. vars
-  --commitmentsIds :: Map.Map Ident Integer
-  --commitmentsNames :: [Ident]
-  --commitmentsNr :: Integer
   }
 
 data Module = Module {
@@ -224,12 +220,8 @@ addSignatureVarAux modifyModule varIdent (nr, typ) = do
       addVar modifyModule typ newIdent
 
 addCmtIdVar :: ModifyModuleType -> Ident -> VerRes ()
-addCmtIdVar modifyModule idIdent = do
-  world <- get
-  case Map.lookup (Ident sMaxCommitments) (constants world) of
-    Nothing -> error $ sMaxCommitments ++ " constant definition not found in the source file."
-    Just maxCommitments -> do
-      addVar modifyModule (TUInt maxCommitments) idIdent
+addCmtIdVar modifyModule varIdent = do
+  addVar modifyModule (TUInt nMaxCommitments) varIdent
   
 addInitialValue :: ModifyModuleType -> Ident -> Exp -> VerRes ()
 addInitialValue modifyModule ident exp = do
@@ -291,28 +283,25 @@ createCoArgumentName suffix (Ident funName) (Ident varName) =
 
 -- TODO: with prefix or not? Now: funName ignored
 addNoPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
-addNoPlayerArg modifyModule (Ident funName) (Ar (TCUInt range) varName) = do
-  let
-    idIdent = Ident $ unident varName ++ sIdSuffix
-  addCmtIdVar modifyModule idIdent
+addNoPlayerArg modifyModule (Ident funName) (Ar (TCUInt range) varIdent) = do
+  addCmtIdVar modifyModule varIdent
   addGlobalCommitments range
 
-addNoPlayerArg modifyModule (Ident funName) (Ar typ varName) = do
-  addVar modifyModule typ varName
+addNoPlayerArg modifyModule (Ident funName) (Ar typ varIdent) = do
+  addVar modifyModule typ varIdent
 
 -- TODO: with prefix of not?
 addPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
-addPlayerArg modifyModule funName (Ar (TCUInt range) varName) = do
+addPlayerArg modifyModule funName (Ar (TCUInt range) varIdent) = do
   mod <- modifyModule id
   let
-    numberedName = createScenarioArgumentName "" funName varName (number mod)
-    idIdent = Ident $ unident numberedName ++ sIdSuffix
-  addCmtIdVar modifyModule idIdent
+    numberedName = createScenarioArgumentName "" funName varIdent (number mod)
+  addCmtIdVar modifyModule varIdent
   addGlobalCommitments range
 
-addPlayerArg modifyModule funName (Ar typ varName) = do
+addPlayerArg modifyModule funName (Ar typ varIdent) = do
   mod <- modifyModule id
-  addVar modifyModule typ $ createScenarioArgumentName "" funName varName (number mod)
+  addVar modifyModule typ $ createScenarioArgumentName "" funName varIdent (number mod)
 
 addContrArgument :: Ident -> Arg -> VerRes ()
 addContrArgument funName arg = do
