@@ -444,7 +444,10 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
             [(cmtArgVar, EInt $ number mod)] 
           -- TODO: 2nd option: random open if committed?
 
-    else if hashInArguments (Fun (Ident "") args [])
+    else
+      generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args [] [] 
+    -- (OLD)
+    {-else if hashInArguments (Fun (Ident "") args [])
       then do
         case typ of
           Just (TCUInt range) -> do
@@ -463,6 +466,7 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
               [0 .. (range - 1)]
       else
         generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args [] [] 
+    -}
 
 
 

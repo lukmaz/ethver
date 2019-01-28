@@ -68,6 +68,7 @@ sNextState = "next_state"
 sCommitmentValSuffix = "_val"
 sCommitmentNonceSuffix = "_nonce"
 sGlobalCommitments = "global_commitments"
+sRandomCommitment = "random_commitment"
 sOpenCommitment = "open_commitment"
 
 sEmptyModule = "emptyModule"

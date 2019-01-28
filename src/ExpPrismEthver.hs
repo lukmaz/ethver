@@ -253,16 +253,24 @@ verStm modifyModule (SSendC funExp args) = do
 --
 --------------------------------------
 
--- RCmt not used directly (fused with calling a function(hash)
-{- verStm modifyModule (SRCmt (EVar cmtVar)) = do
-  typ <- findVarType cmtVar
-  case typ of
-    Just (TCUInt x) -> do
-      verWithCommitment modifyModule cmtVar (\globalName -> SAss globalName (EInt x))
-    _ -> 
-      error $ unident cmtVar ++ ": randomCommitment can be called on cmt_uint object only"
--}
+verStm modifyModule (SRCmt (EVar cmtVar)) = do
+  -- cmtVar is in fact ignored. The player opens his own commitment and assigns the id of it to varIdent
+  mod <- modifyModule id
+  world <- get
 
+  let 
+    nr = show $ number mod
+    cmtIdent = Ident $ sGlobalCommitments ++ "_" ++ nr
+
+  case cmtRange world of
+    Just range -> do
+      addTransToNewState
+        modifyModule
+        -- (sRandomCommitment ++ (show $ nr))
+        ""
+        [EEq (EVar cmtIdent) (EInt $ range + 1)]
+        -- TODO: Alive?
+        [([(cmtIdent, EInt range)], [Alive])]
 
 -- SOCmt not used directly; moved to ValueOf
 {-verStm modifyModule (SOCmt (EVar cmtVar)) = do
@@ -367,28 +375,37 @@ verWithCommitment modifyModule cmtVar stmFromIdent = do
 verFullAss :: ModifyModuleType -> Stm -> VerRes ()
 -- (NEW) moved from SOCmt
 verFullAss modifyModule (SAss varIdent (EValOf (EVar cmtVar))) = do
+  -- TODO: 
   -- cmtVar is in fact ignored. The player opens his own commitment and assigns the id of it to varIdent
-  mod <- modifyModule id
+  -- Isn't it a problem in micro? Maybe not. Let's allow only to open own commitment and to copy commitment
+  -- from the oponent.
 
-  -- open the appropriate commitment
-  addTransToNewState
-    modifyModule
-    (sOpenCommitment ++ (show $ number mod))
-    []
-    -- TODO: Alive?
-    [([], [Alive])]
+  -- TODO: 
+  -- remove cmt argument from ValueOf(cmt)? 
+  world <- get
+
+  case senderNumber world of
+    Just nr -> do
+      -- open the appropriate commitment
+      addTransToNewState
+        modifyModule
+        (sOpenCommitment ++ (show $ nr))
+        []
+        -- TODO: Alive?
+        [([], [Alive])]
 
 
-  -- assign player's commitment id
-
-  (guards, updates) <- generateSimpleAss modifyModule (SAss varIdent (EInt $ number mod))
+      -- assign the value of the commitment
       
-  addTransToNewState
-    modifyModule
-    ""
-    guards
-    -- TODO: Alive?
-    [(updates, [Alive])]
+      let cmtIdent = Ident $ sGlobalCommitments ++ "_" ++ (show $ nr)
+      (guards, updates) <- generateSimpleAss modifyModule (SAss varIdent (EVar cmtIdent))
+          
+      addTransToNewState
+        modifyModule
+        ""
+        guards
+        -- TODO: Alive?
+        [(updates, [Alive])]
 
   {- (OLD)
   mod <- modifyModule id

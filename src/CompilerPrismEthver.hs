@@ -456,13 +456,27 @@ verScenario modifyModule decls stms = do
     []
     [([], [Alive])]
 
+  -- add randomCommitment transactions without commstate=1 etc.
+  addRandomCmtTrans modifyModule
+
+  -- add openCommitment for ADV
+  addAdvOpenCmtTrans modifyModule
+
   --------------------------------------------------
   -- TUTAJ ZAKOMENTOWAĆ, ŻEBY NIE BYŁO CRIT. SEC. --
   --------------------------------------------------
+  
 
   -- add critical sections stuff 
   _ <- modifyModule addCS2
-  
+
+  --------------------------------------------
+  -- Extra transs added manually without CS --
+  --------------------------------------------
+
+  -- add openCommitment transactions without commstate=1 etc.
+  addHonestOpenCmtTrans modifyModule
+
   -- TODO: zmienić 0 i 1 na stałe
   addFirstCustomTrans
     modifyModule

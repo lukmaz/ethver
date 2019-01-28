@@ -52,7 +52,8 @@ data VerWorld = VerWorld {
   condRandomArrays :: Map.Map Ident (Set.Set Exp),
   lazyRandoms :: Set.Set Ident,
   addedGuards :: [Exp],
-  senderNumber :: Maybe Integer
+  senderNumber :: Maybe Integer,
+  cmtRange :: Maybe Integer
   -- removed since commitments are tracked by cmtA_id etc. vars
   --commitmentsIds :: Map.Map Ident Integer
   --commitmentsNames :: [Ident]
@@ -71,8 +72,7 @@ data Module = Module {
   breakStates :: [Integer],
   transs :: [Trans],
   whichSender :: Ident,
-  globalCommitments :: Map.Map Ident Type,
-  openTransPresent :: Bool
+  globalCommitments :: Map.Map Ident Type
   }
   
 
@@ -100,7 +100,8 @@ emptyVerWorld = VerWorld {
   condRandomArrays = Map.empty,
   lazyRandoms = Set.empty,
   addedGuards = [],
-  senderNumber = Nothing
+  senderNumber = Nothing,
+  cmtRange = Nothing
   --commitmentsIds = Map.empty
   --commitmentsNames = []
   --commitmentsNr = 0
@@ -111,8 +112,7 @@ emptyModule = Module {number = nUndefModuleNumber, stateVar = sEmptyState, modul
   vars = Map.empty, varsInitialValues = Map.empty, numLocals = 0, currState = 1, numStates = 1,
   breakStates = [],
   transs = [], whichSender = Ident sEmptySender,
-  globalCommitments = Map.empty,
-  openTransPresent = False
+  globalCommitments = Map.empty
   }
 
 
@@ -546,16 +546,26 @@ addFirstTransToModule tr mod =
 
 -- Commitments  
 
-addOpenTrans :: ModifyModuleType -> Integer -> VerRes ()
-addOpenTrans modifyModule range = do
+setCmtRange :: Integer -> VerRes ()
+setCmtRange range = do
+  world <- get
+  case cmtRange world of
+    Nothing ->
+      put $ world {cmtRange = Just range}
+    _ ->
+      return ()
+
+addHonestOpenCmtTrans :: ModifyModuleType -> VerRes ()
+addHonestOpenCmtTrans modifyModule = do
   mod <- modifyModule id
+  world <- get
   let 
     nr = show $ number mod
     cmtIdent = Ident $ sGlobalCommitments ++ "_" ++ nr
   
-  if openTransPresent mod  == False
-    then do
-      -- committed -> random
+  case cmtRange world of
+    Just range -> do 
+      -- committed -> random (honest, sync with contract ValueOf)
       addTransNoState
         modifyModule
         (sOpenCommitment ++ nr)
@@ -566,17 +576,58 @@ addOpenTrans modifyModule range = do
           [0..(range - 1)]
         )
       
-      -- opened -> the same
+      -- opened -> the same (honest, sync with contract ValueOf)
+      -- Not needed?
       addTransNoState
         modifyModule
         (sOpenCommitment ++ nr)
         [ELt (EVar cmtIdent) (EInt range)]
         [([], [Alive])]
+    _ ->
+      return ()
 
-      _ <- modifyModule (\mod -> mod {openTransPresent = True})
-      return ()
-    else
-      return ()
+
+addAdvOpenCmtTrans :: ModifyModuleType -> VerRes ()
+addAdvOpenCmtTrans modifyModule = do
+  mod <- modifyModule id
+  world <- get
+  let 
+    nr = show $ number mod
+    cmtIdent = Ident $ sGlobalCommitments ++ "_" ++ nr
+  
+  case cmtRange world of
+    Just range -> do 
+      -- committed -> random (adv, no sync)
+      addCustomTrans
+        modifyModule
+        ""
+        (-1)
+        (-1)
+        [EEq (EVar cmtIdent) (EInt range)]
+        (foldl
+          (\acc x -> acc ++ [([(cmtIdent, EInt x)], [Alive])])
+          []
+          [0..(range - 1)]
+        )
+
+addRandomCmtTrans :: ModifyModuleType -> VerRes ()
+addRandomCmtTrans modifyModule = do
+  mod <- modifyModule id
+  world <- get
+  let 
+    nr = show $ number mod
+    cmtIdent = Ident $ sGlobalCommitments ++ "_" ++ nr
+  
+  case cmtRange world of
+    Just range -> do 
+      addCustomTrans
+        modifyModule
+        ""
+        -- (sRandomCommitment ++ nr)
+        (-1)
+        (-1)
+        [EEq (EVar cmtIdent) (EInt $ range + 1)]
+        [([(cmtIdent, EInt range)], [Alive])]
 
 
 addGlobalCommitments :: Integer -> VerRes ()
@@ -587,8 +638,7 @@ addGlobalCommitments range = do
     typ = TCUInt range
   _ <- modifyPlayer0 (\p -> p {globalCommitments = Map.fromList [(ident0, typ)]})
   _ <- modifyPlayer1 (\p -> p {globalCommitments = Map.fromList [(ident1, typ)]})
-  addOpenTrans modifyPlayer0 range
-  addOpenTrans modifyPlayer1 range
+  setCmtRange range
   return ()
 
 
