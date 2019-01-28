@@ -296,7 +296,7 @@ addPlayerArg modifyModule funName (Ar (TCUInt range) varIdent) = do
   mod <- modifyModule id
   let
     numberedName = createScenarioArgumentName "" funName varIdent (number mod)
-  addCmtIdVar modifyModule varIdent
+  addCmtIdVar modifyModule numberedName
   addGlobalCommitments range
 
 addPlayerArg modifyModule funName (Ar typ varIdent) = do
