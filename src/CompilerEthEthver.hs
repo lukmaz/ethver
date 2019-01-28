@@ -85,6 +85,13 @@ ethDecl (ArrDec typ ident size) = do
   ethIdent ident
   addContr ";\n"
 
+ethDecl (MapDec typ ident) = do
+  addContr "mapping(address => "
+  ethType typ
+  addContr ") public "
+  ethIdent ident
+  addContr ";\n"
+
 ethArg :: Arg -> EthRes ()
 ethArg (Ar (TCUInt x) ident) = do
   addContr "uint8 "

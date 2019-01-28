@@ -21,6 +21,7 @@ Contr.    Contract ::= "contract" Ident "{" [Decl] [Function] "}" ;
 Dec.      Decl     ::= Type Ident ;
 DecInit.  Decl     ::= Type Ident "=" Exp ;
 ArrDec.   Decl     ::= Type Ident "[" Integer "]" ;
+MapDec.   Decl     ::= "mapping" "(" "address" "=>" Type ")" Ident ;
 
 terminator Decl ";" ;
 terminator Function "" ;

@@ -141,6 +141,9 @@ verDecl modifyModule (ArrDec typ (Ident ident) size) = do
   verDecl modifyModule (Dec typ $ Ident $ ident ++ "_0")
   verDecl modifyModule (Dec typ $ Ident $ ident ++ "_1")
 
+verDecl modifyModule (MapDec typ ident) = do
+  verDecl modifyModule (ArrDec typ ident 2)
+
 -- OLD:
 {-verDecl modifyModule (ArrDec typ (Ident ident) size) = do
   addVar modifyModule typ $ Ident $ ident ++ "_0"
