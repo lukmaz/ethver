@@ -83,7 +83,6 @@ verCommunication :: Communication -> VerRes ()
 verCommunication (Comm _ funs) = do
   -- adds to communication module all commands generated from a particular function definition
   
-  --mapM_ verDFSFunCommunication funs
   mapM_ verOldFunCommunication funs
 
 ----------
@@ -105,13 +104,11 @@ verDecl modifyModule (Dec (TCUInt range) varIdent) = do
 
 verDecl modifyModule (Dec typ ident) = do
   addVar modifyModule typ ident
-  --assignVarValue ident $ defaultValueOfType typ
 
 verDecl modifyModule (DecInit typ ident value) = do
   addVar modifyModule typ ident
   addInitialValue modifyModule ident value
 
--- TODO: size inne niż 2
 verDecl modifyModule (ArrDec typ (Ident ident) size) = do
   verDecl modifyModule (Dec typ $ Ident $ ident ++ "_0")
   verDecl modifyModule (Dec typ $ Ident $ ident ++ "_1")
@@ -119,13 +116,6 @@ verDecl modifyModule (ArrDec typ (Ident ident) size) = do
 verDecl modifyModule (MapDec typ ident) = do
   verDecl modifyModule (ArrDec typ ident 2)
 
--- OLD:
-{-verDecl modifyModule (ArrDec typ (Ident ident) size) = do
-  addVar modifyModule typ $ Ident $ ident ++ "_0"
-  assignVarValue (Ident (ident ++ "_0")) $ defaultValueOfType typ
-  addVar modifyModule typ $ Ident $ ident ++ "_1"
-  assignVarValue (Ident (ident ++ "_1")) $ defaultValueOfType typ
--}
 ------------------
 -- verFunBroadcast
 ------------------
@@ -184,7 +174,6 @@ verFunExecute modifyModule (Fun name args stms) = do
     addAssignment acc (Ar (TCUInt _) varName) = acc 
         ++ [(createCoArgumentName "" name varName, 
           EVar $ createScenarioArgumentName "" name varName $ number mod)] 
-        -- ++ [(createCoArgumentName "" name varName, EVar $ createScenarioArgumentName "" name varName $ number mod)]
     addAssignment acc (Ar _ varName) = acc ++ 
         [(createCoArgumentName "" name varName, EVar $ createScenarioArgumentName "" name varName $ number mod)]
   -- TODO: Alive?
@@ -250,16 +239,6 @@ verExecTransaction modifyModule = do
           EAdd (EVar iContractBalance) (EVar iValue))
       ], [Alive])
     ]
-
--------------------------------------
--- verDFSContract/Communication --
--------------------------------------
-{-
-verDFSFunContractOrCommunication :: ModifyModuleType -> (Function -> VerRes ()) -> Function -> VerRes ()
-verDFSFunContractOrCommunication modifyModule commonFun fun = do
-  commonFun fun
-  verDFSFun modifyModule fun
--}
 
 ----------------------------------
 -- verOldContract/Communication --
@@ -363,10 +342,6 @@ commonVerFunContract (Fun name args stms) = do
 
   return ()
 
--- DFS
---verDFSFunContract :: Function -> VerRes ()
---verDFSFunContract fun = verDFSFunContractOrCommunication modifyContract commonVerFunContract fun
-
 verOldFunContract :: Function -> VerRes ()
 verOldFunContract fun = verOldFunContractOrCommunication modifyContract commonVerFunContract fun
 
@@ -395,10 +370,6 @@ commonVerFunCommunication (Fun funName args stms) = do
   _ <- modifyCommunication (setNumStates newState)
 
   return ()
-
--- DFS
--- verDFSFunCommunication :: Function -> VerRes ()
--- verDFSFunCommunication fun = verDFSFunContractOrCommunication modifyCommunication commonVerFunCommunication fun
 
 -- OLD
 verOldFunCommunication :: Function -> VerRes ()
@@ -439,11 +410,6 @@ verScenario modifyModule decls stms = do
 
   -- add openCommitment for ADV
   addAdvOpenCmtTrans modifyModule
-
-  --------------------------------------------------
-  -- TUTAJ ZAKOMENTOWAĆ, ŻEBY NIE BYŁO CRIT. SEC. --
-  --------------------------------------------------
-  
 
   -- add critical sections stuff 
   _ <- modifyModule addCS2

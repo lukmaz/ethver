@@ -57,27 +57,6 @@ findType (EValue) = do
 -- strings only used for players names
 findType (EStr _) = findType ESender
 
-{- OLD:
-findVarType :: Ident -> VerRes (Maybe Type)
-findVarType ident = do
-  world <- get 
-  case Map.lookup ident (vars $ blockchain world) of
-    Just typ -> return (Just typ)
-    Nothing ->  
-      case Map.lookup ident (vars $ contract world) of
-        Just typ -> return (Just typ)
-        Nothing ->  
-          case Map.lookup ident (vars $ communication world) of
-            Just typ -> return (Just typ)
-            Nothing ->  
-              case Map.lookup ident (vars $ player0 world) of
-                Just typ -> return (Just typ)
-                Nothing ->
-                  case Map.lookup ident (vars $ player1 world) of
-                    Just typ -> return (Just typ)
-                    Nothing -> return Nothing
--}
-
 findVarType :: Ident -> VerRes (Maybe Type)
 findVarType ident = do
   world <- get
@@ -90,15 +69,6 @@ findVarType ident = do
       [blockchain, contract, communication, player0, player1]
     newMap = Map.fromList l
   return $ Map.lookup ident newMap
-
-{-
-commitmentVarName :: Ident -> VerRes Ident
-commitmentVarName varIdent = do
-  world <- get
-  case Map.lookup varIdent (commitmentsIds world) of
-    Just id -> return $ Ident $ sGlobalCommitments ++ "_" ++ (show id)
-    _ -> error $ (show varIdent) ++ ": not found in commitmentsIds"
--}
 
 isGlobalCommitmentIdent :: Ident -> Bool
 isGlobalCommitmentIdent ident =
@@ -256,6 +226,8 @@ addCommunicateOnePlayer funName args playerNumber = do
 -- Critical section --
 ----------------------
 
+-- TODO: remove? probably not used because of CS2
+
 -- converts all commands in a module by adding critical section stuff
 addCS :: Module -> Module
 addCS mod = 
@@ -280,13 +252,9 @@ unsetCS :: Integer -> Trans -> Trans
 unsetCS number (transName, guards, updates) =
   (
     transName,
-    -- critical section
-    --(EVar $ Ident $ sCriticalSection ++ (show number))
     (EEq (EVar iContrState) (EInt 1))
       :(EEq (EVar iCommState) (EInt 1))
       :guards,
-    -- critical section
-    --(map ((Ident $ sCriticalSection ++ (show number), EFalse):) updates)
     updates
   )
 
@@ -352,13 +320,6 @@ addAdversarialBlockchainTranss = do
     modifyBlockchain
     (sTimelockStep)
     (   
-      {-(EOr 
-        (EAnd (EVar $ Ident $ sWaits ++ "0") (EVar $ Ident $ sWaits ++ "1")) 
-        (EOr 
-          (EAnd (EVar $ Ident $ sWaits ++ "0") (EEq (EVar $ Ident $ sAdversaryFlag) (EInt 1)))
-          (EAnd (EVar $ Ident $ sWaits ++ "1") (EEq (EVar $ Ident $ sAdversaryFlag) (EInt 0)))
-        )
-      ) : -} 
         (ELt (EVar $ Ident $ sTimeElapsed) (EVar $ Ident $ sMaxTime))
         : (Map.elems $ Map.map
             (\fun -> ENe 
@@ -444,29 +405,6 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
 
     else
       generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args [] [] 
-    -- (OLD)
-    {-else if hashInArguments (Fun (Ident "") args [])
-      then do
-        case typ of
-          Just (TCUInt range) -> do
-            mapM_
-              (\x -> generateAdvTranssAux
-                modifyModule 
-                whichPrefix 
-                whichState 
-                withVal 
-                limit 
-                funName 
-                (args)
-                [EEq (EVar cmtVar) (EInt $ range + 1)] 
-                [(cmtVar, EInt x)]
-              )
-              [0 .. (range - 1)]
-      else
-        generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args [] [] 
-    -}
-
-
 
 generateAdvTranssOld :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] ->  VerRes ()
 generateAdvTranssOld modifyModule whichPrefix whichState withVal limit funName args = do
@@ -490,8 +428,6 @@ generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName a
         (whichPrefix ++ funName ++ (show $ number mod))
         (
           [   
-            -- critical section
-            -- ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
             EEq (EVar iContrState) (EInt 1), 
             EEq (EVar iCommState) (EInt 1), 
             EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
@@ -511,8 +447,6 @@ generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName a
           (whichPrefix ++ funName ++ (show $ number mod))
           (
             [
-              -- critical section
-              -- ENot $ EVar $ Ident $ sCriticalSection ++ (show $ 1 - (number mod)),
               EEq (EVar iContrState) (EInt 1),
               EEq (EVar iCommState) (EInt 1),
               EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
@@ -528,65 +462,6 @@ generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName a
             (advUpdates withVal (number mod) (Ident funName) args vals)
           )
         )
-
--- To delete? Currently both fused, but maybe unfuse RCmt? (Micro case)
-{-
-addAdversarialRCmt :: VerRes ()
-addAdversarialRCmt = do
-  addAdversarialRCmtToPlayer modifyPlayer0
-  addAdversarialRCmtToPlayer modifyPlayer1
-
-addAdversarialRCmtToPlayer :: ModifyModuleType -> VerRes ()
-addAdversarialRCmtToPlayer modifyModule = do
-  mod <- modifyModule id
-  mapM_
-    (\var -> addAdvGlobFunction modifyModule var globFunRCmt)
-    (Map.keys $ vars mod)
-
-addAdversarialOCmt :: VerRes ()
-addAdversarialOCmt = do
-  addAdversarialOCmtToPlayer modifyPlayer0
-  addAdversarialOCmtToPlayer modifyPlayer1
-
-addAdversarialOCmtToPlayer :: ModifyModuleType -> VerRes ()
-addAdversarialOCmtToPlayer modifyModule = do
-  mod <- modifyModule id
-  mapM_
-    (\var -> addAdvGlobFunction modifyModule var globFunOCmt)
-    (Map.keys $ vars mod)
-
-addAdvGlobFunction :: ModifyModuleType -> Ident -> (ModifyModuleType -> Ident -> Integer -> VerRes ()) -> VerRes ()
-addAdvGlobFunction modifyModule varIdent globFun = do
-  typ <- findVarType varIdent
-  case typ of
-    Just (TCUInt range) -> do
-      world <- get
-      case Map.lookup varIdent (commitmentsIds world) of
-        Just nr -> do
-          let globalVarName = Ident $ sGlobalCommitments ++ "_" ++ show nr
-          globFun modifyModule globalVarName range
-        _ -> error $ (show $ unident varIdent) ++ " not found in commitmentsIds"
-    _ -> return ()
-
-globFunRCmt :: ModifyModuleType -> Ident -> Integer -> VerRes ()
-globFunRCmt modifyModule globalVarName range = do
-  advTransAux 
-    modifyModule 
-    [EEq (EVar globalVarName) (EInt $ range + 1)] 
-    [([(globalVarName, EInt range)], [Alive])]
-
-globFunOCmt :: ModifyModuleType -> Ident -> Integer -> VerRes ()
-globFunOCmt modifyModule globalVarName range = do
-  advTransAux
-    modifyModule
-    [EEq (EVar globalVarName) (EInt range)]
-    (foldl
-      (\acc x -> acc ++ [([(globalVarName, EInt x)], [Alive])])
-      []
-      [0..(range - 1)]
-    )
--}
-
 
 advTransAux :: ModifyModuleType -> [Exp] -> [Branch] -> VerRes ()
 advTransAux modifyModule guards updates = do

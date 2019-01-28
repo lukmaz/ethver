@@ -98,9 +98,6 @@ emptyVerWorld = VerWorld {
   addedGuards = [],
   senderNumber = Nothing,
   cmtRange = Nothing
-  --commitmentsIds = Map.empty
-  --commitmentsNames = []
-  --commitmentsNr = 0
   } 
 
 emptyModule :: Module
@@ -118,7 +115,6 @@ addAutoVars = do
 
   -- blockchain:
 
-  -- TODO: only 2 players
   addVar modifyBlockchain (TUInt 2) iContrSender
   -- TODO: skąd wziąć zakres value?
   -- ODP: Z (constants world). A tam wczytać z kodu źródłowego
@@ -212,9 +208,6 @@ addSignatureVarAux modifyModule varIdent (nr, typ) = do
   case typ of
     TCUInt x -> do
       world <- get
-      -- (OLD)
-      -- addVar modifyModule (TUInt $ fromIntegral $ Map.size $ commitmentsIds world) newIdent
-      -- (NEW)
       addVar modifyModule (TUInt 2) newIdent
     TUInt x -> 
       addVar modifyModule typ newIdent
@@ -273,7 +266,6 @@ clearCondRandoms = do
 -- TODO: adds function name as a prefix of a variable name
 createScenarioArgumentName :: String -> Ident -> Ident -> Integer -> Ident
 createScenarioArgumentName suffix (Ident funName) (Ident varName) playerName = 
-    --Ident $ funName ++ "_" ++ varName ++ (show playerName)
     Ident $ varName ++ (show playerName) ++ suffix
 
 -- TODO: does not add function name as a prefix
@@ -429,12 +421,6 @@ addInitialValueToModule :: Ident -> Exp -> Module -> Module
 addInitialValueToModule ident exp mod = do
   mod {varsInitialValues = Map.insert ident exp (varsInitialValues mod)}
 
-{-
-addGlobalCommitment :: Type -> Ident -> Module -> Module
-addGlobalCommitment typ ident mod = do
-  mod {globalCommitments = Map.insert ident typ (globalCommitments mod)}
--}
-
 modifyBlockchain :: (Module -> Module) -> VerRes Module
 modifyBlockchain fun = do
   world <- get
@@ -532,8 +518,9 @@ addFirstTransToModule :: Trans -> Module -> Module
 addFirstTransToModule tr mod =
   mod {transs = (transs mod) ++ [tr]}
 
-
--- Commitments  
+-----------------
+-- Commitments --
+-----------------
 
 setCmtRange :: Integer -> VerRes ()
 setCmtRange range = do
@@ -612,7 +599,6 @@ addRandomCmtTrans modifyModule = do
       addCustomTrans
         modifyModule
         ""
-        -- (sRandomCommitment ++ nr)
         (-1)
         (-1)
         [EEq (EVar cmtIdent) (EInt $ range + 1)]
