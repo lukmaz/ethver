@@ -4,6 +4,7 @@ import Control.Monad.State
 import qualified Data.Map.Strict as Map
 
 import AbsEthver
+import AuxEthver
 import ConstantsEthver
 
 maxRealValueOfType :: Type -> Exp
@@ -141,6 +142,21 @@ generateAllVals ((EInt h):t) =
           ++ acc)
       []
       (reverse [0..h])
+
+generateValueUpdates :: Function -> Integer -> Exp -> [[(Ident, Exp)]]
+
+generateValueUpdates (Fun funName _ _) _ _ = 
+  [[]]
+
+generateValueUpdates (FunL _ funName _ _) _ _ =
+  [[]]
+
+generateValueUpdates (FunV funName args stms) nr value =
+  generateValueUpdates (FunVL (-1) funName args stms) nr value
+
+generateValueUpdates (FunVL _ funName _ _) nr value =
+  [[(Ident $ unident funName ++ sValueSuffix ++ (show nr), value)]]
+  
 
 getArgNames :: Function -> [Arg]
 getArgNames (Fun _ args _) = args

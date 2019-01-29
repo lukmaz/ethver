@@ -751,25 +751,26 @@ verSendTAux modifyModule funName argsVals = do
   mod <- modifyModule id
   case Map.lookup funName (funs world) of
     Just fun -> do
-      let argNames = getArgNames fun
-      -- TODO: olewamy "from", bo sender jest wiadomy ze scenariusza
-      let expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
-      evalArgsVals <- mapM (evalArg modifyModule) expArgsVals
-     
-      let (value, guards1) = case (last argsVals) of (ABra _ value) -> (value, [])
-       
-      -- TODO: ta linijka chyba jest nie potrzebna w function_without_value
-      let updates0 = [[(Ident $ (unident funName) ++ sValueSuffix ++ (show $ number mod), value)]]
-      let addAssignment acc (argName, argVal) = acc ++ createAssignments (number mod) funName argName argVal
-      --TODO: Alive?
-      let updates1Root = foldl addAssignment (head updates0) $ zip argNames evalArgsVals
+      let 
+        argNames = getArgNames fun
+        -- TODO: olewamy "from", bo sender jest wiadomy ze scenariusza
+        expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
+        value = 
+          case (last argsVals) of 
+            (ABra _ value) -> value
+        updates0 = generateValueUpdates fun (number mod) value
+        addAssignment acc (argName, argVal) = acc ++ createAssignments (number mod) funName argName argVal
       
-      let updates2 = [(updates1Root, [Alive])]
+      evalArgsVals <- mapM (evalArg modifyModule) expArgsVals
+      let 
+        --TODO: Alive?
+        updates1Root = foldl addAssignment (head updates0) $ zip argNames evalArgsVals
+        updates2 = [(updates1Root, [Alive])]
       
       addTransToNewState 
         modifyModule 
         (sBroadcastPrefix ++ (unident funName) ++ (show $ number mod)) 
-        guards1
+        []
         updates2
 
       addTransToNewState

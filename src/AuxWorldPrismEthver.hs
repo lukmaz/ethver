@@ -411,11 +411,12 @@ generateAdvTranssAux :: ModifyModuleType -> String -> Ident -> Bool -> Integer -
 generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args extraGuards extraUpdates = do
   mod <- modifyModule id
   let valName = Ident $ funName ++ sValueSuffix ++ (show $ number mod)
-  maxValVal <- maxRealValue valName
-  let 
-    maxes = if withVal
-      then generateValsList maxValVal args
-      else generateValsListNoVal args
+  maxes <- if withVal
+    then do
+      maxValVal <- maxRealValue valName
+      return $ generateValsList maxValVal args
+    else do 
+      return $ generateValsListNoVal args
 
   let runsIdent = Ident $ funName ++ sRunsSuffix ++ (show $ number mod)
   case maxes of

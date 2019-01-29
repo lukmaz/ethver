@@ -150,6 +150,22 @@ verFunBroadcast modifyModule (Fun name args stms) = do
 ----------------
 -- adds two commands to blockchain module, that a transaction has been executed or not by a particular player
 -- depending if he holds enough money or not
+
+generateCommonBroadcastGuards :: Ident -> Integer -> [Exp]
+generateCommonBroadcastGuards funIdent nr = 
+  [
+    EEq (EVar iContrState) (EInt nInitContractState),
+    EEq (EVar iCommState) (EInt nInitCommState),
+    EEq
+      (EVar $ Ident $ unident funIdent ++ sStatusSuffix ++ (show nr))
+      (EVar $ iTBroadcast)
+  ]
+
+addAssignmentToUpdates :: Ident -> Integer -> [(Ident, Exp)] -> Arg -> [(Ident, Exp)]
+addAssignmentToUpdates funIdent nr acc (Ar _ varIdent) = acc ++ 
+  [(createCoArgumentName "" funIdent varIdent, 
+    EVar $ createScenarioArgumentName "" funIdent varIdent nr)]
+
 verFunExecute :: ModifyModuleType -> Function -> VerRes ()
 
 verFunExecute modifyModule (FunV name args stms) =
@@ -165,48 +181,39 @@ verFunExecute modifyModule (Fun name args stms) = do
   --TODO: argumenty
   mod <- modifyModule id
 
-  let 
+  let
+    guards0 = generateCommonBroadcastGuards name (number mod)
     updates0 = [[
         (iContrSender, EInt $ number mod), 
         (iValue, EVar $ Ident $ unident name ++ sValueSuffix 
-          ++ (show $ number mod)), (Ident $ unident name ++ sStatusSuffix 
+          ++ (show $ number mod)), 
+        (Ident $ unident name ++ sStatusSuffix 
           ++ (show $ number mod), EVar (Ident sTExecuted))]]
-    addAssignment acc (Ar (TCUInt _) varName) = acc 
-        ++ [(createCoArgumentName "" name varName, 
-          EVar $ createScenarioArgumentName "" name varName $ number mod)] 
-    addAssignment acc (Ar _ varName) = acc ++ 
-        [(createCoArgumentName "" name varName, EVar $ createScenarioArgumentName "" name varName $ number mod)]
   -- TODO: Alive?
-    updates = [(foldl addAssignment (head updates0) args, [Alive])]
+    updates = [(foldl (addAssignmentToUpdates name (number mod)) (head updates0) args, [Alive])]
 
   addTransNoState
     modifyBlockchain 
     (sBroadcastPrefix ++ (unident name))
-    [
-      EEq (EVar iContrState) (EInt nInitContractState),
-      EEq (EVar iCommState) (EInt nInitCommState),
-      EEq 
-        (EVar $ Ident $ unident name ++ sStatusSuffix ++ (show $ number mod)) 
-        (EVar $ iTBroadcast),
-      ELe 
-        (EVar $ Ident $ unident name ++ sValueSuffix ++ (show $ number mod)) 
-        (EVar $ Ident $ sBalancePrefix ++ (show $ number mod))
-    ]
+    (guards0 ++
+      [
+        ELe 
+          (EVar $ Ident $ unident name ++ sValueSuffix ++ (show $ number mod)) 
+          (EVar $ Ident $ sBalancePrefix ++ (show $ number mod))
+      ]
+    )
     updates
 
   addTransNoState
     modifyBlockchain 
     ""
-    [
-      EEq (EVar iContrState) (EInt nInitContractState),
-      EEq (EVar iCommState) (EInt nInitCommState),
-      EEq 
-        (EVar $ Ident $ unident name ++ sStatusSuffix ++ (show $ number mod)) 
-        (EVar $ iTBroadcast),
-      EGt 
-        (EVar $ Ident $ unident name ++ sValueSuffix ++ (show $ number mod)) 
-        (EVar $ Ident $ sBalancePrefix ++ (show $ number mod))
-    ]
+    (guards0 ++
+      [
+        EGt 
+          (EVar $ Ident $ unident name ++ sValueSuffix ++ (show $ number mod)) 
+          (EVar $ Ident $ sBalancePrefix ++ (show $ number mod))
+      ]
+    )
     -- TODO: Alive?
     [
       ([(Ident $ unident name ++ sStatusSuffix ++ (show $ number mod), EVar iTInvalidated)], [Alive])
