@@ -152,23 +152,15 @@ addProps text = do
   put (world {props = (props world) ++ text})
 
 addFun :: Function -> VerRes ()
-addFun (Fun name args stms) = do
+addFun fun = do
   world <- get
-  put $ world {funs = Map.insert name (Fun name args stms) $ funs world}
+  put $ world {funs = Map.insert (getFunName fun) fun $ funs world}
   
-addFun (FunR name args typ stms) = do
-  world <- get
-  put $ world {funs = Map.insert name (FunR name args typ stms) $ funs world}
-
 addContractFun :: Function -> VerRes ()
-addContractFun (Fun name args stms) = do
+addContractFun fun = do
   world <- get
-  put $ world {contractFuns = Map.insert name (Fun name args stms) $ contractFuns world}
+  put $ world {contractFuns = Map.insert (getFunName fun) fun $ contractFuns world}
   
-addContractFun (FunR name args typ stms) = do
-  world <- get
-  put $ world {contractFuns = Map.insert name (FunR name args typ stms) $ contractFuns world}
-
 addConstant :: ConstantDecl -> VerRes ()
 addConstant (Const ident value) = do
   world <- get

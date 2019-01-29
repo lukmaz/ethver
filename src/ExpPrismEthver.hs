@@ -752,7 +752,7 @@ verSendTAux modifyModule funName argsVals = do
   case Map.lookup funName (funs world) of
     Just fun -> do
       let 
-        argNames = getArgNames fun
+        argNames = getFunArgs fun
         -- TODO: olewamy "from", bo sender jest wiadomy ze scenariusza
         expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
         value = 
@@ -794,7 +794,7 @@ verSendCAux modifyModule funName expArgsVals = do
   mod <- modifyModule id
   case Map.lookup funName (funs world) of
     Just fun -> do
-      let argNames = getArgNames fun
+      let argNames = getFunArgs fun
       evalArgsVals <- mapM (evalArg modifyModule) expArgsVals
 
       let addAssignment acc (argName, argVal) = acc ++ createAssignments (number mod) funName argName argVal

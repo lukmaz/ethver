@@ -157,11 +157,6 @@ generateValueUpdates (FunV funName args stms) nr value =
 generateValueUpdates (FunVL _ funName _ _) nr value =
   [[(Ident $ unident funName ++ sValueSuffix ++ (show nr), value)]]
   
-
-getArgNames :: Function -> [Arg]
-getArgNames (Fun _ args _) = args
-getArgNames (FunR _ args _ _) = args
-
 expFromBool :: Bool -> Exp
 expFromBool True = ETrue
 expFromBool False = EFalse
@@ -172,6 +167,18 @@ expFromInt x = EInt x
 intFromExp :: Exp -> Maybe Integer
 intFromExp (EInt x) = Just x
 intFromExp _ = Nothing
+
+getFunName :: Function -> Ident
+getFunName (FunVL _ name _ _) = name
+getFunName (FunL _ name _ _) = name
+getFunName (FunV name _ _) = name
+getFunName (Fun name _ _) = name
+
+getFunArgs :: Function -> [Arg]
+getFunArgs (FunVL _ _ args _) = args
+getFunArgs (FunL _ _ args _) = args
+getFunArgs (FunV _ args _) = args
+getFunArgs (Fun _ args _) = args
 
 commitmentInArguments :: Function -> Bool
 

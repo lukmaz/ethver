@@ -270,6 +270,15 @@ verExecTransaction modifyModule = do
       ], [Alive])
     ]
 
+-- add function before hiding its real type
+verFunAux :: ModifyModuleType -> (Function -> VerRes ()) -> Function -> VerRes ()
+verFunAux modifyModule commonFun fun = do
+  -- adds fun ident to two maps in World
+  addFun fun
+  addContractFun fun
+
+  verOldFunContractOrCommunication modifyModule commonFun fun
+
 ----------------------------------
 -- verOldContract/Communication --
 -- limit, big if for sender,    --
@@ -347,9 +356,6 @@ commonVerFunContract (FunL _ name args stms) =
   commonVerFunContract (Fun name args stms)
 
 commonVerFunContract (Fun name args stms) = do
-  -- adds fun ident to two maps in World
-  addFun (Fun name args stms)
-  addContractFun (Fun name args stms)
   -- variables for status of the transaction
   addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStatusSuffix ++ "0" 
   addVar modifyBlockchain (TUInt nTStates) $ Ident $ unident name ++ sStatusSuffix ++ "1"
@@ -374,7 +380,7 @@ commonVerFunContract (Fun name args stms) = do
   return ()
 
 verOldFunContract :: Function -> VerRes ()
-verOldFunContract fun = verOldFunContractOrCommunication modifyContract commonVerFunContract fun
+verOldFunContract fun = verFunAux modifyContract commonVerFunContract fun
 
 -------------------------
 -- verFunCommunication --
@@ -404,7 +410,7 @@ commonVerFunCommunication (Fun funName args stms) = do
 
 -- OLD
 verOldFunCommunication :: Function -> VerRes ()
-verOldFunCommunication fun = verOldFunContractOrCommunication modifyCommunication commonVerFunCommunication fun
+verOldFunCommunication fun = verFunAux modifyCommunication commonVerFunCommunication fun
 
 --------------
 -- SCENARIO --

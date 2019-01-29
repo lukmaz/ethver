@@ -149,6 +149,8 @@ ethFun (FunV ident args stms) = do
   mapM_ ethStm stms
   addContr "}\n"
 
+-- not used?
+{-
 ethFun (FunR ident args ret stms) = do
   addContr "function "
   ethIdent ident
@@ -159,6 +161,7 @@ ethFun (FunR ident args ret stms) = do
   addContr ") {\n"
   mapM_ ethStm stms
   addContr "}\n"
+-}
 
 ethFun (FunL limit ident args stms) =
   ethFun (Fun ident args stms)

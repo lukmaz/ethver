@@ -75,10 +75,13 @@ isGlobalCommitmentIdent :: Ident -> Bool
 isGlobalCommitmentIdent ident =
   (init $ unident ident) == (sGlobalCommitments ++ "_")
 
+{-
+TODO: to delete? not used?
 nameOfFunction :: Function -> String
 nameOfFunction (Fun (Ident name) _ _) = name
 nameOfFunction (FunV (Ident name) _ _) = name
 nameOfFunction (FunR (Ident name) _ _ _) = name
+-}
 
 -- converts a set of accessed arrays position
 -- from (map from array name to positions) to list of pairs (array name, position)
@@ -324,14 +327,14 @@ addAdversarialBlockchainTranss = do
         (ELt (EVar $ Ident $ sTimeElapsed) (EVar $ Ident $ sMaxTime))
         : (Map.elems $ Map.map
             (\fun -> ENe 
-              (EVar $ Ident $ (nameOfFunction fun) ++ sStatusSuffix ++ "0")
+              (EVar $ Ident $ unident (getFunName fun) ++ sStatusSuffix ++ "0")
               (EVar iTBroadcast)
             )   
             (contractFuns world)
           )   
         ++ (Map.elems $ Map.map
             (\fun -> ENe 
-              (EVar $ Ident $ (nameOfFunction fun) ++ sStatusSuffix ++ "1")
+              (EVar $ Ident $ unident (getFunName fun) ++ sStatusSuffix ++ "1")
               (EVar iTBroadcast)
             )   
             (contractFuns world)
