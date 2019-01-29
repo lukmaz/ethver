@@ -161,6 +161,13 @@ generateCommonBroadcastGuards funIdent nr =
       (EVar $ iTBroadcast)
   ]
 
+generateCommonBroadcastUpdates :: Ident -> Integer -> [(Ident, Exp)]
+generateCommonBroadcastUpdates funIdent nr = 
+  [
+    (iContrSender, EInt nr), 
+    (Ident $ unident funIdent ++ sStatusSuffix ++ (show nr), EVar (Ident sTExecuted))
+  ]
+
 addAssignmentToUpdates :: Ident -> Integer -> [(Ident, Exp)] -> Arg -> [(Ident, Exp)]
 addAssignmentToUpdates funIdent nr acc (Ar _ varIdent) = acc ++ 
   [(createCoArgumentName "" funIdent varIdent, 
@@ -168,29 +175,26 @@ addAssignmentToUpdates funIdent nr acc (Ar _ varIdent) = acc ++
 
 verFunExecute :: ModifyModuleType -> Function -> VerRes ()
 
-verFunExecute modifyModule (FunV name args stms) =
-  verFunExecute modifyModule (Fun name args stms)
-
 verFunExecute modifyModule (FunL _ name args stms) =
   verFunExecute modifyModule (Fun name args stms)
 
 verFunExecute modifyModule (FunVL _ name args stms) =
-  verFunExecute modifyModule (Fun name args stms)
+  verFunExecute modifyModule (FunV name args stms)
 
-verFunExecute modifyModule (Fun name args stms) = do
-  --TODO: argumenty
+verFunExecute modifyModule (FunV name args stms) = do
   mod <- modifyModule id
 
   let
     guards0 = generateCommonBroadcastGuards name (number mod)
-    updates0 = [[
-        (iContrSender, EInt $ number mod), 
-        (iValue, EVar $ Ident $ unident name ++ sValueSuffix 
-          ++ (show $ number mod)), 
-        (Ident $ unident name ++ sStatusSuffix 
-          ++ (show $ number mod), EVar (Ident sTExecuted))]]
+    updates0 = generateCommonBroadcastUpdates name (number mod)
+    updates1 = 
+      [
+        updates0 ++
+        [(iValue, EVar $ Ident $ unident name ++ sValueSuffix 
+          ++ (show $ number mod))]
+      ]
   -- TODO: Alive?
-    updates = [(foldl (addAssignmentToUpdates name (number mod)) (head updates0) args, [Alive])]
+    updates = [(foldl (addAssignmentToUpdates name (number mod)) (head updates1) args, [Alive])]
 
   addTransNoState
     modifyBlockchain 
@@ -218,6 +222,25 @@ verFunExecute modifyModule (Fun name args stms) = do
     [
       ([(Ident $ unident name ++ sStatusSuffix ++ (show $ number mod), EVar iTInvalidated)], [Alive])
     ]
+
+verFunExecute modifyModule (Fun name args stms) = do
+  mod <- modifyModule id
+
+  let
+    guards0 = generateCommonBroadcastGuards name (number mod)
+    updates0 = generateCommonBroadcastUpdates name (number mod)
+    updates1 = 
+      [
+        updates0
+      ]
+    -- TODO: Alive?
+    updates = [(foldl (addAssignmentToUpdates name (number mod)) (head updates1) args, [Alive])]
+
+  addTransNoState
+    modifyBlockchain 
+    (sBroadcastPrefix ++ (unident name))
+    guards0
+    updates
 
 ------------------------
 -- verExecTransaction --
