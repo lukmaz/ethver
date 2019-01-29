@@ -363,13 +363,9 @@ verFullAss modifyModule (SAss varIdent (EValOf (EVar cmtVar))) = do
         -- TODO: Alive?
         [(updates, [Alive])]
 
-verFullAss modifyModule (SAss varIdent exp) = do
-  case exp of
-    ERandL (EInt _) ->
-      addLazyRandom varIdent
-    _ -> 
-      return ()
+-- verFullAss modifyModule (SAss varIdent (ESign args)) = do
 
+verFullAss modifyModule (SAss varIdent exp) = do
   varTyp <- findVarType varIdent
   case varTyp of
     Just (TSig sigTypes) -> do
@@ -505,7 +501,6 @@ verExp modifyModule (EMod exp1 exp2) = verMathExp modifyModule (EMod exp1 exp2)
 verExp modifyModule (EVar ident) = verValExp modifyModule (EVar ident)
 verExp modifyModule (EArray ident exp) = verValExp modifyModule (EArray ident exp)
 verExp modifyModule (ERand exp) = verRandom modifyModule exp
-verExp modifyModule (ERandL exp) = verRandomLazy modifyModule exp
 
 -- should be handled by sendT or so
 --verExp modifyModule (EHashOf exp) = verValExp modifyModule (EHashOf exp)
@@ -517,7 +512,7 @@ verExp modifyModule (EFinney x) = verValExp modifyModule (EInt x)
 verExp modifyModule ETrue = verValExp modifyModule ETrue
 verExp modifyModule EFalse = verValExp modifyModule EFalse
 
-verExp modifyModule (EVerS key signature vars) = verVerSig modifyModule key signature vars
+--verExp modifyModule (EVerS key signature vars) = verVerSig modifyModule key signature vars
 verExp modifyModule (EVerC cmtVar hash) = verCmt modifyModule cmtVar hash
 
 verExp _ exp = error $ (show exp) ++ ": not supported by verExp"
@@ -704,14 +699,10 @@ verRandom modifyModule (EInt range) = do
     )
   return (EVar $ Ident localVarName)
 
-verRandomLazy :: ModifyModuleType -> Exp -> VerRes Exp
-verRandomLazy modifyModule (EInt range) = do
-  return $ EInt range
-
 ----------------
 -- Signatures --
 ----------------
-
+{-
 verVerSig :: ModifyModuleType -> Exp -> Exp -> [Exp] -> VerRes Exp
 verVerSig modifyModule key (EVar signatureVar) varsOrArrs = do
   sigMaybeTyp <- findVarType signatureVar
@@ -751,7 +742,7 @@ verVerSig modifyModule key (EArray arrIdent index) varsOrArrs = do
         _ ->
           error $ "senderNumber world not defined"
     _ -> error $ show index ++ ": not supported index for arrays"
-
+-}
 verCmt :: ModifyModuleType -> Exp -> Exp -> VerRes Exp
 verCmt modifyModule cmtVar hash = do 
   evalHash <- verExp modifyModule hash

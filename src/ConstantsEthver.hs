@@ -114,7 +114,6 @@ sSendTransaction = "sendTransaction"
 sSendCommunication = "sendCommunication"
 sCall = "call"
 sRandom = "random"
-sRandomLazy = "random_lazy"
 
 sReturnValueSuffix = "_returnValue"
 
@@ -148,6 +147,5 @@ iSendTransaction = Ident sSendTransaction
 iSendCommunication = Ident sSendCommunication
 iCall = Ident sCall
 iRandom = Ident sRandom
-iRandomLazy = Ident sRandomLazy
 
 iTimeElapsed = Ident sTimeElapsed

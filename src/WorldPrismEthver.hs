@@ -376,16 +376,6 @@ findArrayValue ident index = do
   world <- get
   return $ Map.lookup (ident, index) $ arraysValues world
 
-addLazyRandom :: Ident -> VerRes ()
-addLazyRandom ident = do
-  world <- get
-  put $ world {lazyRandoms = Set.insert ident $ lazyRandoms world}
-
-removeLazyRandom :: Ident -> VerRes ()
-removeLazyRandom ident = do
-  world <- get
-  put $ world {lazyRandoms = Set.delete ident $ lazyRandoms world}
-
 -- default values
 defaultValueOfType :: Type -> Exp
 defaultValueOfType TBool = EFalse

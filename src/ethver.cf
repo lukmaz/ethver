@@ -82,7 +82,6 @@ ENot.    Exp6 ::= "!" Exp7 ;
 EArray.  Exp7 ::= Ident "[" Exp "]" ;
 --ECall.   Exp7 ::= Ident "." "call" "(" [Exp] ")" ;
 ERand.   Exp7 ::= "random" "(" Exp ")" ;
-ERandL.  Exp7 ::= "random_lazy" "(" Exp ")" ;
 ESign.   Exp7 ::= "sign" "(" [Exp] ")" ;
 EVerS.   Exp7 ::= "verSig" "(" Exp "," Exp "," "(" [Exp] ")" ")" ;
 ECheck.  Exp7 ::= "checkCommitment" "(" Exp "," Exp ")" ;

@@ -41,23 +41,10 @@ communication {
   uint(2) randU;
   signature(cmt_uint(2), uint(2), uint(2)) sigma[2];
 
-  function copy_signature() {
-    if (msg.sender == 0) {
-      sigma_0_sig_key = sigma_1_sig_key;
-      sigma_0_sig0 = sigma_1_sig0;
-      sigma_0_sig1 = sigma_1_sig1;
-      sigma_0_sig2 = sigma_1_sig2;
-    }
-    else {
-      sigma_1_sig_key = sigma_0_sig_key;
-      sigma_1_sig0 = sigma_0_sig0;
-      sigma_1_sig1 = sigma_0_sig1;
-      sigma_1_sig2 = sigma_0_sig2;
-    }
-  }
+  // function copy_commitment?
 
   function payment_request() {
-    if (commitmentM[msg.sender] == 3) { // todo: ladna nazwa
+    if (commitmentM[msg.sender] == 3) { // TODO: ladna nazwa
       commitmentM[msg.sender].randomCommitment();
     }
   }
@@ -67,6 +54,7 @@ communication {
     is_signedU = true;
     sigma[msg.sender] = sign(pay_c, pay_r, pay_a);
   }
+
   function open() {
     if (msg.sender == 1 && commitmentM[msg.sender] == 2) {
       // TODO: zrobic samo openCommitment jakoś
