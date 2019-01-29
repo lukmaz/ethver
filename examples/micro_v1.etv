@@ -26,7 +26,7 @@ contract Micropay {
 
   function_limit 2 release(cmt_uint(2) rel_c, uint(2) rel_rU) {
     if (checkCommitment(rel_c, rel_rU)) {
-      if (pot > 0 && ver(0, sigma[msg.sender], (rel_c, rel_rU, msg.sender))) {
+      if (pot > 0 && verSig(0, sigma[msg.sender], (rel_c, rel_rU, msg.sender))) {
         msg.sender.send(1);
         pot = pot - 1;
       }
@@ -36,6 +36,7 @@ contract Micropay {
 
 communication {
   cmt_uint(2) commitmentM[2];
+  uint(2) nothing;
   bool is_signedU; // wyluskac z podpisu
   uint(2) randU;
   signature(cmt_uint(2), uint(2), uint(2)) sigma[2];
@@ -68,7 +69,8 @@ communication {
   }
   function open() {
     if (msg.sender == 1 && commitmentM[msg.sender] == 2) {
-      commitmentM[msg.sender].openCommitment();
+      // TODO: zrobic samo openCommitment jakoś
+      nothing = valueOf(commitmentM[msg.sender]);
     }
   }
 }

@@ -272,6 +272,13 @@ verStm modifyModule (SRCmt (EVar cmtVar)) = do
         -- TODO: Alive?
         [([(cmtIdent, EInt range)], [Alive])]
 
+verStm modifyModule (SRCmt (EArray arrIdent ESender)) = do
+  world <- get
+  let 
+    nr = senderNumber world
+    varIdent = Ident $ unident arrIdent ++ "_" ++ show nr
+  verStm modifyModule (SRCmt (EVar varIdent))
+
 -- SOCmt not used directly; moved to ValueOf
 {-verStm modifyModule (SOCmt (EVar cmtVar)) = do -}
 
@@ -296,7 +303,10 @@ verStm modifyModule (SWait cond time) = do
     [EOr evalCond $ EGe (EVar $ Ident sTimeElapsed) time]
     -- TODO: Alive?
     [([], [Alive])]
-  
+
+verStm _ exp = do
+  error $ "verStm " ++ show exp ++ " not implemented."
+
 ---------
 -- Cmt --
 ---------
