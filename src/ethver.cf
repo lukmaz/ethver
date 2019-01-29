@@ -84,7 +84,6 @@ EArray.  Exp7 ::= Ident "[" Exp "]" ;
 ERand.   Exp7 ::= "random" "(" Exp ")" ;
 ESign.   Exp7 ::= "sign" "(" [Exp] ")" ;
 EVerS.   Exp7 ::= "verSig" "(" Exp "," Exp "," "(" [Exp] ")" ")" ;
-ECheck.  Exp7 ::= "checkCommitment" "(" Exp "," Exp ")" ;
 EVerC.   Exp7 ::= "verCommitment" "(" Exp "," Exp ")" ;
 EValOf.  Exp7 ::= "valueOf" "(" Exp ")" ;
 EHashOf. Exp7 ::= "hashOf" "(" Exp ")" ;

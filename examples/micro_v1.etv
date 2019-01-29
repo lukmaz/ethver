@@ -25,7 +25,7 @@ contract Micropay {
   uint(2) pot = 1;
 
   function_limit 2 release(cmt_uint(2) rel_c, uint(2) rel_rU) {
-    if (checkCommitment(rel_c, rel_rU)) {
+    if (verCommitment(rel_c, rel_rU)) {
       if (pot > 0 && verSig(0, sigma[msg.sender], (rel_c, rel_rU, msg.sender))) {
         msg.sender.send(1);
         pot = pot - 1;

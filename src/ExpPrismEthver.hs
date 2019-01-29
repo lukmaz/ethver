@@ -363,59 +363,42 @@ verFullAss modifyModule (SAss varIdent (EValOf (EVar cmtVar))) = do
         -- TODO: Alive?
         [(updates, [Alive])]
 
--- verFullAss modifyModule (SAss varIdent (ESign args)) = do
-
-verFullAss modifyModule (SAss varIdent exp) = do
+verFullAss modifyModule (SAss varIdent (ESign args)) = do
+  let 
+    keyIdent = Ident $ unident varIdent ++ sSigSuffix ++ sKeySuffix
+  world <- get
+  case senderNumber world of
+    Just nr -> verStm modifyModule (SAss keyIdent $ EInt nr)
+  argsVars <- mapM toVar args
+  
   varTyp <- findVarType varIdent
   case varTyp of
     Just (TSig sigTypes) -> do
-      case exp of
-        ESign args -> do
-          let keyIdent = Ident $ unident varIdent ++ sSigSuffix ++ sKeySuffix
-          world <- get
-          case senderNumber world of
-            Just x -> verStm modifyModule (SAss keyIdent $ EInt x)
-          argsVars <- mapM toVar args
-          mapM_ (signOne varIdent) (zip (zip [0..] sigTypes) argsVars)
-            where
-              signOne :: Ident -> ((Integer, Type), Exp) -> VerRes ()
-              signOne varIdent ((nr, sigTyp), (EVar rIdent)) = do
-                let 
-                  newIdent = Ident $ unident varIdent ++ sSigSuffix ++ show nr
-                case sigTyp of
-                  TCUInt _ -> do
-                    verStm modifyModule (SAss newIdent $ EVar rIdent)
-                  TUInt x -> do
-                    verStm modifyModule (SAss newIdent (EVar rIdent))
-        _ -> error $ show exp ++ ": r-value for signature can only be a sign(...) function"
-
+      mapM_ (signOne varIdent) (zip (zip [0..] sigTypes) argsVars)
+        where
+          signOne :: Ident -> ((Integer, Type), Exp) -> VerRes ()
+          signOne varIdent ((nr, sigTyp), (EVar rIdent)) = do
+            let 
+              newIdent = Ident $ unident varIdent ++ sSigSuffix ++ show nr
+            verStm modifyModule (SAss newIdent $ EVar rIdent)
+ 
+verFullAss modifyModule (SAss varIdent exp) = do
+  varTyp <- findVarType varIdent
+  let 
+    (newVarIdent, newExp) = 
+      case varTyp of
+        Just (TCUInt x) ->
+          error $ "cmt var in RHS not supported: " ++ show exp
+        _ -> (varIdent, exp)
     
-    _ -> do
-      let 
-        (newVarIdent, newExp) = 
-          case varTyp of
-            Just (TCUInt x) ->
-              case exp of
-                EVar rightIdent -> 
-                  (varIdent, EVar rightIdent)
-                ERand _ ->
-                  (varIdent, exp)
-                EInt _ ->
-                  (varIdent, exp)
-                _ -> 
-                  error $ (show exp)
-                    ++ ": RHS of assignment to cmt can only be a cmt variable or ERand (in openCommitment)"
-                    ++ " or EInt (in randomCommitment)"
-            _ -> (varIdent, exp)
-        
-      (guards, updates) <- generateSimpleAss modifyModule (SAss newVarIdent newExp)
-      
-      addTransToNewState
-        modifyModule
-        ""
-        guards
-        -- TODO: Alive?
-        [(updates, [Alive])]
+  (guards, updates) <- generateSimpleAss modifyModule (SAss newVarIdent newExp)
+  
+  addTransToNewState
+    modifyModule
+    ""
+    guards
+    -- TODO: Alive?
+    [(updates, [Alive])]
 
 verFullAss modifyModule (SArrAss (Ident ident) index exp) = do
   case index of
@@ -512,7 +495,7 @@ verExp modifyModule (EFinney x) = verValExp modifyModule (EInt x)
 verExp modifyModule ETrue = verValExp modifyModule ETrue
 verExp modifyModule EFalse = verValExp modifyModule EFalse
 
---verExp modifyModule (EVerS key signature vars) = verVerSig modifyModule key signature vars
+verExp modifyModule (EVerS key signature vars) = verVerSig modifyModule key signature vars
 verExp modifyModule (EVerC cmtVar hash) = verCmt modifyModule cmtVar hash
 
 verExp _ exp = error $ (show exp) ++ ": not supported by verExp"
@@ -702,7 +685,7 @@ verRandom modifyModule (EInt range) = do
 ----------------
 -- Signatures --
 ----------------
-{-
+
 verVerSig :: ModifyModuleType -> Exp -> Exp -> [Exp] -> VerRes Exp
 verVerSig modifyModule key (EVar signatureVar) varsOrArrs = do
   sigMaybeTyp <- findVarType signatureVar
@@ -712,13 +695,13 @@ verVerSig modifyModule key (EVar signatureVar) varsOrArrs = do
       world <- get
       let
         sigKey = Ident $ unident signatureVar ++ sSigSuffix ++ sKeySuffix
-        f :: Ident -> Map.Map Ident Integer -> Exp -> ((Integer, Type), Exp) -> Exp
-        f signatureVar commitmentsIds acc ((nr, sigType), var) = 
+        f :: Ident -> Exp -> ((Integer, Type), Exp) -> Exp
+        f signatureVar acc ((nr, sigType), var) = 
           case sigType of
             TCUInt x ->
               let 
                 sigId = Ident $ unident signatureVar ++ sSigSuffix ++ show nr
-                varId = Ident $ (unident $ unvar var) ++ sIdSuffix
+                varId = Ident $ (unident $ unvar var)
               in
                 EAnd acc (EEq (EVar sigId) (EVar varId))
             TUInt x ->
@@ -727,7 +710,7 @@ verVerSig modifyModule key (EVar signatureVar) varsOrArrs = do
               in
                 EAnd acc (EEq (EVar sigId) var)
                 
-      return $ foldl (f signatureVar (commitmentsIds world)) (EEq (EVar sigKey) key) (zip (zip [0..] sigTypes) vars)
+      return $ foldl (f signatureVar) (EEq (EVar sigKey) key) (zip (zip [0..] sigTypes) vars)
     Nothing -> error $ show signatureVar ++ ": not found by findVarType"
 
 verVerSig modifyModule key (EArray arrIdent index) varsOrArrs = do
@@ -742,7 +725,7 @@ verVerSig modifyModule key (EArray arrIdent index) varsOrArrs = do
         _ ->
           error $ "senderNumber world not defined"
     _ -> error $ show index ++ ": not supported index for arrays"
--}
+
 verCmt :: ModifyModuleType -> Exp -> Exp -> VerRes Exp
 verCmt modifyModule cmtVar hash = do 
   evalHash <- verExp modifyModule hash
