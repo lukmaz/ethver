@@ -32,10 +32,6 @@ generateModule moduleFun moduleName pream world =
   "\n\n/////////////////////\n" ++
   "\nmodule " ++ moduleName ++ "\n" ++
   pream ++ "\n" ++
-  -- (OLD)
-  -- (prismVars (whichSender $ moduleFun world) (vars $ moduleFun world) (varsInitialValues $ moduleFun world)
-  --   (commitmentsIds world)) ++
-  -- (NEW)
   (prismVars (whichSender $ moduleFun world) (vars $ moduleFun world) (varsInitialValues $ moduleFun world)) ++
   (prismGlobalCommitments (globalCommitments $ moduleFun world)) ++
   "\n" ++ 
@@ -44,23 +40,17 @@ generateModule moduleFun moduleName pream world =
 
 blockchainPream :: String
 blockchainPream = 
-  --"  " ++ sContrSender ++ " : [0..1];\n" ++
-  -- TODO: skąd wziąć zakres val?
-  --"  " ++ sValue ++ " : [0.." ++ sMaxValue ++ "];\n" ++
-  --"  " ++ sTimelocksReleased ++ " : bool init false;"
   "  " ++ sTimeElapsed ++ " : [0.." ++ sMaxTime ++ "] init 0;\n"
 
 contractPream :: String
 contractPream =
   "  " ++ sContrState ++ " : [0.." ++ sNumContractStates ++ "] init " ++ (show nInitContractState) ++ ";\n" ++
   "  " ++ sNextState ++ " : [0.." ++ sNumContractStates ++ "];\n" ++
-  --  "  " ++ sContractBalance ++ " : [0.." ++ sMaxContractBalance ++ "] init " ++ sInitContractBalance ++ ";\n" ++
   "  " ++ sP0Balance ++ " : [0.." ++ sMaxUserBalance ++ "] init " ++ sInitUser0Balance ++ ";\n" ++
   "  " ++ sP1Balance ++ " : [0.." ++ sMaxUserBalance ++ "] init " ++ sInitUser1Balance ++ ";\n"
 
 communicationPream :: String
 communicationPream = 
-  -- "  " ++ sCommSender ++ " : [0..1];\n" ++
   -- TODO: state 0 not used
   "  " ++ sCommState ++ " : [0.." ++ sNumCommStates ++ "] init " ++ (show nInitCommState) ++ ";\n" 
 
@@ -68,15 +58,11 @@ player0Pream :: String
 player0Pream =
   "  " ++ sP0State ++ " : [" ++ (show nMinP0State) ++ ".." ++ sNumP0States ++ "] init " ++ 
   (show nInitP0State) ++ ";\n" 
-  -- critical section
-  -- ++ "  " ++ sCriticalSection0 ++ " : bool;\n"
 
 player1Pream :: String
 player1Pream =
   "  " ++ sP1State ++ " : [" ++ (show nMinP1State) ++ ".." ++ sNumP1States ++ "] init " ++ (show nInitP1State) ++
   ";\n" 
-  -- critical section
-  -- ++ "  " ++ sCriticalSection1 ++ " : bool;\n"
 
 generateConstantConstants :: String
 generateConstantConstants = 
@@ -108,10 +94,6 @@ generateNumStates world =
   (show $ numStates $ player1 world) ++
   ";\n\n"
 
--- (OLD)
---prismVars :: Ident -> Map.Map Ident Type -> Map.Map Ident Exp -> Map.Map Ident Integer -> String
---prismVars senderIdent vars initialValues commitmentsMap = 
--- (NEW)
 prismVars :: Ident -> Map.Map Ident Type -> Map.Map Ident Exp -> String
 prismVars senderIdent vars initialValues  = 
   Map.foldlWithKey
@@ -121,16 +103,6 @@ prismVars senderIdent vars initialValues  =
           code
         TCUInt x ->
           code
-        {- Old, to delete
-        TCUInt x ->
-          let
-            globalIdent = case Map.lookup ident commitmentsMap of
-              Just nr -> Ident $ sGlobalCommitments ++ "_" ++ show nr
-              _ -> error $ unident ident ++ " not found in commitmentsIds"
-            initSuffix = " init " ++ (show $ maxTypeValueOfType (TCUInt x))
-          in
-            code ++ "  " ++ (unident globalIdent)
-              ++ " : " ++ (prismShowType typ) ++ initSuffix ++ ";\n"-}
         _ -> 
           let 
             initSuffix = 
