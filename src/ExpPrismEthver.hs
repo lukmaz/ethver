@@ -517,11 +517,7 @@ verExp modifyModule (EFinney x) = verValExp modifyModule (EInt x)
 verExp modifyModule ETrue = verValExp modifyModule ETrue
 verExp modifyModule EFalse = verValExp modifyModule EFalse
 
--- TODO
--- temporary turned off
-
---verExp modifyModule (EVerS key signature vars) = verVerSig modifyModule key signature vars
-
+verExp modifyModule (EVerS key signature vars) = verVerSig modifyModule key signature vars
 verExp modifyModule (EVerC cmtVar hash) = verCmt modifyModule cmtVar hash
 
 verExp _ exp = error $ (show exp) ++ ": not supported by verExp"
@@ -716,15 +712,6 @@ verRandomLazy modifyModule (EInt range) = do
 -- Signatures --
 ----------------
 
--- TODO --
--- TEMPORARY TURNED OFF
--- SINCE IT IS NOT NEEDED IN RPS
---
-
-
-
-
-{-
 verVerSig :: ModifyModuleType -> Exp -> Exp -> [Exp] -> VerRes Exp
 verVerSig modifyModule key (EVar signatureVar) varsOrArrs = do
   sigMaybeTyp <- findVarType signatureVar
@@ -764,7 +751,6 @@ verVerSig modifyModule key (EArray arrIdent index) varsOrArrs = do
         _ ->
           error $ "senderNumber world not defined"
     _ -> error $ show index ++ ": not supported index for arrays"
--}
 
 verCmt :: ModifyModuleType -> Exp -> Exp -> VerRes Exp
 verCmt modifyModule cmtVar hash = do 
@@ -775,7 +761,6 @@ verCmt modifyModule cmtVar hash = do
 -------------
 -- ScSendT --
 -------------
--- (NEW) opening moved to ValueOf
 verSendTAux :: ModifyModuleType -> Ident -> [CallArg] -> VerRes ()
 verSendTAux modifyModule funName argsVals = do
   world <- get
