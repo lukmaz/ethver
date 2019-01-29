@@ -363,6 +363,16 @@ verFullAss modifyModule (SAss varIdent (EValOf (EVar cmtVar))) = do
         -- TODO: Alive?
         [(updates, [Alive])]
 
+-- cmtVar is nevertheless ignored, so for EArray works the same as for EVar
+verFullAss modifyModule (SAss varIdent (EValOf (EArray ident ESender))) = do
+  world <- get
+  case senderNumber world of
+    Just nr ->
+      let 
+        cmtVar = Ident $ unident ident ++ "_" ++ show nr
+      in 
+        verFullAss modifyModule (SAss varIdent (EValOf (EVar cmtVar)))
+
 verFullAss modifyModule (SAss varIdent (ESign args)) = do
   let 
     keyIdent = Ident $ unident varIdent ++ sSigSuffix ++ sKeySuffix

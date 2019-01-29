@@ -36,6 +36,7 @@ maxRealValue ident = do
   typ <- findVarType ident
   case typ of
     Just t -> return $ maxRealValueOfType t
+    _ -> error $ "Cannot findVarType of " ++ unident ident
 
 maxTypeValue :: Ident -> VerRes Integer
 maxTypeValue ident = do
@@ -405,10 +406,6 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
 
     else
       generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args [] [] 
-
-generateAdvTranssOld :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] ->  VerRes ()
-generateAdvTranssOld modifyModule whichPrefix whichState withVal limit funName args = do
-  generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args [] [] 
 
 generateAdvTranssAux :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args extraGuards extraUpdates = do

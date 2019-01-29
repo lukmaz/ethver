@@ -85,7 +85,9 @@ scenario M {
   wait(is_signedU, 1);
   if (is_signedU && time_elapsed < 1) {
     rand1 = randU;
-    copy_signature.sendCommunication();
+    // TODO: po co to było?
+    // zamiast robić copy_signature, po prostu podać id podpisu jako argument.
+    // copy_signature.sendCommunication();
     if (sigma_1_sig0 == 1 && sigma_1_sig1 == rand1 && sigma_1_sig2 == 1) {
       open.sendCommunication();
       if (commitmentM[1] == rand1) {

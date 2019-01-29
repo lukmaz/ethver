@@ -249,12 +249,21 @@ verExecTransaction modifyModule = do
 verOldFunContractOrCommunication :: ModifyModuleType -> (Function -> VerRes ()) -> Function -> VerRes ()
 
 verOldFunContractOrCommunication modifyModule commonfun (FunV name args stm) =
-  verOldFunContractOrCommunication modifyModule commonfun (FunL (-1)  name args stm)
+  verOldFunContractOrCommunication modifyModule commonfun (FunVL (-1)  name args stm)
 
 verOldFunContractOrCommunication modifyModule commonfun (Fun name args stm) =
   verOldFunContractOrCommunication modifyModule commonfun (FunL (-1)  name args stm)
 
-verOldFunContractOrCommunication modifyModule commonfun (FunVL limit name args stm) =
+verOldFunContractOrCommunication modifyModule commonfun (FunVL limit name args stm) = do
+  -- TODO: skąd wziąć zakres val - rozwiązane na razie jednym MAX_VALUE
+  world <- get
+  let maxValue = case Map.lookup (Ident sMaxValue) $ constants world of
+        Just value -> value
+
+  -- add arguments for value to players modules
+  addVar modifyPlayer0 (TUInt (maxValue + 1)) $ Ident $ unident name ++ sValueSuffix ++ "0"
+  addVar modifyPlayer1 (TUInt (maxValue + 1)) $ Ident $ unident name ++ sValueSuffix ++ "1"
+
   verOldFunContractOrCommunication modifyModule commonfun (FunL limit  name args stm)
 
 verOldFunContractOrCommunication modifyModule commonFun fun@(FunL limit name args stms) = do
@@ -318,14 +327,6 @@ commonVerFunContract (Fun name args stms) = do
   -- add arguments variables to World
   mapM_ (addContrArgument name) args
 
-  -- TODO: skąd wziąć zakres val - rozwiązane na razie jednym MAX_VALUE
-  world <- get
-  let maxValue = case Map.lookup (Ident sMaxValue) $ constants world of
-        Just value -> value
-
-  -- add arguments for value to players modules
-  addVar modifyPlayer0 (TUInt (maxValue + 1)) $ Ident $ unident name ++ sValueSuffix ++ "0"
-  addVar modifyPlayer1 (TUInt (maxValue + 1)) $ Ident $ unident name ++ sValueSuffix ++ "1"
   
   mod <- modifyContract id
   -- adds a command to Contract module that the transaction is being broadcast
