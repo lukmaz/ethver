@@ -231,7 +231,8 @@ verFunExecute modifyModule (Fun name args stms) = do
     updates0 = generateCommonBroadcastUpdates name (number mod)
     updates1 = 
       [
-        updates0
+        updates0 ++
+        [(iValue, EInt 0)]
       ]
     -- TODO: Alive?
     updates = [(foldl (addAssignmentToUpdates name (number mod)) (head updates1) args, [Alive])]
