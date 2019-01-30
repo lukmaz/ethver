@@ -332,38 +332,30 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
         _ -> True
       )
       argsOrig
-  if commitmentInArguments (Fun (Ident "") argsOrig []) 
-    then do
-      let 
-        cmtArgVar = 
-          Ident $ (unident $ commitmentFromArguments (Fun (Ident "") argsOrig [])) 
-            ++ (show $ number mod)
-      case typ of 
-        Just (TCUInt range) -> do
-          -- only option: leave the same if already decided 
-          generateAdvTranssAux
-            modifyModule 
-            whichPrefix 
-            whichState 
-            withVal 
-            limit 
-            funName 
-            args
-            [ELt (EVar cmtVar) (EInt $ range)] 
-            [(cmtArgVar, EInt $ number mod)] 
-          -- TODO: 2nd option: random open if committed?
 
-    else
-      generateAdvTranssAux 
-        modifyModule 
-        whichPrefix 
-        whichState 
-        withVal 
-        limit 
-        funName 
-        args 
-        [] 
-        [] 
+    (extraGuards, extraUpdates) =
+      if commitmentInArguments (Fun (Ident "") argsOrig []) 
+        then 
+          case cmtRange world of
+            Just range ->
+              let 
+                cmtArgVar = Ident $ (unident $ commitmentFromArguments (Fun (Ident "") argsOrig []))
+                    ++ (show $ number mod)
+              in
+                ([ELt (EVar cmtVar) (EInt $ range)], [(cmtArgVar, EInt $ number mod)])
+        else
+          ([], [])
+    
+  generateAdvTranssAux 
+    modifyModule 
+    whichPrefix 
+    whichState 
+    withVal 
+    limit 
+    funName 
+    args 
+    extraGuards
+    extraUpdates
 
 generateAdvTranssAux :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args extraGuards extraUpdates = do
