@@ -448,27 +448,16 @@ verFullAss modifyModule (SAss varIdent (ESign args)) = do
               newIdent = Ident $ unident varIdent ++ sSigSuffix ++ show nr
             verStm modifyModule (SAss newIdent $ EVar rIdent)
  
-verFullAss modifyModule (SAss varIdent exp) = do
-  varTyp <- findVarType varIdent
+verFullAss modifyModule (SAss lVarIdent rExp) = do
+  lVarTyp <- findVarType lVarIdent
   
-  case varTyp of
+  (guards, updates) <- case lVarTyp of
     Just (TCUInt x) ->
-      error $ "cmt var in RHS not supported: " ++ show exp
-    Just (TSig sigTypes) ->
-      
-      
-      
-      
-      -- TODO: chwilowe 
-      return ()
-
-
-
-      
-    _ -> return ()
-
-
-  (guards, updates) <- generateSimpleAss modifyModule (SAss varIdent exp)
+      error $ "cmt var in LHS supported only when RHS=valueOf, not " ++ show rExp
+    Just (TSig sigTypes) -> do
+      generateSigAss modifyModule sigTypes lVarIdent rExp
+    _ -> 
+      generateSimpleAss modifyModule (SAss lVarIdent rExp)
   
   addTransToNewState
     modifyModule
@@ -543,6 +532,52 @@ generateSimpleAssWithType modifyModule (SAss ident exp) typ = do
                            _ -> [EGe evalExp (EInt minV), ELe evalExp (EInt maxV)]
   return (guards, [(ident, evalExp)])
 
+generateSigAss :: ModifyModuleType -> [Type] -> Ident -> Exp -> VerRes ([Exp], [(Ident, Exp)])
+generateSigAss modifyModule sigTypes lVarIdent rExp = do
+  case rExp of
+    EVar rVarIdent -> do
+      world <- get
+      mod <- modifyModule id
+      let
+        playerNr = case senderNumber world of
+          Just n -> n
+          Nothing ->
+            if number mod == nUndefModuleNumber
+              then error $ "Cannot determine the player number"
+              else number mod
+      
+        globalSigName = sGlobalSignatures ++ "_" ++ (show playerNr)
+        rVarName = unident rVarIdent
+        
+      simpleAsses <- mapM
+        (\(attrType, attrNr) -> 
+          let
+            lIdent = Ident $ globalSigName ++ sAttrSuffix ++ show attrNr
+            rIdent = Ident $ rVarName ++ sAttrSuffix ++ show attrNr
+          in
+            generateSimpleAssWithType modifyModule (SAss lIdent (EVar rIdent)) attrType
+        )
+        (zip sigTypes [0..])
+      
+      let
+        lKeyIdent = Ident $ globalSigName ++ sKeySuffix
+        rKeyIdent = Ident $ rVarName ++ sKeySuffix
+        
+      keyAsses <- 
+        generateSimpleAssWithType modifyModule (SAss lKeyIdent (EVar rKeyIdent)) TAddr
+      
+      (idGuards, idUpdates) <- 
+        generateSimpleAssWithType modifyModule (SAss lVarIdent (EInt playerNr)) TAddr
+
+      let
+        (guardsListAttr, updatesListAttr) = unzip (keyAsses:simpleAsses)
+
+      return (idGuards ++ (concat guardsListAttr), idUpdates ++ (concat updatesListAttr))
+    _ ->
+      error $ "RHS must be a signature variable"
+
+    
+ 
 ---------
 -- Exp --
 ---------

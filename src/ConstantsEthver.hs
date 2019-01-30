@@ -9,6 +9,7 @@ import AbsEthver
 nMaxRuns = 2 -- ???
 
 nMaxCommitments = 2
+nMaxSignatures = 2
 
 nUndefModuleNumber = 42
 nWrongExp = 43
@@ -56,8 +57,6 @@ sP0State = "state0"
 sP1State = "state1"
 sStatePrefix = "state"
 sStatusSuffix = "_status"
--- TODO: to remove
-sSigSuffix = "_sig"
 sAttrSuffix = "_attr"
 sKeySuffix = "_key"
 -- TODO: To remove

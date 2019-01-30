@@ -178,19 +178,23 @@ addLocal modifyModule typ = do
   _ <- modifyModule (\mod -> mod {numLocals = numLocals mod + 1})
   return ()
 
+-- TODO: OLD sig
 -- General addVar
 addVar :: ModifyModuleType -> Type -> Ident -> VerRes ()
 addVar modifyModule typ ident = do
   case typ of
     TSig types -> do
-      _ <- modifyModule (addVarToModule typ ident)
-      addSignatureVar modifyModule types ident
+      error $ "addVar should not be called with TSig?"
+      --_ <- modifyModule (addVarToModule typ ident)
+      --addSignatureVar modifyModule types ident
     TCUInt range -> do
+      -- też niepotrzebne?
       addCmtIdVar modifyModule ident 
     _ -> do
       _ <- modifyModule (addVarToModule typ ident)
       return ()
 
+{- TODO: OLD
 addSignatureVar :: ModifyModuleType -> [Type] -> Ident -> VerRes ()
 addSignatureVar modifyModule types varIdent = do
   addVar modifyModule (TUInt 2) $ Ident $ unident varIdent ++ sSigSuffix ++ sKeySuffix
@@ -207,6 +211,11 @@ addSignatureVarAux modifyModule varIdent (nr, typ) = do
       addVar modifyModule (TUInt 2) newIdent
     TUInt x -> 
       addVar modifyModule typ newIdent
+-}
+
+addSigIdVar :: ModifyModuleType -> Ident -> VerRes ()
+addSigIdVar modifyModule varIdent = do
+  addVar modifyModule (TUInt nMaxSignatures) varIdent
 
 addCmtIdVar :: ModifyModuleType -> Ident -> VerRes ()
 addCmtIdVar modifyModule varIdent = do
@@ -275,6 +284,10 @@ addNoPlayerArg modifyModule (Ident funName) (Ar (TCUInt range) varIdent) = do
   addCmtIdVar modifyModule varIdent
   addGlobalCommitments range
 
+addNoPlayerArg modifyModule (Ident funName) (Ar (TSig sigTypes) varIdent) = do
+  addSigIdVar modifyModule varIdent
+  addGlobalSignatures (TSig sigTypes)
+
 addNoPlayerArg modifyModule (Ident funName) (Ar typ varIdent) = do
   addVar modifyModule typ varIdent
 
@@ -286,6 +299,13 @@ addPlayerArg modifyModule funName (Ar (TCUInt range) varIdent) = do
     numberedName = createScenarioArgumentName "" funName varIdent (number mod)
   addCmtIdVar modifyModule numberedName
   addGlobalCommitments range
+
+addPlayerArg modifyModule funName (Ar (TSig sigTypes) varIdent) = do
+  mod <- modifyModule id
+  let
+    numberedName = createScenarioArgumentName "" funName varIdent (number mod)
+  addSigIdVar modifyModule numberedName
+  addGlobalSignatures (TSig sigTypes)
 
 addPlayerArg modifyModule funName (Ar typ varIdent) = do
   mod <- modifyModule id

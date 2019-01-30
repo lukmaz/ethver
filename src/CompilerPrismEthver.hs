@@ -92,15 +92,20 @@ verCommunication (Comm _ funs) = do
 verDecl :: ModifyModuleType -> Decl -> VerRes ()
 
 verDecl modifyModule (Dec (TCUInt range) varIdent) = do
-  world <- get
   addGlobalCommitments range
 
   -- auxiliary variable for id with the given name
-  addCmtIdVar modifyModule varIdent
-
   mod <- modifyModule id 
+  addCmtIdVar modifyModule varIdent
   addInitialValue modifyModule varIdent (EInt $ number mod)
 
+verDecl modifyModule (Dec (TSig sigTypes) varIdent) = do
+  addGlobalSignatures (TSig sigTypes)
+
+  -- auxiliary variable for id with the given name
+  mod <- modifyModule id
+  addSigIdVar modifyModule varIdent
+  addInitialValue modifyModule varIdent (EInt $ number mod)
 
 verDecl modifyModule (Dec typ ident) = do
   addVar modifyModule typ ident
