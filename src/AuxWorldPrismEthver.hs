@@ -98,6 +98,10 @@ toVar ESender = do
     Just x -> return $ EInt x
     _ -> error $ "senderNumber world not defined"
 
+toVar (EInt x) = return $ EInt x
+
+toVar (EHashOf x) = return x
+
 toVar exp = error $ "toVar '" ++ show exp ++ "' not implemented"
 
 -----------
