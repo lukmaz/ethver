@@ -329,16 +329,18 @@ verWithCommitment modifyModule cmtVar stmFromIdent = do
 -- Ass --
 ---------
 
--- similar to addHonestOpenCmtTrans, but 
+-- similar to addHonestOpenCmtTrans, and to verValOfAssContr but 
 -- - addHonestOpenCmtTrans is with label
 -- - addHonestOpenCmtTrans is for calling valueOf from contract code
+-- - verValOfAssContr assumes the global_commitments_0 is set by the synced trans is player0.
+--     addHonestOpenCmtTrans must set global_commitments_0 manually
 verValOfAssPlayer :: ModifyModuleType -> Ident -> VerRes ()
 verValOfAssPlayer modifyModule varIdent = do
   mod <- modifyModule id
   world <- get
   let
-    nr = show $ number mod
-    cmtIdent = Ident $ sGlobalCommitments ++ "_" ++ nr
+    nr = number mod
+    cmtIdent = Ident $ sGlobalCommitments ++ "_" ++ show nr
 
   case cmtRange world of
     Just range -> do
@@ -348,7 +350,7 @@ verValOfAssPlayer modifyModule varIdent = do
         ""
         [EEq (EVar cmtIdent) (EInt range)]
         (foldl
-          (\acc x -> acc ++ [([(cmtIdent, EInt x)], [Alive])])
+          (\acc x -> acc ++ [([(varIdent, EInt x), (cmtIdent, EInt x)], [Alive])])
           []
           [0..(range - 1)]
         )
@@ -358,7 +360,7 @@ verValOfAssPlayer modifyModule varIdent = do
         modifyModule
         ""
         [ELt (EVar cmtIdent) (EInt range)]
-        [([], [Alive])]
+        [([(varIdent, EVar cmtIdent)], [Alive])]
     _ ->
       error $ "Commitment range not set at the moment of calling valueOf"
 
@@ -375,7 +377,7 @@ verValOfAssContr modifyModule varIdent = do
         (sOpenCommitment ++ (show $ nr))
         []
         -- TODO: Alive?
-        [([], [Alive])]
+        [([(varIdent, EInt nr)], [Alive])]
 
 
       -- assign the value of the commitment
