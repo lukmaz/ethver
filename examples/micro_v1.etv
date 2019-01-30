@@ -13,8 +13,8 @@ USER0_BALANCE_INIT = 0;
 USER1_BALANCE_INIT = 0;
 MAX_VALUE = 1;
 MAX_TIME = 2;
-MAX_SIGNATURES = 3;
-MAX_COMMITMENTS = 2;
+//MAX_SIGNATURES = 3;
+//MAX_COMMITMENTS = 2;
 
 // c1, r1 - values in honest mode, recipient = 1
 // c0, r0 - values in adversarial mode, recipient = 0
@@ -23,77 +23,72 @@ MAX_COMMITMENTS = 2;
 
 contract Micropay {
   uint(2) pot = 1;
+  uint(2) r1_loc;
 
-  function_limit 2 release(cmt_uint(2) rel_c, uint(2) rel_rU) {
-    if (verCommitment(rel_c, rel_rU)) {
-      if (pot > 0 && verSig(0, sigma[msg.sender], (rel_c, rel_rU, msg.sender))) {
-        msg.sender.send(1);
-        pot = pot - 1;
-      }
+  function_limit 2 release(cmt_uint(2) rel_r1, uint(2) rel_r2, hash rel_c) {
+    r1_loc = valueOf(rel_r1);
+    if ((pot > 0) && verCommitment(rel_r1, rel_c) && (r1_loc == rel_r2) &&
+        verSig(0, comm_sigma, (rel_c, rel_r2, msg.sender))) {
+      msg.sender.send(1);
+      pot = pot - 1;
     }
   }
 }    
 
 communication {
-  cmt_uint(2) commitmentM[2];
-  uint(2) nothing;
-  bool is_signedU; // wyluskac z podpisu
-  uint(2) randU;
-  signature(cmt_uint(2), uint(2), uint(2)) sigma[2];
+  bool payment_requested;
+  bool payment_issued;
+  
+  uint(2) comm_r2;
+  hash comm_c;
+  address comm_a;
+  signature(cmt_uint(2), uint(2), uint(2)) comm_sigma;
 
   // function copy_commitment?
 
-  function payment_request() {
-    if (commitmentM[msg.sender] == 3) { // TODO: ladna nazwa
-      commitmentM[msg.sender].randomCommitment();
-    }
+  function payment_request(hash req_c) {
+    comm_c = req_c;
+    comm_a = msg.sender;
+    payment_requested = true;
   }
 
-  function payment_issuance(cmt_uint(2) pay_c, uint(2) pay_r, uint(2) pay_a) {
-    randU = pay_r;
-    is_signedU = true;
-    sigma[msg.sender] = sign(pay_c, pay_r, pay_a);
+  function payment_issuance(hash iss_c, uint(2) iss_r2, uint(2) iss_a) {
+    comm_r2 = iss_r2;
+    comm_sigma = sign(iss_c, iss_r2, iss_a);
+    payment_issued = true;
   }
-
-  function open() {
-    if (msg.sender == 1 && commitmentM[msg.sender] == 2) {
-      // TODO: zrobic samo openCommitment jakoś
-      nothing = valueOf(commitmentM[msg.sender]);
-    }
-  }
+  
 }
 
 scenario U {
-  uint(2) rand0;
+  uint(2) r2;
   bool endU;
 
-  wait(commitmentM[1] < 3, 1);
-  if (commitmentM[1] < 3) {
-    rand0 = random(2);
-    payment_issuance.sendCommunication(commitmentM[1], rand0, 1);
+  wait(payment_requested, 1);
+  // TODO: && time_elapsed < 1?
+  if (payment_requested) {
+    r2 = random(2);
+    payment_issuance.sendCommunication(comm_c, r2, comm_a);
   }
 
   endU = true;
 }
 
 scenario M {
+  cmt_uint(2) r1;
+  uint(2) r1_val;
   bool win;
-  uint(2) rand1;
   bool endM;
 
-  payment_request.sendCommunication();
-  wait(is_signedU, 1);
-  if (is_signedU && time_elapsed < 1) {
-    rand1 = randU;
-    // TODO: po co to było?
-    // zamiast robić copy_signature, po prostu podać id podpisu jako argument.
-    // copy_signature.sendCommunication();
-    if (sigma_1_sig0 == 1 && sigma_1_sig1 == rand1 && sigma_1_sig2 == 1) {
-      open.sendCommunication();
-      if (commitmentM[1] == rand1) {
-        win = true;
-        release.sendTransaction(commitmentM[1], rand1, {from: "M", value: 0});
-      }
+  r1.randomCommitment();
+
+  payment_request.sendCommunication(hashOf(r1));
+  wait(payment_issued, 1);
+  if (payment_issued && time_elapsed < 1) {
+    r1_val = valueOf(r1);
+    if (r1_val == comm_r2) {
+      win = true;
+      release.sendTransaction(r1, comm_r2, hashOf(r1), {from: "M", value: 0});
     }
   }
   endM = true;
