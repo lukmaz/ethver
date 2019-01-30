@@ -77,7 +77,7 @@ scenario U {
 scenario M {
   cmt_uint(2) r1;
   uint(2) r1_val;
-  bool win;
+  bool winM;
   bool endM;
 
   r1.randomCommitment();
@@ -87,7 +87,7 @@ scenario M {
   if (payment_issued && time_elapsed < 1) {
     r1_val = valueOf(r1);
     if (r1_val == comm_r2) {
-      win = true;
+      winM = true;
       release.sendTransaction(r1, comm_r2, hashOf(r1), {from: "M", value: 0});
     }
   }

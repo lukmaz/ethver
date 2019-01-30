@@ -329,27 +329,45 @@ verWithCommitment modifyModule cmtVar stmFromIdent = do
 -- Ass --
 ---------
 
-verFullAss :: ModifyModuleType -> Stm -> VerRes ()
-verFullAss modifyModule (SAss varIdent (EValOf (EVar cmtVar))) = do
-  -- TODO: 
-  -- cmtVar is in fact ignored. The player opens his own commitment and assigns the id of it to varIdent
-  -- Isn't it a problem in micro? Maybe not. Let's allow only to open own commitment and to copy commitment
-  -- from the oponent.
-
-  -- TODO: 
-  -- remove cmt argument from ValueOf(cmt)? 
-  world <- get
+-- similar to addHonestOpenCmtTrans, but 
+-- - addHonestOpenCmtTrans is with label
+-- - addHonestOpenCmtTrans is for calling valueOf from contract code
+verValOfAssPlayer :: ModifyModuleType -> Ident -> VerRes ()
+verValOfAssPlayer modifyModule varIdent = do
   mod <- modifyModule id
+  world <- get
+  let
+    nr = show $ number mod
+    cmtIdent = Ident $ sGlobalCommitments ++ "_" ++ nr
 
-  let 
-    playerNr = case senderNumber world of
-      Just nr -> Just nr
-      _ -> 
-        if number mod == nUndefModuleNumber
-          then Nothing
-          else Just $ number mod
+  case cmtRange world of
+    Just range -> do
+      -- committed -> random
+      addTransToNewState
+        modifyModule
+        ""
+        [EEq (EVar cmtIdent) (EInt range)]
+        (foldl
+          (\acc x -> acc ++ [([(cmtIdent, EInt x)], [Alive])])
+          []
+          [0..(range - 1)]
+        )
 
-  case playerNr of
+      -- opened -> the same
+      addTransToNewState
+        modifyModule
+        ""
+        [ELt (EVar cmtIdent) (EInt range)]
+        [([], [Alive])]
+    _ ->
+      error $ "Commitment range not set at the moment of calling valueOf"
+
+
+verValOfAssContr :: ModifyModuleType -> Ident -> VerRes ()
+verValOfAssContr modifyModule varIdent = do
+  world <- get
+
+  case senderNumber world of
     Just nr -> do
       -- open the appropriate commitment
       addTransToNewState
@@ -372,6 +390,20 @@ verFullAss modifyModule (SAss varIdent (EValOf (EVar cmtVar))) = do
         -- TODO: Alive?
         [(updates, [Alive])]
     Nothing -> error $ "Cannot determine player number"
+
+verFullAss :: ModifyModuleType -> Stm -> VerRes ()
+verFullAss modifyModule (SAss varIdent (EValOf (EVar cmtVar))) = do
+  -- TODO: 
+  -- cmtVar is in fact ignored. The player opens his own commitment and assigns the id of it to varIdent
+  -- Isn't it a problem in micro? Maybe not. Let's allow only to open own commitment and to copy commitment
+  -- from the oponent.
+
+  -- different behavior when called from a contract or from a scenario
+  mod <- modifyModule id
+
+  if moduleName mod == sContrModule
+    then verValOfAssContr modifyModule varIdent
+    else verValOfAssPlayer modifyModule varIdent
     
 -- cmtVar is nevertheless ignored, so for EArray works the same as for EVar
 verFullAss modifyModule (SAss varIdent (EValOf (EArray ident ESender))) = do

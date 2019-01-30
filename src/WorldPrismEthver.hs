@@ -510,8 +510,10 @@ setCmtRange range = do
   case cmtRange world of
     Nothing ->
       put $ world {cmtRange = Just range}
-    _ ->
-      return ()
+    Just old_range -> do
+      if old_range /= range
+        then error $ "Commitment range changed"
+        else return ()
 
 addHonestOpenCmtTrans :: ModifyModuleType -> VerRes ()
 addHonestOpenCmtTrans modifyModule = do
@@ -542,7 +544,7 @@ addHonestOpenCmtTrans modifyModule = do
         [ELt (EVar cmtIdent) (EInt range)]
         [([], [Alive])]
     _ ->
-      return ()
+      error $ "Commitment range not set at the moment of calling valueOf"
 
 
 addAdvOpenCmtTrans :: ModifyModuleType -> VerRes ()
@@ -567,6 +569,8 @@ addAdvOpenCmtTrans modifyModule = do
           []
           [0..(range - 1)]
         )
+    _ ->
+      error $ "Commitment range not set at the moment of adding adversarial opening the commitment"
 
 addRandomCmtTrans :: ModifyModuleType -> VerRes ()
 addRandomCmtTrans modifyModule = do
@@ -585,6 +589,8 @@ addRandomCmtTrans modifyModule = do
         (-1)
         [EEq (EVar cmtIdent) (EInt $ range + 1)]
         [([(cmtIdent, EInt range)], [Alive])]
+    _ ->
+      error $ "Commitment range not set at the moment of adding adversarial opening the commitment"
 
 
 addGlobalCommitments :: Integer -> VerRes ()
