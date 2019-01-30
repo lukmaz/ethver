@@ -78,12 +78,13 @@ scenario M {
   payment_request.sendCommunication(hashOf(r1_cmt));
   wait(payment_issued, 1);
   if (payment_issued && time_elapsed < 1) {
-    r1_val = valueOf(r1_cmt);
     // TODO: moj adres jest wpisany na sztywno. Da sie zrobić coś w stylu msg.sender w scenariuszu?
-    if ((r1_val == comm_r2) && 
-        verSig(0, comm_sigma, (hashOf(r1_cmt), comm_r2, 1))) {
-      winM = true;
-      release.sendTransaction(r1_cmt, comm_r2, hashOf(r1_cmt), {from: "M", value: 0});
+    if (verSig(0, comm_sigma, (hashOf(r1_cmt), comm_r2, 1))) {
+      r1_val = valueOf(r1_cmt);
+      if (r1_val == comm_r2) { 
+        winM = true;
+        release.sendTransaction(r1_cmt, comm_r2, hashOf(r1_cmt), {from: "M", value: 0});
+      }
     }
   }
   endM = true;

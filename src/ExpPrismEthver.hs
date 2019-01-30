@@ -760,19 +760,11 @@ verVerSig modifyModule key (EVar signatureVar) varsOrArrs = do
       let
         sigKey = Ident $ unident signatureVar ++ sSigSuffix ++ sKeySuffix
         f :: Ident -> Exp -> ((Integer, Type), Exp) -> Exp
-        f signatureVar acc ((nr, sigType), var) = 
-          case sigType of
-            TCUInt x ->
-              let 
-                sigId = Ident $ unident signatureVar ++ sSigSuffix ++ show nr
-                varId = Ident $ (unident $ unvar var)
-              in
-                EAnd acc (EEq (EVar sigId) (EVar varId))
-            TUInt x ->
-              let
-                sigId = Ident $ unident signatureVar ++ sSigSuffix ++ show nr
-              in
-                EAnd acc (EEq (EVar sigId) var)
+        f signatureVar acc ((nr, sigType), varExp) = 
+          let 
+            sigId = Ident $ unident signatureVar ++ sSigSuffix ++ show nr
+          in
+            EAnd acc (EEq (EVar sigId) varExp)
                 
       return $ foldl (f signatureVar) (EEq (EVar sigKey) key) (zip (zip [0..] sigTypes) vars)
     Nothing -> error $ show signatureVar ++ ": not found by findVarType"

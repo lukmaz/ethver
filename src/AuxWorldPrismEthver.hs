@@ -74,66 +74,7 @@ findVarType ident = do
 isGlobalCommitmentIdent :: Ident -> Bool
 isGlobalCommitmentIdent ident =
   (init $ unident ident) == (sGlobalCommitments ++ "_")
-
-{-
-TODO: to delete? not used?
-nameOfFunction :: Function -> String
-nameOfFunction (Fun (Ident name) _ _) = name
-nameOfFunction (FunV (Ident name) _ _) = name
-nameOfFunction (FunR (Ident name) _ _ _) = name
--}
-
--- converts a set of accessed arrays position
--- from (map from array name to positions) to list of pairs (array name, position)
-arraysAsList :: Map.Map Ident (Set.Set Exp) -> [(Ident, Exp)]
-arraysAsList arrays =
-  let 
-    -- for an array and set of its accessed positions, creates list of pairs (arrayName, pos)
-    expandArray :: Ident -> Set.Set Exp -> [(Ident, Exp)]
-    expandArray ident set = Set.toList $ Set.map (\exp -> (ident, exp)) set 
-
-    -- expands all the "arrays"
-    expandedArrays :: Map.Map Ident [(Ident, Exp)]
-    expandedArrays = Map.mapWithKey expandArray arrays
-
-    -- converts "arrays" from map to list
-    arraysList :: [(Ident, Exp)]
-    arraysList = concat $ Map.elems $ expandedArrays
-  in  
-    arraysList
-
-typesFromVarsAndArrays :: [Ident] -> [(Ident, Exp)] -> VerRes [Type]
-typesFromVarsAndArrays vars arrays = do
-  let firstElements = map (\(Ident ident, _) -> Ident $ ident ++ "_0") arrays
-  mapM
-    (\var -> do
-      res <- findVarType var 
-      case res of
-        Just typ -> return typ 
-        Nothing -> error $ "Error in typesFromVarsAndArrays: var " ++ (show var) ++ " not found."
-    )   
-    (vars ++ firstElements)
-
--- TODO: should not be used; use varFromArray instead
-arrayToVarOld :: ModifyModuleType -> (Ident, Exp) -> VerRes Ident
-arrayToVarOld modifyModule ((Ident arrayName), indexExp) = do
-  world <- get
-  mod <- modifyModule id
-
-  return $ case indexExp of
-    EInt intIndex -> Ident $ arrayName ++ "_" ++ (show intIndex)
-    ESender ->
-      case Map.lookup (whichSender mod) (varsValues world) of
-        Just (EInt value) -> Ident $ arrayName ++ "_" ++ (show value)
-        Just _ -> error $ "arrayToVarOld: value of 'sender' is not of type EInt"
-        Nothing -> error $ "arrayToVarOld: array[sender] used, but 'sender' is not in varsValues"
-    EVar varName ->
-      case Map.lookup varName (varsValues world) of
-        Just (EInt value) -> Ident $ arrayName ++ "_" ++ (show value)
-        Just _ -> error $ "arrayToVarOld: value of '" ++ (unident varName) ++ "' value is not of type EInt"
-        Nothing -> error $ "arrayToVarOld: array[" ++ (unident varName) ++ "] used, but '" ++ (unident varName) 
-          ++ "' is not in varsValues"
-    
+  
 varFromArray :: Exp -> VerRes Exp
 varFromArray (EArray (Ident varName) index) = do
   world <- get 
