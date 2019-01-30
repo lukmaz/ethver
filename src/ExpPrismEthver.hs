@@ -339,8 +339,17 @@ verFullAss modifyModule (SAss varIdent (EValOf (EVar cmtVar))) = do
   -- TODO: 
   -- remove cmt argument from ValueOf(cmt)? 
   world <- get
+  mod <- modifyModule id
 
-  case senderNumber world of
+  let 
+    playerNr = case senderNumber world of
+      Just nr -> Just nr
+      _ -> 
+        if number mod == nUndefModuleNumber
+          then Nothing
+          else Just $ number mod
+
+  case playerNr of
     Just nr -> do
       -- open the appropriate commitment
       addTransToNewState
@@ -362,7 +371,8 @@ verFullAss modifyModule (SAss varIdent (EValOf (EVar cmtVar))) = do
         guards
         -- TODO: Alive?
         [(updates, [Alive])]
-
+    Nothing -> error $ "Cannot determine player number"
+    
 -- cmtVar is nevertheless ignored, so for EArray works the same as for EVar
 verFullAss modifyModule (SAss varIdent (EValOf (EArray ident ESender))) = do
   world <- get

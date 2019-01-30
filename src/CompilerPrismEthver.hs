@@ -274,9 +274,6 @@ verExecTransaction modifyModule = do
 -- add function before hiding its real type
 verFunAux :: ModifyModuleType -> (Function -> VerRes ()) -> Function -> VerRes ()
 verFunAux modifyModule commonFun fun = do
-  -- adds fun ident to two maps in World
-  addFun fun
-  addContractFun fun
 
   verOldFunContractOrCommunication modifyModule commonFun fun
 
@@ -381,7 +378,12 @@ commonVerFunContract (Fun name args stms) = do
   return ()
 
 verOldFunContract :: Function -> VerRes ()
-verOldFunContract fun = verFunAux modifyContract commonVerFunContract fun
+verOldFunContract fun = do
+  -- adds fun ident to two maps in World
+  addFun fun
+  addContractFun fun
+
+  verFunAux modifyContract commonVerFunContract fun
 
 -------------------------
 -- verFunCommunication --
@@ -411,7 +413,11 @@ commonVerFunCommunication (Fun funName args stms) = do
 
 -- OLD
 verOldFunCommunication :: Function -> VerRes ()
-verOldFunCommunication fun = verFunAux modifyCommunication commonVerFunCommunication fun
+verOldFunCommunication fun = do
+  -- adds fun ident to two maps in World
+  addFun fun
+
+  verFunAux modifyCommunication commonVerFunCommunication fun
 
 --------------
 -- SCENARIO --
