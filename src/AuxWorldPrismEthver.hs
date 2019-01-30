@@ -63,7 +63,8 @@ findVarType ident = do
   world <- get
   let
     listFromModule :: (VerWorld -> Module) -> [(Ident, Type)]
-    listFromModule mod = (Map.toList $ vars $ mod world) ++ (Map.toList $ globalCommitments $ mod world)
+    listFromModule mod = (Map.toList $ vars $ mod world) ++ (Map.toList $ globalCommitments $ mod world) ++
+      (Map.toList $ globalSignatures $ mod world)
     l = foldl 
       (\acc m -> acc ++ listFromModule m) 
       []
@@ -347,13 +348,22 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
             withVal 
             limit 
             funName 
-            (args)
+            args
             [ELt (EVar cmtVar) (EInt $ range)] 
             [(cmtArgVar, EInt $ number mod)] 
           -- TODO: 2nd option: random open if committed?
 
     else
-      generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args [] [] 
+      generateAdvTranssAux 
+        modifyModule 
+        whichPrefix 
+        whichState 
+        withVal 
+        limit 
+        funName 
+        args 
+        [] 
+        [] 
 
 generateAdvTranssAux :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args extraGuards extraUpdates = do

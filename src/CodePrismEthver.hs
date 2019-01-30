@@ -34,6 +34,7 @@ generateModule moduleFun moduleName pream world =
   pream ++ "\n" ++
   (prismVars (whichSender $ moduleFun world) (vars $ moduleFun world) (varsInitialValues $ moduleFun world)) ++
   (prismGlobalCommitments (globalCommitments $ moduleFun world)) ++
+  (prismGlobalSignatures (globalSignatures $ moduleFun world)) ++
   "\n" ++ 
   prismTranss (whichSender $ moduleFun world) (reverse $ transs $ moduleFun world) ++
   "endmodule\n\n\n"
@@ -125,6 +126,21 @@ prismGlobalCommitments globalCommitments =
     ""
     globalCommitments
   
+prismGlobalSignatures :: Map.Map Ident Type -> String
+prismGlobalSignatures globalSignatures =
+  Map.foldlWithKey
+    (\code ident typ ->
+      case typ of
+        TSig types ->
+          (foldl
+            (\acc (attr_type, nr) -> acc ++ "  " ++ (unident ident) ++ sAttrSuffix ++ (show nr) ++ 
+              " : " ++ (prismShowType attr_type) ++ ";\n")
+            (code ++ "  " ++ (unident ident) ++ sKeySuffix ++ " : " ++ (prismShowType TAddr) ++ ";\n")
+            (zip types [0..])
+          )
+    )
+    ""
+    globalSignatures
 
 -----------------
 -- prism Trans --

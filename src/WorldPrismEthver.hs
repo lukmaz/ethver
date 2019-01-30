@@ -53,7 +53,8 @@ data VerWorld = VerWorld {
   lazyRandoms :: Set.Set Ident,
   addedGuards :: [Exp],
   senderNumber :: Maybe Integer,
-  cmtRange :: Maybe Integer
+  cmtRange :: Maybe Integer,
+  sigType :: Maybe Type
   }
 
 data Module = Module {
@@ -68,7 +69,8 @@ data Module = Module {
   breakStates :: [Integer],
   transs :: [Trans],
   whichSender :: Ident,
-  globalCommitments :: Map.Map Ident Type
+  globalCommitments :: Map.Map Ident Type,
+  globalSignatures :: Map.Map Ident Type
   }
   
 
@@ -97,7 +99,8 @@ emptyVerWorld = VerWorld {
   lazyRandoms = Set.empty,
   addedGuards = [],
   senderNumber = Nothing,
-  cmtRange = Nothing
+  cmtRange = Nothing,
+  sigType = Nothing
   } 
 
 emptyModule :: Module
@@ -105,7 +108,8 @@ emptyModule = Module {number = nUndefModuleNumber, stateVar = sEmptyState, modul
   vars = Map.empty, varsInitialValues = Map.empty, numLocals = 0, currState = 1, numStates = 1,
   breakStates = [],
   transs = [], whichSender = Ident sEmptySender,
-  globalCommitments = Map.empty
+  globalCommitments = Map.empty,
+  globalSignatures = Map.empty
   }
 
 
@@ -592,6 +596,21 @@ addRandomCmtTrans modifyModule = do
     _ ->
       error $ "Commitment range not set at the moment of adding adversarial opening the commitment"
 
+----------------
+-- Signatures --
+----------------
+
+setSigType :: Type -> VerRes ()
+setSigType typ = do
+  world <- get
+  case sigType world of
+    Nothing ->
+      put $ world {sigType = Just typ}
+    Just old_typ -> do
+      if old_typ /= typ
+        then error $ "Signature type changed"
+        else return ()
+
 
 addGlobalCommitments :: Integer -> VerRes ()
 addGlobalCommitments range = do
@@ -604,4 +623,12 @@ addGlobalCommitments range = do
   setCmtRange range
   return ()
 
+addGlobalSignatures :: Type -> VerRes ()
+addGlobalSignatures typ = do
+  let
+    ident0 = Ident $ sGlobalSignatures ++ "_0"
+    ident1 = Ident $ sGlobalSignatures ++ "_1"
+  _ <- modifyPlayer0 (\p -> p {globalSignatures = Map.fromList [(ident0, typ)]})
+  _ <- modifyPlayer1 (\p -> p {globalSignatures = Map.fromList [(ident1, typ)]})
+  return ()
 

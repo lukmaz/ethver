@@ -56,7 +56,9 @@ sP0State = "state0"
 sP1State = "state1"
 sStatePrefix = "state"
 sStatusSuffix = "_status"
+-- TODO: to remove
 sSigSuffix = "_sig"
+sAttrSuffix = "_attr"
 sKeySuffix = "_key"
 -- TODO: To remove
 sRunsSuffix = "_runs"
@@ -68,6 +70,7 @@ sNextState = "next_state"
 sCommitmentValSuffix = "_val"
 sCommitmentNonceSuffix = "_nonce"
 sGlobalCommitments = "global_commitments"
+sGlobalSignatures = "global_signatures"
 sRandomCommitment = "random_commitment"
 sOpenCommitment = "open_commitment"
 
