@@ -340,6 +340,18 @@ getPlayerNumber str = do
   case Map.lookup str $ playerNumbers world of
     Just number -> return number
 
+deducePlayerNumber :: ModifyModuleType -> VerRes Integer
+deducePlayerNumber modifyModule = do
+  world <- get
+  mod <- modifyModule id
+
+  return $ case senderNumber world of
+    Just n -> n
+    Nothing ->
+      if number mod == nUndefModuleNumber
+        then error $ "Cannot determine the player number"
+        else number mod
+ 
 -- TODO: stos dla zagnieżdżonych wywołań?
 addReturnVar :: Ident -> VerRes ()
 addReturnVar ident = do
@@ -477,6 +489,31 @@ addTransToNewState modifyModule transName guards updates = do
   mod <- modifyModule id
   let newState = numStates mod + 1
   addCustomTrans modifyModule transName (currState mod) newState guards updates
+  _ <- modifyModule (setCurrState newState)
+  _ <- modifyModule (setNumStates newState)
+  return ()
+
+add2TranssToNewState :: ModifyModuleType -> String -> [Exp] -> [Branch] -> String -> [Exp] -> [Branch] -> VerRes ()
+add2TranssToNewState modifyModule transName1 guards1 updates1 transName2 guards2 updates2 = do
+  mod <- modifyModule id
+  let newState = numStates mod + 1
+
+  addCustomTrans
+    modifyModule
+    transName1
+    (currState mod)
+    newState
+    guards1
+    updates1
+
+  addCustomTrans
+    modifyModule
+    transName2
+    (currState mod)
+    newState
+    guards2
+    updates2
+
   _ <- modifyModule (setCurrState newState)
   _ <- modifyModule (setNumStates newState)
   return ()
@@ -650,5 +687,6 @@ addGlobalSignatures typ = do
     ident1 = Ident $ sGlobalSignatures ++ "_1"
   _ <- modifyPlayer0 (\p -> p {globalSignatures = Map.fromList [(ident0, typ)]})
   _ <- modifyPlayer1 (\p -> p {globalSignatures = Map.fromList [(ident1, typ)]})
+  setSigType typ
   return ()
 

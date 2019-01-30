@@ -53,7 +53,11 @@ findVarType ident = do
 isGlobalCommitmentIdent :: Ident -> Bool
 isGlobalCommitmentIdent ident =
   (init $ unident ident) == (sGlobalCommitments ++ "_")
-  
+
+isGlobalSignatureIdent :: Ident -> Bool
+isGlobalSignatureIdent ident = 
+  (init $ unident ident) == (sGlobalSignatures ++ "_")
+
 varFromArray :: Exp -> VerRes Exp
 varFromArray (EArray (Ident varName) index) = do
   world <- get 

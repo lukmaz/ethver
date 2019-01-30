@@ -428,9 +428,26 @@ verFullAss modifyModule (SAss varIdent (EValOf (EArray ident ESender))) = do
         verFullAss modifyModule (SAss varIdent (EValOf (EVar cmtVar)))
 
 
+verFullAss modifyModule (SAss lVarIdent (ESign args)) = do
+  playerNr <- deducePlayerNumber modifyModule
+  world <- get
+
+  case sigType world of
+    Just (TSig sigTypes) -> do
+      (guards, updates) <- 
+        generateSigAss modifyModule sigTypes (EInt playerNr) args playerNr
+
+      (idGuards, idUpdates) <-
+        generateSimpleAssWithType modifyModule (SAss lVarIdent (EInt playerNr)) TAddr
+
+      addTransToNewState
+        modifyModule
+        ""
+        (guards ++ idGuards)
+        [(updates ++ idUpdates, [Alive])]
+    
 -- TODO: to jest stare
-verFullAss modifyModule (SAss varIdent (ESign args)) = do
-  let 
+{-  let 
     keyIdent = Ident $ unident varIdent ++ sSigSuffix ++ sKeySuffix
   world <- get
   case senderNumber world of
@@ -447,24 +464,27 @@ verFullAss modifyModule (SAss varIdent (ESign args)) = do
             let 
               newIdent = Ident $ unident varIdent ++ sSigSuffix ++ show nr
             verStm modifyModule (SAss newIdent $ EVar rIdent)
- 
+-}
+
+
 verFullAss modifyModule (SAss lVarIdent rExp) = do
   lVarTyp <- findVarType lVarIdent
   
-  (guards, updates) <- case lVarTyp of
+  case lVarTyp of
     Just (TCUInt x) ->
       error $ "cmt var in LHS supported only when RHS=valueOf, not " ++ show rExp
     Just (TSig sigTypes) -> do
-      generateSigAss modifyModule sigTypes lVarIdent rExp
-    _ -> 
-      generateSimpleAss modifyModule (SAss lVarIdent rExp)
+      verCopySig modifyModule sigTypes lVarIdent rExp
+    _ -> do
+      (guards, updates) <-
+        generateSimpleAss modifyModule (SAss lVarIdent rExp)
   
-  addTransToNewState
-    modifyModule
-    ""
-    guards
-    -- TODO: Alive?
-    [(updates, [Alive])]
+      addTransToNewState
+        modifyModule
+        ""
+        guards
+        -- TODO: Alive?
+        [(updates, [Alive])]
 
 verFullAss modifyModule (SArrAss (Ident ident) index exp) = do
   case index of
@@ -532,52 +552,67 @@ generateSimpleAssWithType modifyModule (SAss ident exp) typ = do
                            _ -> [EGe evalExp (EInt minV), ELe evalExp (EInt maxV)]
   return (guards, [(ident, evalExp)])
 
-generateSigAss :: ModifyModuleType -> [Type] -> Ident -> Exp -> VerRes ([Exp], [(Ident, Exp)])
-generateSigAss modifyModule sigTypes lVarIdent rExp = do
-  case rExp of
-    EVar rVarIdent -> do
-      world <- get
-      mod <- modifyModule id
-      let
-        playerNr = case senderNumber world of
-          Just n -> n
-          Nothing ->
-            if number mod == nUndefModuleNumber
-              then error $ "Cannot determine the player number"
-              else number mod
-      
-        globalSigName = sGlobalSignatures ++ "_" ++ (show playerNr)
-        rVarName = unident rVarIdent
-        
-      simpleAsses <- mapM
-        (\(attrType, attrNr) -> 
-          let
-            lIdent = Ident $ globalSigName ++ sAttrSuffix ++ show attrNr
-            rIdent = Ident $ rVarName ++ sAttrSuffix ++ show attrNr
-          in
-            generateSimpleAssWithType modifyModule (SAss lIdent (EVar rIdent)) attrType
-        )
-        (zip sigTypes [0..])
-      
-      let
-        lKeyIdent = Ident $ globalSigName ++ sKeySuffix
-        rKeyIdent = Ident $ rVarName ++ sKeySuffix
-        
-      keyAsses <- 
-        generateSimpleAssWithType modifyModule (SAss lKeyIdent (EVar rKeyIdent)) TAddr
-      
-      (idGuards, idUpdates) <- 
-        generateSimpleAssWithType modifyModule (SAss lVarIdent (EInt playerNr)) TAddr
-
-      let
-        (guardsListAttr, updatesListAttr) = unzip (keyAsses:simpleAsses)
-
-      return (idGuards ++ (concat guardsListAttr), idUpdates ++ (concat updatesListAttr))
-    _ ->
-      error $ "RHS must be a signature variable"
-
+generateSigAss :: ModifyModuleType -> [Type] -> Exp -> [Exp] -> Integer -> VerRes ([Exp], [(Ident, Exp)])
+generateSigAss modifyModule sigTypes rKey rAttrs playerNr = do
+  world <- get
+  mod <- modifyModule id
+  let
+    globalSigName = sGlobalSignatures ++ "_" ++ (show playerNr)
     
+  simpleAsses <- mapM
+    (\(attrType, rAttr, attrNr) -> 
+      let
+        lIdent = Ident $ globalSigName ++ sAttrSuffix ++ show attrNr
+      in
+        generateSimpleAssWithType modifyModule (SAss lIdent rAttr) attrType
+    )
+    (zip3 sigTypes rAttrs [0..])
+  
+  let
+    lKeyIdent = Ident $ globalSigName ++ sKeySuffix
+    
+  keyAsses <- 
+    generateSimpleAssWithType modifyModule (SAss lKeyIdent rKey) TAddr
  
+  let
+    (guardsListAttr, updatesListAttr) = unzip (keyAsses:simpleAsses)
+
+  return (concat guardsListAttr, concat updatesListAttr)
+
+verCopySig :: ModifyModuleType -> [Type] -> Ident -> Exp -> VerRes ()
+verCopySig modifyModule sigTypes lVarIdent rExp = do
+  playerNr <- deducePlayerNumber modifyModule
+
+  let  
+    rKey0 = EVar $ Ident $ sGlobalSignatures ++ "_0" ++ sKeySuffix
+    rKey1 = EVar $ Ident $ sGlobalSignatures ++ "_1" ++ sKeySuffix
+    rAttr0Root = sGlobalSignatures ++ "_0" ++ sAttrSuffix
+    rAttr1Root = sGlobalSignatures ++ "_1" ++ sAttrSuffix
+    rAttrs0 = map
+      (\(_, nr) -> EVar $ Ident $ rAttr0Root ++ show nr)
+      (zip sigTypes [0..])
+    rAttrs1 = map
+      (\(_, nr) -> EVar $ Ident $ rAttr1Root ++ show nr)
+      (zip sigTypes [0..])
+
+  (guards0, updates0) <- 
+    generateSigAss modifyModule sigTypes rKey0 rAttrs0 playerNr
+  
+  (guards1, updates1) <- 
+    generateSigAss modifyModule sigTypes rKey1 rAttrs1 playerNr
+  
+  (idGuards, idUpdates) <- 
+    generateSimpleAssWithType modifyModule (SAss lVarIdent (EInt playerNr)) TAddr
+  
+  add2TranssToNewState
+    modifyModule
+    ""
+    (guards0 ++ idGuards ++ [EEq rExp (EInt 0)])
+    [(updates0 ++ idUpdates, [Alive])]
+    ""
+    (guards1 ++ idGuards ++ [EEq rExp (EInt 1)])
+    [(updates1 ++ idUpdates, [Alive])]
+
 ---------
 -- Exp --
 ---------
@@ -807,23 +842,21 @@ verRandom modifyModule (EInt range) = do
 
 verVerSig :: ModifyModuleType -> Exp -> Exp -> [Exp] -> VerRes Exp
 verVerSig modifyModule key (EVar signatureVar) varsOrArrs = do
-  sigMaybeTyp <- findVarType signatureVar
-  vars <- mapM toVar varsOrArrs
-  case sigMaybeTyp of
-    Just (TSig sigTypes) -> do
-      world <- get
+  world <- get
+  case sigType world of
+    Just sigTypes -> do
+      vars <- mapM toVar varsOrArrs
+      playerNr <- deducePlayerNumber modifyModule
+      
       let
-        sigKey = Ident $ unident signatureVar ++ sSigSuffix ++ sKeySuffix
-        f :: Ident -> Exp -> ((Integer, Type), Exp) -> Exp
-        f signatureVar acc ((nr, sigType), varExp) = 
-          let 
-            sigId = Ident $ unident signatureVar ++ sSigSuffix ++ show nr
-          in
-            EAnd acc (EEq (EVar sigId) varExp)
-                
-      return $ foldl (f signatureVar) (EEq (EVar sigKey) key) (zip (zip [0..] sigTypes) vars)
-    Nothing -> error $ show signatureVar ++ ": not found by findVarType"
+        verCond0 = verVerGlobalSignature key (sGlobalSignatures ++ "_0") vars
+        verCond1 = verVerGlobalSignature key (sGlobalSignatures ++ "_1") vars
+      
+      return $ EOr
+        (EAnd (EEq (EVar signatureVar) (EInt 0)) verCond0)
+        (EAnd (EEq (EVar signatureVar) (EInt 1)) verCond1)
 
+      
 verVerSig modifyModule key (EArray arrIdent index) varsOrArrs = do
   case index of
     EInt x ->
@@ -836,6 +869,13 @@ verVerSig modifyModule key (EArray arrIdent index) varsOrArrs = do
         _ ->
           error $ "senderNumber world not defined"
     _ -> error $ show index ++ ": not supported index for arrays"
+
+verVerGlobalSignature :: Exp -> String -> [Exp] -> Exp
+verVerGlobalSignature key globalSigName vars = do
+  foldl
+    (\acc (var, nr) -> EAnd acc (EEq (EVar $ Ident $ globalSigName ++ sAttrSuffix ++ show nr) var))
+    (EEq (EVar $ Ident $ globalSigName ++ sKeySuffix) key)
+    (zip vars [0..])
 
 verCmt :: ModifyModuleType -> Exp -> Exp -> VerRes Exp
 verCmt modifyModule cmtVar hash = do 
