@@ -183,10 +183,12 @@ addLocal modifyModule typ = do
 addVar :: ModifyModuleType -> Type -> Ident -> VerRes ()
 addVar modifyModule typ ident = do
   case typ of
-    TSig types -> do
+    -- TSig dodajemy standardowo
+    {-TSig types -> do
       error $ "addVar should not be called with TSig?"
       --_ <- modifyModule (addVarToModule typ ident)
       --addSignatureVar modifyModule types ident
+    -}
     TCUInt range -> do
       -- też niepotrzebne?
       addCmtIdVar modifyModule ident 
@@ -213,10 +215,11 @@ addSignatureVarAux modifyModule varIdent (nr, typ) = do
       addVar modifyModule typ newIdent
 -}
 
-addSigIdVar :: ModifyModuleType -> Ident -> VerRes ()
-addSigIdVar modifyModule varIdent = do
-  addVar modifyModule (TUInt nMaxSignatures) varIdent
+addSigIdVar :: ModifyModuleType -> Type -> Ident -> VerRes ()
+addSigIdVar modifyModule typ varIdent = do
+  addVar modifyModule typ varIdent
 
+-- TODO: czy nie powinno byc z prawdziwym typem, tak jak w addSigIdVar wyzej?
 addCmtIdVar :: ModifyModuleType -> Ident -> VerRes ()
 addCmtIdVar modifyModule varIdent = do
   addVar modifyModule (TUInt nMaxCommitments) varIdent
@@ -285,7 +288,7 @@ addNoPlayerArg modifyModule (Ident funName) (Ar (TCUInt range) varIdent) = do
   addGlobalCommitments range
 
 addNoPlayerArg modifyModule (Ident funName) (Ar (TSig sigTypes) varIdent) = do
-  addSigIdVar modifyModule varIdent
+  addSigIdVar modifyModule (TSig sigTypes) varIdent
   addGlobalSignatures (TSig sigTypes)
 
 addNoPlayerArg modifyModule (Ident funName) (Ar typ varIdent) = do
@@ -304,7 +307,7 @@ addPlayerArg modifyModule funName (Ar (TSig sigTypes) varIdent) = do
   mod <- modifyModule id
   let
     numberedName = createScenarioArgumentName "" funName varIdent (number mod)
-  addSigIdVar modifyModule numberedName
+  addSigIdVar modifyModule (TSig sigTypes) numberedName
   addGlobalSignatures (TSig sigTypes)
 
 addPlayerArg modifyModule funName (Ar typ varIdent) = do

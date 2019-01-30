@@ -479,7 +479,16 @@ verFullAss modifyModule (SAss lVarIdent (ESign args)) = do
 
 verFullAss modifyModule (SAss lVarIdent rExp) = do
   lVarTyp <- findVarType lVarIdent
-  
+
+  {- TODO DEBUG
+  if lVarIdent == Ident "sigma_loc"
+    then do
+      mod <- modifyPlayer1 id
+      error $ (show lVarTyp) ++ (show $ Map.toList $ vars mod)
+    else
+      return ()
+  -}
+
   case lVarTyp of
     Just (TCUInt x) ->
       error $ "cmt var in LHS supported only when RHS=valueOf, not " ++ show rExp

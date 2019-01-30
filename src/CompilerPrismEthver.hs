@@ -104,7 +104,7 @@ verDecl modifyModule (Dec (TSig sigTypes) varIdent) = do
 
   -- auxiliary variable for id with the given name
   mod <- modifyModule id
-  addSigIdVar modifyModule varIdent
+  addSigIdVar modifyModule (TSig sigTypes) varIdent
 
 verDecl modifyModule (Dec typ ident) = do
   addVar modifyModule typ ident
@@ -468,6 +468,10 @@ verScenario modifyModule decls stms = do
 
   -- add openCommitment transactions without commstate=1 etc.
   addHonestOpenCmtTrans modifyModule
+
+  -- add updateSignature transactions without commstate=1 etc.
+  addUpdateSignatureTranss modifyModule
+
 
   -- TODO: zmienić 0 i 1 na stałe
   addFirstCustomTrans

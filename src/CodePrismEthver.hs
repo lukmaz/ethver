@@ -101,7 +101,9 @@ prismVars senderIdent vars initialValues  =
     (\code ident typ ->
       case typ of
         TSig _ ->
-          code
+          code ++ "  " ++ (unident ident) 
+            ++ " : " ++ (prismShowType TAddr) ++ ";\n"
+        -- TODO: shouldn't TCUInt be added to vars as-is and then generated id var here, like Tsig?
         TCUInt x ->
           code
         _ -> 
