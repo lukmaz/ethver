@@ -224,5 +224,35 @@ hashInArguments (Fun _ args _) =
     )
     args
 
+signatureInArguments :: Function -> Bool
+
+signatureInArguments (FunV name args stms) = signatureInArguments (Fun name args stms)
+signatureInArguments (FunL _ name args stms) = signatureInArguments (Fun name args stms)
+signatureInArguments (FunVL _ name args stms) = signatureInArguments (Fun name args stms)
+
+signatureInArguments (Fun _ args _) = 
+  any 
+    (\arg -> case arg of
+      Ar (TSig _) _ -> True
+      _ -> False
+    )
+    args
+
+signatureFromArguments :: Function -> Ident
+
+signatureFromArguments (FunV name args stms) = signatureFromArguments (Fun name args stms)
+signatureFromArguments (FunL _ name args stms) = signatureFromArguments (Fun name args stms)
+signatureFromArguments (FunVL _ name args stms) = signatureFromArguments (Fun name args stms)
+
+signatureFromArguments (Fun _ args _) = 
+  case filter 
+    (\arg -> case arg of
+      Ar (TSig _) _ -> True
+      _ -> False
+    )
+    args
+    of
+      [Ar _ varName] -> varName
+
 
 

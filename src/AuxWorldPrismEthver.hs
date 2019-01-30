@@ -113,26 +113,6 @@ addUser :: UserDecl -> VerRes ()
 addUser (UDec name) = do
   addPlayer name
 
-
-modifyUpdatesIfCmtInArgs :: Ident -> Maybe Type -> Function -> [(Ident, Exp)] -> [([(Ident, Exp)], [Liveness])]
-modifyUpdatesIfCmtInArgs cmtVar typ fun updatesRoot = 
-  if commitmentInArguments fun
-    then 
-      case typ of
-        Just (TCUInt range) -> 
-          (foldl
-            (\acc x -> acc ++ [(updatesRoot ++ [(cmtVar, EInt x)], [Alive])])
-            []
-            [0..(range - 1)]
-          )
-    else if hashInArguments fun
-      then 
-        case typ of 
-          Just (TCUInt range) ->
-            [(updatesRoot ++ [(cmtVar, EInt range)], [Alive])]
-      else [(updatesRoot, [Alive])]
-
-
 -----------
 -- Trans --
 -----------
@@ -329,11 +309,12 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
     args = filter 
       (\x -> case x of
         Ar (TCUInt _) _ -> False
+        Ar (TSig _) _ -> False
         _ -> True
       )
       argsOrig
 
-    (extraGuards, extraUpdates) =
+    (extraGuardsCmt, extraUpdatesCmt) =
       if commitmentInArguments (Fun (Ident "") argsOrig []) 
         then 
           case cmtRange world of
@@ -345,6 +326,21 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
                 ([ELt (EVar cmtVar) (EInt $ range)], [(cmtArgVar, EInt $ number mod)])
         else
           ([], [])
+
+    (extraGuardsSig, extraUpdatesSig) =
+      if signatureInArguments (Fun (Ident "") argsOrig []) 
+        then 
+          case cmtRange world of
+            Just range ->
+              let 
+                sigArgVar = Ident $ (unident $ signatureFromArguments (Fun (Ident "") argsOrig []))
+                    ++ (show $ number mod)
+              in
+                -- TODO: ograniczyc mozliwosc odpalania funkcji z sig w argumencie?
+                -- moze jakos sprawdzac, czy zostal podpisany?
+                ([], [(sigArgVar, EInt $ number mod)])
+        else
+          ([], [])
     
   generateAdvTranssAux 
     modifyModule 
@@ -354,8 +350,8 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
     limit 
     funName 
     args 
-    extraGuards
-    extraUpdates
+    (extraGuardsCmt ++ extraGuardsSig)
+    (extraUpdatesCmt ++ extraUpdatesSig)
 
 generateAdvTranssAux :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args extraGuards extraUpdates = do
