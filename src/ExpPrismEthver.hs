@@ -344,10 +344,14 @@ verValOfAssPlayer modifyModule varIdent = do
 
   case cmtRange world of
     Just range -> do
+      let newState = numStates mod + 1
+
       -- committed -> random
-      addTransToNewState
+      addCustomTrans
         modifyModule
         ""
+        (currState mod)
+        newState
         [EEq (EVar cmtIdent) (EInt range)]
         (foldl
           (\acc x -> acc ++ [([(varIdent, EInt x), (cmtIdent, EInt x)], [Alive])])
@@ -356,11 +360,17 @@ verValOfAssPlayer modifyModule varIdent = do
         )
 
       -- opened -> the same
-      addTransToNewState
+      addCustomTrans
         modifyModule
         ""
+        (currState mod)
+        newState
         [ELt (EVar cmtIdent) (EInt range)]
         [([(varIdent, EVar cmtIdent)], [Alive])]
+
+      _ <- modifyModule (setCurrState newState)
+      _ <- modifyModule (setNumStates newState)
+      return ()
     _ ->
       error $ "Commitment range not set at the moment of calling valueOf"
 
@@ -377,7 +387,7 @@ verValOfAssContr modifyModule varIdent = do
         (sOpenCommitment ++ (show $ nr))
         []
         -- TODO: Alive?
-        [([(varIdent, EInt nr)], [Alive])]
+        [([], [Alive])]
 
 
       -- assign the value of the commitment

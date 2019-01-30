@@ -13,22 +13,15 @@ USER0_BALANCE_INIT = 0;
 USER1_BALANCE_INIT = 0;
 MAX_VALUE = 1;
 MAX_TIME = 2;
-//MAX_SIGNATURES = 3;
-//MAX_COMMITMENTS = 2;
-
-// c1, r1 - values in honest mode, recipient = 1
-// c0, r0 - values in adversarial mode, recipient = 0
-// rM - values from Merchant role of the protocol
-// rU - values from User role of the protocol
 
 contract Micropay {
   uint(2) pot = 1;
   uint(2) r1_loc;
 
-  function_limit 2 release(cmt_uint(2) rel_r1, uint(2) rel_r2, hash rel_c) {
-    r1_loc = valueOf(rel_r1);
-    if ((pot > 0) && verCommitment(rel_r1, rel_c) && (r1_loc == rel_r2) &&
-        verSig(0, comm_sigma, (rel_c, rel_r2, msg.sender))) {
+  function_limit 2 release(cmt_uint(2) rel_c_cmt, uint(2) rel_r2, hash rel_c_hash) {
+    r1_loc = valueOf(rel_c_cmt);
+    if ((pot > 0) && verCommitment(rel_c_cmt, rel_c_hash) && (r1_loc == rel_r2) &&
+        verSig(0, comm_sigma, (rel_c_hash, rel_r2, msg.sender))) {
       msg.sender.send(1);
       pot = pot - 1;
     }
@@ -75,20 +68,22 @@ scenario U {
 }
 
 scenario M {
-  cmt_uint(2) r1;
+  cmt_uint(2) r1_cmt;
   uint(2) r1_val;
   bool winM;
   bool endM;
 
-  r1.randomCommitment();
+  r1_cmt.randomCommitment();
 
-  payment_request.sendCommunication(hashOf(r1));
+  payment_request.sendCommunication(hashOf(r1_cmt));
   wait(payment_issued, 1);
   if (payment_issued && time_elapsed < 1) {
-    r1_val = valueOf(r1);
-    if (r1_val == comm_r2) {
+    r1_val = valueOf(r1_cmt);
+    // TODO: moj adres jest wpisany na sztywno. Da sie zrobić coś w stylu msg.sender w scenariuszu?
+    if ((r1_val == comm_r2) && 
+        verSig(0, comm_sigma, (hashOf(r1_cmt), comm_r2, 1))) {
       winM = true;
-      release.sendTransaction(r1, comm_r2, hashOf(r1), {from: "M", value: 0});
+      release.sendTransaction(r1_cmt, comm_r2, hashOf(r1_cmt), {from: "M", value: 0});
     }
   }
   endM = true;
