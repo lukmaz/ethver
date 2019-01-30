@@ -427,6 +427,8 @@ verFullAss modifyModule (SAss varIdent (EValOf (EArray ident ESender))) = do
       in 
         verFullAss modifyModule (SAss varIdent (EValOf (EVar cmtVar)))
 
+
+-- TODO: to jest stare
 verFullAss modifyModule (SAss varIdent (ESign args)) = do
   let 
     keyIdent = Ident $ unident varIdent ++ sSigSuffix ++ sKeySuffix
@@ -448,14 +450,25 @@ verFullAss modifyModule (SAss varIdent (ESign args)) = do
  
 verFullAss modifyModule (SAss varIdent exp) = do
   varTyp <- findVarType varIdent
-  let 
-    (newVarIdent, newExp) = 
-      case varTyp of
-        Just (TCUInt x) ->
-          error $ "cmt var in RHS not supported: " ++ show exp
-        _ -> (varIdent, exp)
-    
-  (guards, updates) <- generateSimpleAss modifyModule (SAss newVarIdent newExp)
+  
+  case varTyp of
+    Just (TCUInt x) ->
+      error $ "cmt var in RHS not supported: " ++ show exp
+    Just (TSig sigTypes) ->
+      
+      
+      
+      
+      -- TODO: chwilowe 
+      return ()
+
+
+
+      
+    _ -> return ()
+
+
+  (guards, updates) <- generateSimpleAss modifyModule (SAss varIdent exp)
   
   addTransToNewState
     modifyModule
@@ -503,13 +516,12 @@ verFullAss modifyModule (SArrAss (Ident ident) index exp) = do
 -- returns simple updates [], not [[]]
 generateSimpleAss :: ModifyModuleType -> Stm -> VerRes ([Exp], [(Ident, Exp)])
 generateSimpleAss modifyModule (SAss ident exp) = do
-  evalExp <- verExp modifyModule exp 
   typ <- findVarType ident
-  minV <- minValue ident
-  maxV <- maxTypeValue ident
-  let guards = case typ of Just TBool -> []
-                           Just _ -> [EGe evalExp (EInt minV), ELe evalExp (EInt maxV)]
-  return (guards, [(ident, evalExp)])
+  case typ of
+    Just t ->
+      generateSimpleAssWithType modifyModule (SAss ident exp) t
+    Nothing ->
+      error $ "Cannot determine type of " ++ (show $ unident ident) ++ " variable."
 
 generateSimpleAss modifyModule (SArrAss (Ident ident) index exp) = do
   case index of
@@ -522,6 +534,14 @@ generateSimpleAss modifyModule (SArrAss (Ident ident) index exp) = do
       let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
       generateSimpleAss modifyModule $ SAss indexVar exp 
 
+generateSimpleAssWithType :: ModifyModuleType -> Stm -> Type -> VerRes ([Exp], [(Ident, Exp)])
+generateSimpleAssWithType modifyModule (SAss ident exp) typ = do
+  evalExp <- verExp modifyModule exp 
+  let minV = minTypeValue typ
+  let maxV = maxTypeValue typ
+  let guards = case typ of TBool -> []
+                           _ -> [EGe evalExp (EInt minV), ELe evalExp (EInt maxV)]
+  return (guards, [(ident, evalExp)])
 
 ---------
 -- Exp --

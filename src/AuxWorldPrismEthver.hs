@@ -15,34 +15,12 @@ import WorldPrismEthver
 -- Vars --
 ----------
 
-minValue :: Ident -> VerRes Integer
-minValue ident = do
-  typ <- findVarType ident
-  case typ of
-    Just (TUInt x) -> return 0
-    Just (TCUInt x) -> return 0
-    Just (TSig x) -> return 0
-    Just TBool -> return 0
-    Just TAddr -> return 0
-    Just THash -> return 0
-    Nothing -> do
-      world <- get
-      error $ "Type of '" ++ (show ident) ++ "' not found" ++
-        "\n" ++ (show $ vars $ contract world) ++
-        (show callStack)
-
 maxRealValue :: Ident -> VerRes Exp
 maxRealValue ident = do
   typ <- findVarType ident
   case typ of
-    Just t -> return $ maxRealValueOfType t
+    Just t -> return $ maxRealTypeValue t
     _ -> error $ "Cannot findVarType of " ++ unident ident
-
-maxTypeValue :: Ident -> VerRes Integer
-maxTypeValue ident = do
-  typ <- findVarType ident
-  case typ of
-    Just t -> return $ maxTypeValueOfType t
 
 findType :: Exp -> VerRes (Maybe Type)
 findType (EInt x) = return $ Just $ TUInt (x + 1)

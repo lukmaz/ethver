@@ -7,27 +7,31 @@ import AbsEthver
 import AuxEthver
 import ConstantsEthver
 
-maxRealValueOfType :: Type -> Exp
-maxRealValueOfType (TUInt x) = EInt (x - 1)
--- TODO: only for 2 commitments, take from MAX_COMMITMENTS constant
-maxRealValueOfType (TCUInt x) = EInt 1
-maxRealValueOfType TBool = ETrue
-maxRealValueOfType THash = EInt 1
-maxRealValueOfType (TSig _) = error $ "maxRealValueOfType should not be used with TSig _"
+minTypeValue :: Type -> Integer
+minTypeValue typ = 
+  case typ of
+    (TUInt x) -> 0
+    (TCUInt x) -> 0
+    (TSig x) ->  0
+    TBool ->  0
+    TAddr -> 0
+    THash -> 0
 
-maxTypeExpOfType :: Type -> Exp
-maxTypeExpOfType (TUInt x) = EInt (x - 1)
-maxTypeExpOfType (TCUInt x) = EInt (x + 1)
-maxTypeExpOfType TBool = ETrue
-maxTypeExpOfType (TSig _) = error $ "maxTypeExpOfType should not be used with TSig _"
+maxTypeValue :: Type -> Integer
+maxTypeValue (TUInt x) = (x - 1)
+maxTypeValue (TCUInt x) = (x + 1)
+maxTypeValue TBool = 1
+maxTypeValue TAddr = 1
+maxTypeValue THash = 1
+maxTypeValue (TSig _) = error $ "maxTypeValue should not be used with TSig _"
 
-maxTypeValueOfType :: Type -> Integer
-maxTypeValueOfType (TUInt x) = (x - 1)
-maxTypeValueOfType (TCUInt x) = (x + 1)
-maxTypeValueOfType TBool = 1
-maxTypeValueOfType TAddr = 1
-maxTypeValueOfType THash = 1
-maxTypeValueOfType (TSig _) = error $ "maxTypeValueOfType should not be used with TSig _"
+
+maxRealTypeValue :: Type -> Exp
+maxRealTypeValue (TUInt x) = EInt (x - 1)
+maxRealTypeValue (TCUInt x) = EInt 1
+maxRealTypeValue TBool = ETrue
+maxRealTypeValue THash = EInt 1
+maxRealTypeValue (TSig _) = error $ "maxRealTypeValue should not be used with TSig _"
 
 -- identFromComp
 
@@ -108,12 +112,12 @@ negateExp exp = ENot exp
 -- TODO: Only support types with minimal value 0
 generateValsList :: Exp -> [Arg] -> [[Exp]]
 generateValsList maxValVal args =
-  let maxVals = maxValVal:(map (\(Ar typ _) -> maxRealValueOfType typ) args) in
+  let maxVals = maxValVal:(map (\(Ar typ _) -> maxRealTypeValue typ) args) in
     generateAllVals maxVals
 
 generateValsListNoVal :: [Arg] -> [[Exp]]
 generateValsListNoVal args =
-  let maxVals = (map (\(Ar typ _) -> maxRealValueOfType typ) args) in
+  let maxVals = (map (\(Ar typ _) -> maxRealTypeValue typ) args) in
     generateAllVals maxVals
 
 generateAllVals :: [Exp] -> [[Exp]]
