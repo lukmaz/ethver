@@ -427,15 +427,19 @@ verFullAss modifyModule (SAss varIdent (EValOf (EArray ident ESender))) = do
       in 
         verFullAss modifyModule (SAss varIdent (EValOf (EVar cmtVar)))
 
-
+-- lVarIdent = sign(...) should be called inside communication
+-- but it cannot modify global_commitments_0, so must sync with player0
 verFullAss modifyModule (SAss lVarIdent (ESign args)) = do
   playerNr <- deducePlayerNumber modifyModule
   world <- get
 
   case sigType world of
     Just (TSig sigTypes) -> do
+      let
+        lName = sCommSignature
+
       (guards, updates) <- 
-        generateSigAss modifyModule sigTypes (EInt playerNr) args playerNr
+        generateSigAss modifyModule sigTypes lName (EInt playerNr) args playerNr
 
       (idGuards, idUpdates) <-
         generateSimpleAssWithType modifyModule (SAss lVarIdent (EInt playerNr)) TAddr
@@ -445,6 +449,12 @@ verFullAss modifyModule (SAss lVarIdent (ESign args)) = do
         ""
         (guards ++ idGuards)
         [(updates ++ idUpdates, [Alive])]
+
+      addTransToNewState
+        modifyModule
+        (sUpdateSignature ++ show playerNr)
+        []
+        [([], [Alive])]
     
 -- TODO: to jest stare
 {-  let 
@@ -552,24 +562,22 @@ generateSimpleAssWithType modifyModule (SAss ident exp) typ = do
                            _ -> [EGe evalExp (EInt minV), ELe evalExp (EInt maxV)]
   return (guards, [(ident, evalExp)])
 
-generateSigAss :: ModifyModuleType -> [Type] -> Exp -> [Exp] -> Integer -> VerRes ([Exp], [(Ident, Exp)])
-generateSigAss modifyModule sigTypes rKey rAttrs playerNr = do
+generateSigAss :: ModifyModuleType -> [Type] -> String -> Exp -> [Exp] -> Integer -> VerRes ([Exp], [(Ident, Exp)])
+generateSigAss modifyModule sigTypes lName rKey rAttrs playerNr = do
   world <- get
   mod <- modifyModule id
-  let
-    globalSigName = sGlobalSignatures ++ "_" ++ (show playerNr)
     
   simpleAsses <- mapM
     (\(attrType, rAttr, attrNr) -> 
       let
-        lIdent = Ident $ globalSigName ++ sAttrSuffix ++ show attrNr
+        lIdent = Ident $ lName ++ sAttrSuffix ++ show attrNr
       in
         generateSimpleAssWithType modifyModule (SAss lIdent rAttr) attrType
     )
     (zip3 sigTypes rAttrs [0..])
   
   let
-    lKeyIdent = Ident $ globalSigName ++ sKeySuffix
+    lKeyIdent = Ident $ lName ++ sKeySuffix
     
   keyAsses <- 
     generateSimpleAssWithType modifyModule (SAss lKeyIdent rKey) TAddr
@@ -578,6 +586,34 @@ generateSigAss modifyModule sigTypes rKey rAttrs playerNr = do
     (guardsListAttr, updatesListAttr) = unzip (keyAsses:simpleAsses)
 
   return (concat guardsListAttr, concat updatesListAttr)
+
+-- global_signatures_nr := comm_signature
+addUpdateSignatureTranss :: ModifyModuleType -> VerRes ()
+addUpdateSignatureTranss modifyModule = do
+  mod <- modifyModule id
+  world <- get
+
+  let 
+    playerNr = number mod
+    globalName = sGlobalSignatures ++ "_" ++ show playerNr
+  
+  case sigType world of
+    Just (TSig sigTypes) -> do
+      let
+        rKey = EVar $ Ident $ sCommSignature ++ sKeySuffix
+        rAttrs = map
+          (\(_, nr) -> EVar $ Ident $ sCommSignature ++ sAttrSuffix ++ show nr)
+          (zip sigTypes [0..])
+
+      (guards, updates) <-
+        generateSigAss modifyModule sigTypes globalName rKey rAttrs playerNr
+
+      addTransNoState
+        modifyModule
+        (sUpdateSignature ++ show playerNr)
+        guards
+        [(updates, [Alive])]
+
 
 verCopySig :: ModifyModuleType -> [Type] -> Ident -> Exp -> VerRes ()
 verCopySig modifyModule sigTypes lVarIdent rExp = do
@@ -594,12 +630,13 @@ verCopySig modifyModule sigTypes lVarIdent rExp = do
     rAttrs1 = map
       (\(_, nr) -> EVar $ Ident $ rAttr1Root ++ show nr)
       (zip sigTypes [0..])
+    globalSigName = sGlobalSignatures ++ "_" ++ (show playerNr)
 
   (guards0, updates0) <- 
-    generateSigAss modifyModule sigTypes rKey0 rAttrs0 playerNr
+    generateSigAss modifyModule sigTypes globalSigName rKey0 rAttrs0 playerNr
   
   (guards1, updates1) <- 
-    generateSigAss modifyModule sigTypes rKey1 rAttrs1 playerNr
+    generateSigAss modifyModule sigTypes globalSigName rKey1 rAttrs1 playerNr
   
   (idGuards, idUpdates) <- 
     generateSimpleAssWithType modifyModule (SAss lVarIdent (EInt playerNr)) TAddr

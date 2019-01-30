@@ -685,8 +685,10 @@ addGlobalSignatures typ = do
   let
     ident0 = Ident $ sGlobalSignatures ++ "_0"
     ident1 = Ident $ sGlobalSignatures ++ "_1"
+    identComm = Ident $ sCommSignature 
   _ <- modifyPlayer0 (\p -> p {globalSignatures = Map.fromList [(ident0, typ)]})
   _ <- modifyPlayer1 (\p -> p {globalSignatures = Map.fromList [(ident1, typ)]})
+  _ <- modifyCommunication (\p -> p {globalSignatures = Map.fromList [(identComm, typ)]})
   setSigType typ
   return ()
 

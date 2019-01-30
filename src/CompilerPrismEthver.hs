@@ -105,7 +105,6 @@ verDecl modifyModule (Dec (TSig sigTypes) varIdent) = do
   -- auxiliary variable for id with the given name
   mod <- modifyModule id
   addSigIdVar modifyModule varIdent
-  addInitialValue modifyModule varIdent (EInt $ number mod)
 
 verDecl modifyModule (Dec typ ident) = do
   addVar modifyModule typ ident

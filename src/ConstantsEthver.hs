@@ -70,8 +70,10 @@ sCommitmentValSuffix = "_val"
 sCommitmentNonceSuffix = "_nonce"
 sGlobalCommitments = "global_commitments"
 sGlobalSignatures = "global_signatures"
+sCommSignature = "comm_signature"
 sRandomCommitment = "random_commitment"
 sOpenCommitment = "open_commitment"
+sUpdateSignature = "update_signature"
 
 sEmptyModule = "emptyModule"
 
