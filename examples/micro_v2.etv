@@ -99,6 +99,7 @@ scenario M {
   signature(cmt_uint(2), uint(2), uint(2)) sigma_loc;
   bool winM;
   bool endM;
+  bool signature_verified;
 
   r1_cmt.randomCommitment();
 
@@ -109,6 +110,7 @@ scenario M {
     sigma_loc = comm_sigma;
     // TODO: moj adres jest wpisany na sztywno. Da sie zrobić coś w stylu msg.sender w scenariuszu?
     if (verSig(0, sigma_loc, (hashOf(r1_cmt), r2_loc, 1))) {
+      signature_verified = true;
       r1_val = valueOf(r1_cmt);
       if (r1_val == r2_loc) { 
         winM = true;
