@@ -6,127 +6,88 @@
 user "U";
 user "M";
 
-CONTRACT_BALANCE_MAX = 3;
-CONTRACT_BALANCE_INIT = 3;
-USER_BALANCE_MAX = 3;
+CONTRACT_BALANCE_MAX = 1;
+CONTRACT_BALANCE_INIT = 1;
+USER_BALANCE_MAX = 1;
 USER0_BALANCE_INIT = 0;
 USER1_BALANCE_INIT = 0;
 MAX_VALUE = 1;
 MAX_TIME = 2;
-MAX_SIGNATURES = 3;
-MAX_COMMITMENTS = 2;
-
-// c1, r1 - values in honest mode, recipient = 1
-// c0, r0 - values in adversarial mode, recipient = 0
-// rM - values from Merchant role of the protocol
-// rU - values from User role of the protocol
 
 contract Micropay {
-  uint(3) winning_tickets;
   uint(2) pot = 1;
-  uint(3) deposit = 2;
+  uint(2) r1_loc;
 
-  function_limit 2 release(cmt_uint(2) rel_c, uint(2) rel_rU) {
-    if (checkCommitment(rel_c, rel_rU)) {
-      if (winning_tickets < 2) {
-        winning_tickets = winning_tickets + 1;
-      }
-      if (pot > 0 && ver(0, sigma[msg.sender], (rel_c, rel_rU, msg.sender))) {
-        msg.sender.send(1);
-        pot = pot - 1;
-      }
-    } 
-  }
-
-  function burn() {
-    if ((winning_tickets >= 2) && (deposit >= 2)) {
-      "null".send(2);
-      deposit = deposit - 2;
-    }
-  }
-
-  function release_deposit() {
-    if (time_elapsed >= 2 && deposit >= 2) {
-      0.send(2);
-      deposit = deposit - 2;
+  function_limit 2 release(cmt_uint(2) rel_c_cmt, uint(2) rel_r2, hash rel_c_hash, signature(cmt_uint(2), uint(2), uint(2)) rel_sigma) {
+    r1_loc = valueOf(rel_c_cmt);
+    if ((pot > 0) && verCommitment(rel_c_cmt, rel_c_hash) && (r1_loc == rel_r2) &&
+        verSig(0, rel_sigma, (rel_c_hash, rel_r2, msg.sender))) {
+      msg.sender.send(1);
+      pot = pot - 1;
     }
   }
 }    
 
 communication {
-  cmt_uint(2) commitmentM[2];
-  bool is_signedU; // wyluskac z podpisu
-  uint(2) randU;
-  signature(cmt_uint(2), uint(2), uint(2)) sigma[2];
+  bool payment_requested;
+  bool payment_issued;
+  
+  uint(2) comm_r2;
+  hash comm_c_hash;
+  address comm_a;
+  signature(cmt_uint(2), uint(2), uint(2)) comm_sigma;
 
-  function copy_signature() {
-    if (msg.sender == 0) {
-      sigma_0_sig_key = sigma_1_sig_key;
-      sigma_0_sig0 = sigma_1_sig0;
-      sigma_0_sig1 = sigma_1_sig1;
-      sigma_0_sig2 = sigma_1_sig2;
-    }
-    else {
-      sigma_1_sig_key = sigma_0_sig_key;
-      sigma_1_sig0 = sigma_0_sig0;
-      sigma_1_sig1 = sigma_0_sig1;
-      sigma_1_sig2 = sigma_0_sig2;
-    }
+  // function copy_commitment?
+
+  function payment_request(hash req_c_hash) {
+    comm_c_hash = req_c_hash;
+    comm_a = msg.sender;
+    payment_requested = true;
   }
 
-  function payment_request() {
-    if (commitmentM[msg.sender] == 3) { // todo: ladna nazwa
-      commitmentM[msg.sender].randomCommitment();
-    }
+  function payment_issuance(hash iss_c_hash, uint(2) iss_r2, uint(2) iss_a) {
+    comm_r2 = iss_r2;
+    comm_sigma = sign(iss_c_hash, iss_r2, iss_a);
+    payment_issued = true;
   }
-
-  function payment_issuance(cmt_uint(2) pay_c, uint(2) pay_r, uint(2) pay_a) {
-    randU = pay_r;
-    is_signedU = true;
-    sigma[msg.sender] = sign(pay_c, pay_r, pay_a);
-  }
-
-  function open() {
-    if (msg.sender == 1 && commitmentM[msg.sender] == 2) {
-      commitmentM[msg.sender].openCommitment();
-    }
-  }
+  
 }
 
 scenario U {
-  uint(2) rand0;
+  uint(2) r2;
   bool endU;
 
-  wait(commitmentM[1] < 3, 1);
-  if (commitmentM[1] < 3) {
-    rand0 = random(2);
-    payment_issuance.sendCommunication(commitmentM[1], rand0, 1);
+  wait(payment_requested, 1);
+  // TODO: && time_elapsed < 1?
+  if (payment_requested) {
+    r2 = random(2);
+    payment_issuance.sendCommunication(comm_c_hash, r2, comm_a);
   }
-  wait(false, 2);
-  release_deposit.sendTransaction({from: "U", value: 0});
 
   endU = true;
 }
 
 scenario M {
-  bool win;
+  cmt_uint(2) r1_cmt;
+  uint(2) r1_val;
+  uint(2) r2_loc;
+  signature(cmt_uint(2), uint(2), uint(2)) sigma_loc;
+  bool winM;
   bool endM;
-  uint(2) rand1;
 
-  payment_request.sendCommunication();
-  wait(is_signedU, 1);
-  if (is_signedU && time_elapsed < 1) {
-    rand1 = randU;
-    copy_signature.sendCommunication();
-    if (sigma_1_sig0 == 1 && sigma_1_sig1 == rand1 && sigma_1_sig2 == 1) {
-      open.sendCommunication();
-      if (commitmentM[1] == rand1) { // moze niepotrzebne? Moze nie trzeba trzymac randU w globalu?
-        win = true;
-        release.sendTransaction(commitmentM[1], rand1, {from: "M", value: 0});
-        wait(balance1 >= 1, 1);
-        if ((balance1 < 1) && (winning_tickets >= 2)) {
-          burn.sendTransaction({from: "M", value: 0});
-        }
+  r1_cmt.randomCommitment();
+
+  payment_request.sendCommunication(hashOf(r1_cmt));
+  wait(payment_issued, 1);
+  if (payment_issued && time_elapsed < 1) {
+    r2_loc = comm_r2;
+    sigma_loc = comm_sigma;
+    // TODO: moj adres jest wpisany na sztywno. Da sie zrobić coś w stylu msg.sender w scenariuszu?
+    if (verSig(0, sigma_loc, (hashOf(r1_cmt), r2_loc, 1))) {
+      r1_val = valueOf(r1_cmt);
+      if (r1_val == r2_loc) { 
+        winM = true;
+        release.sendTransaction(r1_cmt, r2_loc, hashOf(r1_cmt), sigma_loc, {from: "M", value: 0});
       }
     }
   }

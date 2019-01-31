@@ -6,3 +6,7 @@ Pmax=? [ F balance1>=1 ]
 
 Pmax=? [ F endM&winM&balance1<1 ]
 
+filter(max, Pmax=? [ F balance1<1 ], winM)
+
+filter(min, Pmin=? [ F balance1>=1 ], winM)
+

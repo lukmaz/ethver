@@ -33,21 +33,21 @@ communication {
   bool payment_issued;
   
   uint(2) comm_r2;
-  hash comm_c;
+  hash comm_c_hash;
   address comm_a;
   signature(cmt_uint(2), uint(2), uint(2)) comm_sigma;
 
   // function copy_commitment?
 
-  function payment_request(hash req_c) {
-    comm_c = req_c;
+  function payment_request(hash req_c_hash) {
+    comm_c_hash = req_c_hash;
     comm_a = msg.sender;
     payment_requested = true;
   }
 
-  function payment_issuance(hash iss_c, uint(2) iss_r2, uint(2) iss_a) {
+  function payment_issuance(hash iss_c_hash, uint(2) iss_r2, uint(2) iss_a) {
     comm_r2 = iss_r2;
-    comm_sigma = sign(iss_c, iss_r2, iss_a);
+    comm_sigma = sign(iss_c_hash, iss_r2, iss_a);
     payment_issued = true;
   }
   
@@ -61,7 +61,7 @@ scenario U {
   // TODO: && time_elapsed < 1?
   if (payment_requested) {
     r2 = random(2);
-    payment_issuance.sendCommunication(comm_c, r2, comm_a);
+    payment_issuance.sendCommunication(comm_c_hash, r2, comm_a);
   }
 
   endU = true;
