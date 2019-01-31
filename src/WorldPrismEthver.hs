@@ -621,18 +621,17 @@ addAdvOpenCmtTrans modifyModule = do
   
   case cmtRange world of
     Just range -> do 
-      -- committed -> random (adv, no sync)
-      addCustomTrans
-        modifyModule
-        ""
-        (-1)
-        (-1)
-        [EEq (EVar cmtIdent) (EInt range)]
-        (foldl
-          (\acc x -> acc ++ [([(cmtIdent, EInt x)], [Alive])])
-          []
-          [0..(range - 1)]
+      -- committed -> chosen (adv, no sync)
+      mapM_ 
+        (\nr -> addCustomTrans
+          modifyModule
+          ""
+          (-1)
+          (-1)
+          [EEq (EVar cmtIdent) (EInt range)]
+          [([(cmtIdent, EInt nr)], [Alive])]
         )
+        [0..(range - 1)]
     _ ->
       error $ "Commitment range not set at the moment of adding adversarial opening the commitment"
 
@@ -646,6 +645,7 @@ addRandomCmtTrans modifyModule = do
   
   case cmtRange world of
     Just range -> do 
+      -- not committed -> committed
       addCustomTrans
         modifyModule
         ""
