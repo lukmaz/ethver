@@ -6,5 +6,3 @@ Pmax=? [ F balance1>=1 ]
 
 Pmax=? [ F endM&signature_verified&balance1<1&balance0>=2 ]
 
-E [ F balance1 >= 1 & !winM ]
-
