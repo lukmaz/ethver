@@ -137,7 +137,7 @@ prismGlobalSignatures globalSignatures =
           (foldl
             (\acc (attr_type, nr) -> acc ++ "  " ++ (unident ident) ++ sAttrSuffix ++ (show nr) ++ 
               " : " ++ (prismShowType attr_type) ++ ";\n")
-            (code ++ "  " ++ (unident ident) ++ sKeySuffix ++ " : " ++ (prismShowType TAddr) ++ ";\n")
+            (code ++ "  " ++ (unident ident) ++ sKeySuffix ++ " : [-1..1] init -1;\n")
             (zip types [0..])
           )
     )
