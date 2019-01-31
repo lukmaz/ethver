@@ -83,6 +83,7 @@ scenario M {
     r2_loc = comm_r2;
     sigma_loc = comm_sigma;
     // TODO: moj adres jest wpisany na sztywno. Da sie zrobić coś w stylu msg.sender w scenariuszu?
+    // Chyba wystarczy address[0]
     if (verSig(0, sigma_loc, (hashOf(r1_cmt), r2_loc, 1))) {
       r1_val = valueOf(r1_cmt);
       if (r1_val == r2_loc) { 
