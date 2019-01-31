@@ -6,9 +6,9 @@
 user "U";
 user "M";
 
-CONTRACT_BALANCE_MAX = 1;
-CONTRACT_BALANCE_INIT = 1;
-USER_BALANCE_MAX = 1;
+CONTRACT_BALANCE_MAX = 3;
+CONTRACT_BALANCE_INIT = 3;
+USER_BALANCE_MAX = 3;
 USER0_BALANCE_INIT = 0;
 USER1_BALANCE_INIT = 0;
 MAX_VALUE = 1;
@@ -17,13 +17,36 @@ MAX_TIME = 2;
 contract Micropay {
   uint(2) pot = 1;
   uint(2) r1_loc;
+  uint(3) winning_tickets = 0;
+  uint(3) deposit = 2;
 
   function_limit 2 release(cmt_uint(2) rel_c_cmt, uint(2) rel_r2, hash rel_c_hash, signature(cmt_uint(2), uint(2), uint(2)) rel_sigma) {
     r1_loc = valueOf(rel_c_cmt);
     if ((pot > 0) && verCommitment(rel_c_cmt, rel_c_hash) && (r1_loc == rel_r2) &&
         verSig(0, rel_sigma, (rel_c_hash, rel_r2, msg.sender))) {
-      msg.sender.send(1);
-      pot = pot - 1;
+      if (winning_tickets < 2) {
+        winning_tickets = winning_tickets + 1;
+      }
+      // TODO: czy ten if jest potrzebny?
+      if (pot > 0) {
+        msg.sender.send(1);
+        pot = pot - 1;
+      }
+    }
+  }
+
+  function burn() {
+    if ((winning_tickets >= 2) && (deposit >= 2)) {
+      "null".send(2);
+      deposit = deposit - 2;
+    }
+  }
+
+  function release_deposit() {
+    if (time_elapsed >= 2 && deposit >= 2) {
+      // TODO: to 0 brzydko wygląda
+      0.send(2);
+      deposit = deposit - 2;
     }
   }
 }    
@@ -63,6 +86,8 @@ scenario U {
     r2 = random(2);
     payment_issuance.sendCommunication(comm_c_hash, r2, comm_a);
   }
+  wait(false, 2);
+  release_deposit.sendTransaction({from: "U", value: 0});
 
   endU = true;
 }
@@ -88,6 +113,10 @@ scenario M {
       if (r1_val == r2_loc) { 
         winM = true;
         release.sendTransaction(r1_cmt, r2_loc, hashOf(r1_cmt), sigma_loc, {from: "M", value: 0});
+        wait(balance1 >= 1, 1);
+        if ((balance1 < 1) && (winning_tickets >= 2)) {
+          burn.sendTransaction({from: "M", value: 0});
+        }
       }
     }
   }

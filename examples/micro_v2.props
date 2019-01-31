@@ -4,5 +4,9 @@ Pmax=? [ F endM&balance1>=1 ]
 
 Pmax=? [ F balance1>=1 ]
 
-Pmax=? [ F endM&commitmentM_1<2&balance0>=2&balance1<1 ]
+Pmax=? [ F endM&winM&balance1<1 ]
+
+filter(max, Pmax=? [ F balance0 >= 0 & balance1<1 ], winM)
+
+filter(min, Pmin=? [ F balance1>=1 ], winM)
 
