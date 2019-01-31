@@ -453,11 +453,14 @@ verScenario modifyModule decls stms = do
     []
     [([], [Alive])]
 
-  -- add randomCommitment transactions without commstate=1 etc.
+  -- add randomCommitment transactions
   addRandomCmtTrans modifyModule
 
   -- add openCommitment for ADV
   addAdvOpenCmtTrans modifyModule
+
+  -- aad updateSignature for ADV
+  addAdvUpdateSignatureTranss modifyModule
 
   -- add critical sections stuff 
   _ <- modifyModule addCS2
@@ -470,7 +473,7 @@ verScenario modifyModule decls stms = do
   addHonestOpenCmtTrans modifyModule
 
   -- add updateSignature transactions without commstate=1 etc.
-  addUpdateSignatureTranss modifyModule
+  addHonestUpdateSignatureTranss modifyModule
 
 
   -- TODO: zmienić 0 i 1 na stałe

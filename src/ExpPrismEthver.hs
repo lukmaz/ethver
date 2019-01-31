@@ -597,8 +597,8 @@ generateSigAss modifyModule sigTypes lName rKey rAttrs playerNr = do
   return (concat guardsListAttr, concat updatesListAttr)
 
 -- global_signatures_nr := comm_signature
-addUpdateSignatureTranss :: ModifyModuleType -> VerRes ()
-addUpdateSignatureTranss modifyModule = do
+addHonestUpdateSignatureTranss :: ModifyModuleType -> VerRes ()
+addHonestUpdateSignatureTranss modifyModule = do
   mod <- modifyModule id
   world <- get
 
@@ -621,6 +621,48 @@ addUpdateSignatureTranss modifyModule = do
         modifyModule
         (sUpdateSignature ++ show playerNr)
         guards
+        [(updates, [Alive])]
+
+-- global_signatures_nr := comm_signature
+addAdvUpdateSignatureTranss :: ModifyModuleType -> VerRes ()
+addAdvUpdateSignatureTranss modifyModule = do
+  mod <- modifyModule id
+  world <- get
+
+  let 
+    playerNr = number mod
+    globalName = sGlobalSignatures ++ "_" ++ show playerNr
+  
+  case sigType world of
+    Just (TSig sigTypes) -> do
+      let
+        rKey = EVar $ Ident $ sCommSignature ++ sKeySuffix
+        rAttrs = map
+          (\(_, nr) -> EVar $ Ident $ sCommSignature ++ sAttrSuffix ++ show nr)
+          (zip sigTypes [0..])
+        
+        {- These extra guards decrease #transs by 30% but increase time by 8%
+        lKey = EVar $ Ident $ globalName ++ sKeySuffix
+        lAttrs = map
+          (\(_, nr) -> EVar $ Ident $ globalName ++ sAttrSuffix ++ show nr)
+          (zip sigTypes [0..])
+
+        extraGuards = foldl
+          (\acc (lAttr, rAttr) -> EOr acc (ENe lAttr rAttr))
+          (ENe lKey rKey)
+          (zip lAttrs rAttrs)
+        -}
+
+      (guards, updates) <-
+        generateSigAss modifyModule sigTypes globalName rKey rAttrs playerNr
+      
+      addCustomTrans
+        modifyModule
+        ""
+        (-1)
+        (-1)
+        (guards)
+        {-(guards ++ [extraGuards])-}
         [(updates, [Alive])]
 
 
