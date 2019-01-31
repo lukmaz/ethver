@@ -20,10 +20,12 @@ contract Micropay {
 
   function_limit 2 release(cmt_uint(2) rel_c_cmt, uint(2) rel_r2, hash rel_c_hash, signature(cmt_uint(2), uint(2), uint(2)) rel_sigma) {
     r1_loc = valueOf(rel_c_cmt);
-    if ((pot > 0) && verCommitment(rel_c_cmt, rel_c_hash) && (r1_loc == rel_r2) &&
+    if (verCommitment(rel_c_cmt, rel_c_hash) && (r1_loc == rel_r2) &&
         verSig(0, rel_sigma, (rel_c_hash, rel_r2, msg.sender))) {
-      msg.sender.send(1);
-      pot = pot - 1;
+      if (pot > 0) {
+        msg.sender.send(1);
+        pot = pot - 1;
+      }
     }
   }
 }    
@@ -74,6 +76,7 @@ scenario M {
   signature(cmt_uint(2), uint(2), uint(2)) sigma_loc;
   bool winM;
   bool endM;
+  bool signature_verified;
 
   r1_cmt.randomCommitment();
 
@@ -85,6 +88,7 @@ scenario M {
     // TODO: moj adres jest wpisany na sztywno. Da sie zrobić coś w stylu msg.sender w scenariuszu?
     // Chyba wystarczy address[0]
     if (verSig(0, sigma_loc, (hashOf(r1_cmt), r2_loc, 1))) {
+      signature_verified = true;
       r1_val = valueOf(r1_cmt);
       if (r1_val == r2_loc) { 
         winM = true;
