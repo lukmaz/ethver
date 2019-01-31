@@ -453,14 +453,23 @@ verScenario modifyModule decls stms = do
     []
     [([], [Alive])]
 
-  -- add randomCommitment transactions
-  addRandomCmtTrans modifyModule
+  world <- get
+  case cmtRange world of
+    Just _ -> do
+      -- add randomCommitment transactions
+      addRandomCmtTrans modifyModule
 
-  -- add openCommitment for ADV
-  addAdvOpenCmtTrans modifyModule
-
-  -- aad updateSignature for ADV
-  addAdvUpdateSignatureTranss modifyModule
+      -- add openCommitment for ADV
+      addAdvOpenCmtTrans modifyModule
+    Nothing ->
+      return ()
+  
+  case sigType world of
+    Just _ -> do
+      -- aad updateSignature for ADV
+      addAdvUpdateSignatureTranss modifyModule
+    Nothing ->
+      return ()
 
   -- add critical sections stuff 
   _ <- modifyModule addCS2
@@ -469,12 +478,19 @@ verScenario modifyModule decls stms = do
   -- Extra transs added manually without CS --
   --------------------------------------------
 
-  -- add openCommitment transactions without commstate=1 etc.
-  addHonestOpenCmtTrans modifyModule
+  case cmtRange world of
+    Just _ -> do
+      -- add openCommitment transactions without commstate=1 etc.
+      addHonestOpenCmtTrans modifyModule
+    Nothing ->
+      return ()
 
-  -- add updateSignature transactions without commstate=1 etc.
-  addHonestUpdateSignatureTranss modifyModule
-
+  case sigType world of
+    Just _ -> do
+      -- add updateSignature transactions without commstate=1 etc.
+      addHonestUpdateSignatureTranss modifyModule
+    Nothing ->
+      return ()
 
   -- TODO: zmienić 0 i 1 na stałe
   addFirstCustomTrans
