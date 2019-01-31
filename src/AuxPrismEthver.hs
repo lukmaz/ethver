@@ -31,7 +31,7 @@ maxRealTypeValue (TUInt x) = EInt (x - 1)
 maxRealTypeValue (TCUInt x) = EInt 1
 maxRealTypeValue TBool = ETrue
 maxRealTypeValue THash = EInt 1
-maxRealTypeValue (TSig _) = error $ "maxRealTypeValue should not be used with TSig _"
+maxRealTypeValue (TSig _) = EInt 1
 
 -- identFromComp
 

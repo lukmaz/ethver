@@ -291,7 +291,7 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
     args = filter 
       (\x -> case x of
         Ar (TCUInt _) _ -> False
-        Ar (TSig _) _ -> False
+        --Ar (TSig _) _ -> False
         _ -> True
       )
       argsOrig
@@ -308,7 +308,8 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
                 ([ELt (EVar cmtVar) (EInt $ range)], [(cmtArgVar, EInt $ number mod)])
         else
           ([], [])
-
+    -- ADV can pass any signature (0/1)
+    {-
     (extraGuardsSig, extraUpdatesSig) =
       if signatureInArguments (Fun (Ident "") argsOrig []) 
         then 
@@ -323,7 +324,7 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
                 ([], [(sigArgVar, EInt $ number mod)])
         else
           ([], [])
-    
+    -}
   generateAdvTranssAux 
     modifyModule 
     whichPrefix 
@@ -332,8 +333,8 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
     limit 
     funName 
     args 
-    (extraGuardsCmt ++ extraGuardsSig)
-    (extraUpdatesCmt ++ extraUpdatesSig)
+    (extraGuardsCmt)
+    (extraUpdatesCmt)
 
 generateAdvTranssAux :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args extraGuards extraUpdates = do
