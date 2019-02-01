@@ -621,14 +621,25 @@ addAdvOpenCmtTrans modifyModule = do
   
   case cmtRange world of
     Just range -> do 
-      -- committed -> chosen (adv, no sync)
+      -- committed -> random (adv, no sync)
+      addTransNoState
+        modifyModule
+        ""
+        [EEq (EVar cmtIdent) (EInt range)]
+        (foldl
+          (\acc x -> acc ++ [([(cmtIdent, EInt x)], [Alive])])
+          []
+          [0..(range - 1)]
+        )
+      
+      -- not committed -> chosen (adv, no sync)
       mapM_ 
         (\nr -> addCustomTrans
           modifyModule
           ""
           (-1)
           (-1)
-          [EEq (EVar cmtIdent) (EInt range)]
+          [EEq (EVar cmtIdent) (EInt $ range + 1)]
           [([(cmtIdent, EInt nr)], [Alive])]
         )
         [0..(range - 1)]

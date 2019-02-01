@@ -335,9 +335,21 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
     (extraGuardsCmt ++ extraGuardsSig)
     (extraUpdatesCmt ++ extraUpdatesSig)
 
+hashGuards :: Integer -> [Arg] -> [Exp] -> [Exp]
+hashGuards cmtRange args vals =
+  let 
+    hashPairs = filter
+      (\(Ar typ _, val) -> typ == THash)
+      (zip args vals)
+  in
+    map
+      (\(Ar _ _, EInt x) -> ELe (EVar $ Ident $ sGlobalCommitments ++ "_" ++ show x) (EInt cmtRange))
+      hashPairs
+
 generateAdvTranssAux :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> [Exp] -> [(Ident, Exp)] -> VerRes ()
 generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName args extraGuards extraUpdates = do
   mod <- modifyModule id
+  world <- get
   let valName = Ident $ funName ++ sValueSuffix ++ (show $ number mod)
   maxes <- if withVal
     then do
@@ -346,7 +358,12 @@ generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName a
     else do 
       return $ generateValsListNoVal args
 
-  let runsIdent = Ident $ funName ++ sRunsSuffix ++ (show $ number mod)
+  let 
+    runsIdent = Ident $ funName ++ sRunsSuffix ++ (show $ number mod)
+    range = case cmtRange world of
+      Just r -> r
+      Nothing -> 0
+
   case maxes of
     [] ->
       addTransNoState
@@ -377,6 +394,12 @@ generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName a
               EEq (EVar iCommState) (EInt 1),
               EEq (EVar $ Ident $ sStatePrefix ++ (show $ number mod)) (EInt (-1))
             ]
+            ++
+            (hashGuards 
+              range 
+              args 
+              (if withVal then (tail vals) else vals)
+            )
             ++ 
             extraGuards
             ++
