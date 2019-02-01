@@ -622,9 +622,11 @@ addAdvOpenCmtTrans modifyModule = do
   case cmtRange world of
     Just range -> do 
       -- committed -> random (adv, no sync)
-      addTransNoState
+      addCustomTrans
         modifyModule
         ""
+        (-1)
+        (-1)
         [EEq (EVar cmtIdent) (EInt range)]
         (foldl
           (\acc x -> acc ++ [([(cmtIdent, EInt x)], [Alive])])
