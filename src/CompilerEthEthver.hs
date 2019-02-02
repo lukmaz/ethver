@@ -31,9 +31,16 @@ ethContract constants (Contr ident decls funs) = do
   ethIdent ident
   addContr " {\n"
   ethConstants constants
+  
+  if signaturesInContract decls funs 
+    then addContr codeHashMessage
+    else return ()
+
   mapM_ ethDecl decls
   addContr "\n"
+  
   mapM_ ethFun funs
+  
   addContr "}"
 
 ethConstants :: [ConstantDecl] -> EthRes ()
@@ -103,6 +110,15 @@ ethArg (Ar (TCUInt x) ident) = do
   ethIdent ident
   addContr sCommitmentNonceSuffix
 
+ethArg (Ar (TSig _) ident) = do
+  addContr "uint8 "
+  ethIdent ident
+  addContr "_v, bytes32 "
+  ethIdent ident
+  addContr "_r, bytes32 "
+  ethIdent ident
+  addContr "_s"
+
 ethArg (Ar typ ident) = do
   ethType typ
   addContr " "
@@ -149,20 +165,6 @@ ethFun (FunV ident args stms) = do
   mapM_ ethStm stms
   addContr "}\n"
 
--- not used?
-{-
-ethFun (FunR ident args ret stms) = do
-  addContr "function "
-  ethIdent ident
-  addContr "("
-  ethArgs args
-  addContr ") returns ("
-  ethType ret
-  addContr ") {\n"
-  mapM_ ethStm stms
-  addContr "}\n"
--}
-
 ethFun (FunL limit ident args stms) =
   ethFun (Fun ident args stms)
 
@@ -195,12 +197,14 @@ ethStm (SArrAss ident index val) = do
   addContr ";\n"
 
 ethStm (SIf cond stm) = do
+  ethCond cond
   addContr "if ("
   ethExp cond
   addContr ")\n"
   ethStm stm
 
 ethStm (SIfElse cond stm1 stm2) = do
+  ethCond cond
   addContr "if ("
   ethExp cond
   addContr ")\n"
@@ -283,9 +287,34 @@ ethExp (EFinney x) = do
 ethExp (ETrue) = addContr "true"
 ethExp (EFalse) = addContr "false"
 
+ethExp (EVerS key sigVar _) = do
+  addContr "(ecrecover(msgHash, "
+  ethExp sigVar
+  addContr "_v, "
+  ethExp sigVar
+  addContr "_r, "
+  ethExp sigVar
+  addContr "_s) == "
+  ethExp key
+  addContr ")"
+
 ethExp exp = do
   error $ (show exp) ++ ": ethExp not implemented for this expression"
 
+ethCond :: Exp -> EthRes ()
+ethCond cond =
+  case verSigArgsFromCond cond of
+    [] -> return ()
+    args -> do
+      addContr "bytes32 msgHash = hashMessage(string(abi.encodePacked("
+      ethExp $ head args
+      mapM_
+        (\arg -> do
+          addContr ", "
+          ethExp arg)
+        (tail args)
+      addContr ")));\n"
+    
 
 -- ethExp aux
 
@@ -345,14 +374,6 @@ ethScExp (EInt x) = do
 
 ethScExp (EVar ident) = do
   ethScIdent ident
-
-{-
-ethScExp (ECall ident args) = do
-  ethScIdent ident
-  addScen "("
-  commaList ethScExp addScen args
-  addScen ")"
--}
 
 -- CallArg
 ethScCallArg (AExp exp) = do

@@ -153,3 +153,19 @@ iCall = Ident sCall
 iRandom = Ident sRandom
 
 iTimeElapsed = Ident sTimeElapsed
+
+-- contract code
+
+codeHashMessage = 
+  "function hashMessage(string str) public pure returns (bytes32) {\n" ++
+  "  string memory header = \"\\x19Ethereum Signed Message:\\n\";\n" ++
+  "  uint len = bytes(str).length;\n" ++
+  "  uint enc_len = 0;\n" ++
+  "  uint mult = 1;\n" ++
+  "  while (len > 0) {\n" ++
+  "    enc_len += mult * ((len % 10) + 48);\n" ++
+  "    mult *= 256;\n" ++
+  "    len /= 10;\n" ++
+  "  }\n" ++
+  "  return keccak256(abi.encodePacked(header, uint24(enc_len), str));\n" ++
+  "}\n"
