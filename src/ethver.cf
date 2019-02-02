@@ -17,7 +17,7 @@ Const.  ConstantDecl ::= Ident "=" Integer ;
 
 -- CONTRACT
 
-Contr.    Contract ::= "contract" Ident "{" [Decl] [Function] "}" ;
+Contr.    Contract ::= "contract" Ident "{" [Decl] Constructor [Function] "}" ;
 Dec.      Decl     ::= Type Ident ;
 DecInit.  Decl     ::= Type Ident "=" Exp ;
 ArrDec.   Decl     ::= Type Ident "[" Integer "]" ;
@@ -25,6 +25,9 @@ MapDec.   Decl     ::= "mapping" "(" "address" "=>" Type ")" Ident ;
 
 terminator Decl ";" ;
 terminator Function "" ;
+
+ConstrEmp. Constructor ::= "" ;
+Constr.    Constructor ::= "constructor" "(" ")" "{" [Stm] "}" ;
 
 -- COMMUNICATION
 

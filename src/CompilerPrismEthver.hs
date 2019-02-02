@@ -40,7 +40,7 @@ verProgram (Prog users constants contract communication scenarios) = do
   addAdversarialBlockchainTranss
   
 verContractDecl :: Contract -> VerRes ()
-verContractDecl (Contr _ decls _) = do
+verContractDecl (Contr _ decls _ _) = do
   mapM_ (verDecl modifyContract) decls
 
 verCommunicationDecl :: Communication -> VerRes ()
@@ -53,7 +53,7 @@ verCommunicationDecl (Comm decls _) = do
 
 -- declarations already done before with verContractDecl
 verContract :: Contract -> VerRes ()
-verContract (Contr name _ funs) = do
+verContract (Contr name _ _ funs) = do
   -- adds a command to blockchain module, that a function has just been broadcast by a particular player
   mapM_ (verFunBroadcast modifyPlayer0) funs
   -- adds two commands to blockchain module, that a transaction has been executed or not by a particular player

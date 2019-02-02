@@ -17,6 +17,11 @@ MAX_TIME = 2;
 contract Micropay {
   uint(2) pot = 1;
   uint(2) r1_loc;
+  address escrowAddress;
+
+  constructor() {
+    escrowAddress = msg.sender;
+  }
 
   function_limit 2 release(cmt_uint(2) rel_c_cmt, uint(2) rel_r2, hash rel_c_hash, signature(cmt_uint(2), uint(2), uint(2)) rel_sigma) {
     r1_loc = valueOf(rel_c_cmt);

@@ -252,7 +252,7 @@ addAdversarialBlockchainTranss = do
     [([(Ident sTimeElapsed, EAdd (EVar $ Ident sTimeElapsed) (EInt 1))], [Alive])]
 
 addAdversarialContrTranss :: Contract -> VerRes ()
-addAdversarialContrTranss (Contr _ _ funs) =
+addAdversarialContrTranss (Contr _ _ _ funs) =
   addAdversarialTranss funs sBroadcastPrefix iContrState
 
 addAdversarialCommTranss :: Communication -> VerRes ()

@@ -26,19 +26,20 @@ ethProgram (Prog _ constants contract communication scenarios) = do
 
 -- TODO: UserDecl
 ethContract :: [ConstantDecl] -> Contract -> EthRes ()
-ethContract constants (Contr ident decls funs) = do
+ethContract constants (Contr ident decls constr funs) = do
   addContr "contract "
   ethIdent ident
   addContr " {\n"
   ethConstants constants
+  mapM_ ethDecl decls
+  addContr "\n"
   
+  ethConstructor constr
+
   if signaturesInContract decls funs 
     then addContr codeHashMessage
     else return ()
 
-  mapM_ ethDecl decls
-  addContr "\n"
-  
   mapM_ ethFun funs
   
   addContr "}"
@@ -54,16 +55,20 @@ ethConstants constants = do
           addContr $ "uint " ++ (unident ident) ++ " = "
           ethInteger val
           addContr ";\n"
-          ethConstructor
+          ethConstructorOld
         else return ()
     )
     constants
 
-ethConstructor :: EthRes ()
-ethConstructor = do
+ethConstructorOld :: EthRes ()
+ethConstructorOld = do
   addContr "constructor() public {\n"
   addContr $ sContractStart ++ " = " ++ sNow ++ ";\n"
   addContr $ "}\n"
+
+ethConstructor :: Constructor -> EthRes ()
+ethConstructor (Constr stms) = 
+  return () -- TODO
 
 -- TODO
 ethCommunication :: Communication -> EthRes ()
