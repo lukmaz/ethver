@@ -22,18 +22,20 @@ scStm :: Stm -> EthRes ()
 
 scStm (SAss ident (ERand range)) = do
   scIdent ident
-  addScen $ " =  web3.utils.randomHex(32) % " ++ show range
+  addScen $ " =  web3.utils.randomHex(32) % "
+  scExp range
+  addScen "\n\n"
 
 scStm (SAss ident exp) = do
   scIdent ident
   addScen " = "
   scExp exp
-  addScen "\n"
+  addScen "\n\n"
 
 scStm (SBlock stms) = do
   addScen "{\n"
   mapM_ scStm stms
-  addScen "}\n"
+  addScen "}\n\n"
 
 scStm (SIf cond stm) = do
   scCond cond
@@ -60,7 +62,7 @@ scStm (SSendT (EVar funIdent) callArgs) = do
       addScen ", "
       scCallArg arg)
     (tail callArgs)
-  addScen ")"
+  addScen ")\n\n"
 
 -- TODO
 scStm (SSendC (EVar funIdent) args) = do
@@ -71,14 +73,14 @@ scStm (SWait cond time) = do
   scExp cond
   addScen $ ") IS TRUE OR "
   scExp time
-  addScen $ "TIME_DELTAs HAS PASSED >"
+  addScen $ " TIME_DELTA(s) HAS PASSED >\n\n"
 
 scStm (SRCmt (EVar (Ident varName))) = do
   typ <- ethFindType (Ident varName)
   case typ of
     Just (TCUInt range) -> do
       addScen $ varName ++ "_val = web3.utils.randomHex(32) % " ++ show range ++ "\n"
-      addScen $ varName ++ "_nonce = web3.utils.randomHex(32)\n"
+      addScen $ varName ++ "_nonce = web3.utils.randomHex(32)\n\n"
     _ -> 
       error $ "randomCommitment() can be called on TCUIint type only."
 
@@ -175,7 +177,7 @@ scCond cond =
         (tail args)
       addScen "\n"
 
-      addScen "_msg = \"msg\" + web3.utils.sha3(_concat)\n"
+      addScen "_msg = \"msg\" + web3.utils.sha3(_concat)\n\n"
  
 scUnOp op e = do
   addScen $ op ++ " "

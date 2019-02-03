@@ -95,7 +95,7 @@ scenario M {
       r1_val = valueOf(r1_cmt);
       if (r1_val == r2_loc) { 
         winM = true;
-        release.sendTransaction(r1_cmt, r2_loc, hashOf(r1_cmt), sigma_loc, {from: "M", value: 0});
+        release.sendTransaction(r1_cmt, r2_loc, hashOf(r1_cmt), sigma_loc, {from: merchantAddress, value: 0});
       }
     }
   }
