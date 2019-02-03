@@ -8,10 +8,10 @@ import AuxEthver
 import ConstantsEthver
 import ExpEthEthver
 
-ethTree :: Program -> String
+ethTree :: Program -> (String, String)
 ethTree prog =
   let (a, world) = (runState (ethProgram prog)) emptyEthWorld
-  in contr world
+  in (contr world, scen world)
   
 
 ethProgram :: Program -> EthRes ()
@@ -20,7 +20,10 @@ ethProgram (Prog _ constants contract communication scenarios) = do
   -- TODO: constants
   addContr solPragma
   ethContract constants contract
-  addContr "\n"
+
+  ethCommunication communication
+  
+  mapM_ ethScenario scenarios
 
 -- Contract
 
@@ -43,7 +46,7 @@ ethContract constants (Contr ident decls constr funs) = do
 
   mapM_ ethFun funs
   
-  addContr "}"
+  addContr "}\n"
 
 ethConstants :: [ConstantDecl] -> EthRes Bool
 ethConstants constants = do
@@ -73,9 +76,6 @@ ethConstructor (Constr stms) isTimed = do
 
   addContr $ "}\n\n"
 
--- TODO
-ethCommunication :: Communication -> EthRes ()
-ethCommunication _ = return ()
 
 ethDecl :: Decl -> EthRes ()
 ethDecl (Dec typ ident) = do
@@ -160,11 +160,18 @@ ethFun (FunL limit ident args stms) =
 ethFun (FunVL limit ident args stms) =
   ethFun (Fun ident args stms)
 
+
+-------------------
+-- Communication --
+-------------------
+
+-- TODO
+ethCommunication :: Communication -> EthRes ()
+ethCommunication _ = return ()
+
 --------------
 -- Scenario --
 --------------
-
--- currently not used
 
 ethScenario :: Scenario -> EthRes ()
 ethScenario (Scen userName decls stms) = do
@@ -172,7 +179,9 @@ ethScenario (Scen userName decls stms) = do
   -- TODO: userName obsłużyć
   mapM_ ethScStm stms
 
--- Stm
+---------
+-- Stm --
+---------
 
 ethScStm :: Stm -> EthRes ()
 
@@ -183,7 +192,12 @@ ethScStm (SAss ident exp) = do
   addScen "\n"
 
 
--- Exp
+ethScStm stm = do
+  error $ "ethScStm not implemented for: " ++ show stm
+
+---------
+-- Exp --
+---------
 
 ethScExp :: Exp -> EthRes ()
 ethScExp (EStr str) = do
@@ -196,6 +210,9 @@ ethScExp (EInt x) = do
 
 ethScExp (EVar ident) = do
   ethScIdent ident
+
+ethScExp exp = do
+  error $ "ethScExp not implemented for: " ++ show exp
 
 -- CallArg
 ethScCallArg (AExp exp) = do
