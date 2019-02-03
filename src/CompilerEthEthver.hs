@@ -7,6 +7,7 @@ import AuxEthEthver
 import AuxEthver
 import ConstantsEthver
 import ExpEthEthver
+import ScenEthver
 
 ethTree :: Program -> (String, String)
 ethTree prog =
@@ -23,7 +24,7 @@ ethProgram (Prog _ constants contract communication scenarios) = do
 
   ethCommunication communication
   
-  mapM_ ethScenario scenarios
+  mapM_ scScenario scenarios
 
 -- Contract
 
@@ -169,74 +170,4 @@ ethFun (FunVL limit ident args stms) =
 ethCommunication :: Communication -> EthRes ()
 ethCommunication _ = return ()
 
---------------
--- Scenario --
---------------
 
-ethScenario :: Scenario -> EthRes ()
-ethScenario (Scen userName decls stms) = do
-  mapM_ ethDecl decls
-  -- TODO: userName obsłużyć
-  mapM_ ethScStm stms
-
----------
--- Stm --
----------
-
-ethScStm :: Stm -> EthRes ()
-
-ethScStm (SAss ident exp) = do
-  ethScIdent ident
-  addScen " = "
-  ethScExp exp
-  addScen "\n"
-
-
-ethScStm stm = do
-  error $ "ethScStm not implemented for: " ++ show stm
-
----------
--- Exp --
----------
-
-ethScExp :: Exp -> EthRes ()
-ethScExp (EStr str) = do
-  addScen "\""
-  addScen str
-  addScen "\""
-
-ethScExp (EInt x) = do
-  addScen (show x)
-
-ethScExp (EVar ident) = do
-  ethScIdent ident
-
-ethScExp exp = do
-  error $ "ethScExp not implemented for: " ++ show exp
-
--- CallArg
-ethScCallArg (AExp exp) = do
-  ethScExp exp
-
-ethScCallArg (ABra from value) = do
-  addScen "{from: "
-  ethScExp from
-  addScen ", value: "
-  ethScExp value
-  addScen "}"
-
-
--- Ident
-
-ethScIdents :: [Ident] -> EthRes ()
-ethScIdents [h] =
-  ethScIdent h
-
-ethScIdents (h:t) = do
-  ethScIdent h
-  addScen "."
-  ethScIdents t
-
-ethScIdent :: Ident -> EthRes ()
-ethScIdent (Ident ident) = do
-  addScen ident
