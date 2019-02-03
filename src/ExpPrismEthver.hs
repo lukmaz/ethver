@@ -476,6 +476,9 @@ verFullAss modifyModule (SAss lVarIdent (ESign args)) = do
             verStm modifyModule (SAss newIdent $ EVar rIdent)
 -}
 
+verFullAss modifyModule (SAss lVarIdent EGetMy) = do
+  mod <- modifyModule id
+  verStm modifyModule $ SAss lVarIdent (EInt $ number mod)
 
 verFullAss modifyModule (SAss lVarIdent rExp) = do
   lVarTyp <- findVarType lVarIdent
@@ -736,6 +739,7 @@ verExp modifyModule (EStr s) = verValExp modifyModule (EStr s)
 verExp modifyModule (EFinney x) = verValExp modifyModule (EInt x)
 verExp modifyModule ETrue = verValExp modifyModule ETrue
 verExp modifyModule EFalse = verValExp modifyModule EFalse
+verExp modifyModule EGetMy = verValExp modifyModule EGetMy
 
 verExp modifyModule (EVerS key signature vars) = verVerSig modifyModule key signature vars
 verExp modifyModule (EVerC cmtVar hash) = verCmt modifyModule cmtVar hash

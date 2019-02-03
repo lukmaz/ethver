@@ -109,6 +109,11 @@ verDecl modifyModule (Dec (TSig sigTypes) varIdent) = do
 verDecl modifyModule (Dec typ ident) = do
   addVar modifyModule typ ident
 
+verDecl modifyModule (DecInit typ ident EGetMy) = do
+  mod <- modifyModule id
+  addVar modifyModule typ ident
+  addInitialValue modifyModule ident $ EInt $ number mod
+
 verDecl modifyModule (DecInit typ ident value) = do
   addVar modifyModule typ ident
   addInitialValue modifyModule ident value

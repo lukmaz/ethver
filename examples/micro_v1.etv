@@ -58,7 +58,8 @@ communication {
 scenario U {
   uint(2) r2;
   bool endU;
-
+  address userAddress;
+  
   wait(payment_requested, 1);
   // TODO: && time_elapsed < 1?
   if (payment_requested) {
@@ -77,6 +78,8 @@ scenario M {
   bool winM;
   bool endM;
   bool signature_verified;
+  
+  address merchantAddress = getMyAddress();
 
   r1_cmt.randomCommitment();
 
@@ -87,7 +90,7 @@ scenario M {
     sigma_loc = comm_sigma;
     // TODO: moj adres jest wpisany na sztywno. Da sie zrobić coś w stylu msg.sender w scenariuszu?
     // Chyba wystarczy address[0]
-    if (verSig(0, sigma_loc, (hashOf(r1_cmt), r2_loc, 1))) {
+    if (verSig(escrowAddress, sigma_loc, (hashOf(r1_cmt), r2_loc, merchantAddress))) {
       signature_verified = true;
       r1_val = valueOf(r1_cmt);
       if (r1_val == r2_loc) { 
