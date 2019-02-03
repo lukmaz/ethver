@@ -26,7 +26,6 @@ MapDec.   Decl     ::= "mapping" "(" "address" "=>" Type ")" Ident ;
 terminator Decl ";" ;
 terminator Function "" ;
 
-ConstrEmp. Constructor ::= "" ;
 Constr.    Constructor ::= "constructor" "(" ")" "{" [Stm] "}" ;
 
 -- COMMUNICATION

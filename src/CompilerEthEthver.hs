@@ -18,7 +18,7 @@ ethProgram :: Program -> EthRes ()
 ethProgram (Prog _ constants contract communication scenarios) = do
   -- TODO: users?
   -- TODO: constants
-  addContr "pragma solidity ^0.4.24;\n"
+  addContr solPragma
   ethContract constants contract
   addContr "\n"
 
@@ -30,45 +30,48 @@ ethContract constants (Contr ident decls constr funs) = do
   addContr "contract "
   ethIdent ident
   addContr " {\n"
-  ethConstants constants
+  isTimed <- ethConstants constants
+  
   mapM_ ethDecl decls
   addContr "\n"
   
-  ethConstructor constr
+  ethConstructor constr isTimed
 
   if signaturesInContract decls funs 
-    then addContr codeHashMessage
+    then addContr solSigDefaultFunctions
     else return ()
 
   mapM_ ethFun funs
   
   addContr "}"
 
-ethConstants :: [ConstantDecl] -> EthRes ()
+ethConstants :: [ConstantDecl] -> EthRes Bool
 ethConstants constants = do
-  mapM_
-    (
-      \(Const ident val) -> 
-        if ident == (Ident sTimeDelta) 
-        then do
-          addContr $ "uint " ++ sContractStart ++ ";\n"
-          addContr $ "uint " ++ (unident ident) ++ " = "
-          ethInteger val
-          addContr ";\n"
-          ethConstructorOld
-        else return ()
-    )
-    constants
-
-ethConstructorOld :: EthRes ()
-ethConstructorOld = do
+  let 
+    filtered = filter
+      (\(Const ident val) -> ident == (Ident sTimeDelta))
+      constants
+  
+  case filtered of
+    [] -> return False
+    [Const ident val] -> do
+      addContr $ "uint " ++ sContractStart ++ ";\n"
+      addContr $ "uint " ++ (unident ident) ++ " = "
+      ethInteger val
+      addContr ";\n"
+      return True
+      
+ethConstructor :: Constructor -> Bool -> EthRes ()
+ethConstructor (Constr stms) isTimed = do 
   addContr "constructor() public {\n"
-  addContr $ sContractStart ++ " = " ++ sNow ++ ";\n"
-  addContr $ "}\n"
 
-ethConstructor :: Constructor -> EthRes ()
-ethConstructor (Constr stms) = 
-  return () -- TODO
+  mapM_ ethStm stms
+
+  if isTimed
+    then addContr $ sContractStart ++ " = " ++ sNow ++ ";\n"
+    else return ()
+
+  addContr $ "}\n\n"
 
 -- TODO
 ethCommunication :: Communication -> EthRes ()
@@ -110,7 +113,7 @@ ethArg (Ar (TCUInt x) ident) = do
   ethIdent ident
   addContr sCommitmentValSuffix
   addContr ", "
-  addContr "string"
+  addContr "string memory"
   addContr " "
   ethIdent ident
   addContr sCommitmentNonceSuffix
@@ -134,7 +137,7 @@ ethArgs = commaList ethArg addContr
 
 ethType :: Type -> EthRes ()
 ethType (TUInt x) = do
-  addContr "uint"
+  addContr "uint8"
 
 ethType TBool = do
   addContr "bool"
@@ -226,7 +229,7 @@ ethStm (SSend receiver value) = do
   ethExp receiver
   addContr ".transfer("
   ethExp value
-  addContr ");\n"
+  addContr " finney);\n"
 
 ethStm stm = do
   error $ (show stm) ++ ": ethStm not implemented for this statement"
@@ -293,7 +296,7 @@ ethExp (ETrue) = addContr "true"
 ethExp (EFalse) = addContr "false"
 
 ethExp (EVerS key sigVar _) = do
-  addContr "(ecrecover(msgHash, "
+  addContr "(ecrecover(_msgHash, "
   ethExp sigVar
   addContr "_v, "
   ethExp sigVar
@@ -311,14 +314,14 @@ ethCond cond =
   case verSigArgsFromCond cond of
     [] -> return ()
     args -> do
-      addContr "bytes32 msgHash = hashMessage(string(abi.encodePacked("
+      addContr solCondPrefix
       ethExp $ head args
       mapM_
         (\arg -> do
           addContr ", "
           ethExp arg)
         (tail args)
-      addContr ")));\n"
+      addContr solCondSuffix
     
 
 -- ethExp aux

@@ -154,18 +154,49 @@ iRandom = Ident sRandom
 
 iTimeElapsed = Ident sTimeElapsed
 
--- contract code
 
-codeHashMessage = 
-  "function hashMessage(string str) public pure returns (bytes32) {\n" ++
-  "  string memory header = \"\\x19Ethereum Signed Message:\\n\";\n" ++
-  "  uint len = bytes(str).length;\n" ++
-  "  uint enc_len = 0;\n" ++
-  "  uint mult = 1;\n" ++
-  "  while (len > 0) {\n" ++
-  "    enc_len += mult * ((len % 10) + 48);\n" ++
-  "    mult *= 256;\n" ++
-  "    len /= 10;\n" ++
+-- default .sol contract code
+solPragma = "pragma solidity ^0.5.2;\n"
+
+solSigDefaultFunctions = 
+  "function _topup() public payable {\n" ++
+  "  \n" ++
+  "}\n" ++
+  "\n" ++
+  "function _charToHexAscii(uint8 c) public pure returns (uint8) {\n" ++
+  "  if (c >= 0 && c <= 9) {\n" ++
+  "    return 30 + c;\n" ++
   "  }\n" ++
-  "  return keccak256(abi.encodePacked(header, uint24(enc_len), str));\n" ++
-  "}\n"
+  "  else if (c >= 10 && c <= 15) {\n" ++
+  "    return 61 + (c - 10);\n" ++
+  "  }\n" ++
+  "  else {\n" ++
+  "    return 42;\n" ++
+  "  }\n" ++
+  "}\n" ++
+  "\n" ++
+  "function _hexToBytes(bytes32 str) public pure returns (bytes memory) {\n" ++
+  "    bytes memory bytesArray = new bytes(64);\n" ++
+  "    uint8 t1;\n" ++
+  "    uint8 t2;\n" ++
+  "    for (uint i = 0; i < 32; i++) {\n" ++
+  "        t1 = _charToHexAscii(uint8(str[i]) >> 4);\n" ++
+  "        t2 = _charToHexAscii(uint8(str[i]) & 0xf);\n" ++
+  "        bytesArray[2 * i] = byte((t1 / 10) * 16 + t1 % 10);\n" ++
+  "        bytesArray[2 * i + 1] = byte((t2 / 10) * 16 + t2 % 10);\n" ++
+  "    }\n" ++
+  "    return bytesArray;\n" ++
+  "}\n" ++
+  "\n"
+
+solCondPrefix = 
+  "string memory header = \"\\x19Ethereum Signed Message:\\n69msg0x\";\n" ++
+  "bytes memory _dataHash = _hexToBytes(keccak256(abi.encodePacked("
+
+solCondSuffix = 
+  ")));\n" ++
+  "bytes32 _msgHash = keccak256(abi.encodePacked(header, _dataHash));\n" ++
+  "\n"
+
+
+
