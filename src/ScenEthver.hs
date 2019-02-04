@@ -38,7 +38,7 @@ scStm :: Stm -> EthRes ()
 
 scStm (SAss ident (ERand range)) = do
   scIdent ident
-  addScen $ " =  web3.utils.randomHex(32) % "
+  addScen $ " =  web3.utils.randomHex(6) % "
   scExp range
   addScen "\n\n"
 
@@ -114,7 +114,7 @@ scStm (SRCmt (EVar (Ident varName))) = do
   typ <- ethFindType (Ident varName)
   case typ of
     Just (TCUInt range) -> do
-      addScen $ varName ++ "_val = web3.utils.randomHex(32) % " ++ show range ++ "\n"
+      addScen $ varName ++ "_val = web3.utils.randomHex(6) % " ++ show range ++ "\n"
       addScen $ varName ++ "_nonce = web3.utils.randomHex(32)\n\n"
     _ -> 
       error $ "randomCommitment() can be called on TCUIint type only."
@@ -149,16 +149,16 @@ scExp (EVar ident) = do
   scIdent ident
 
 scExp (EHashOf (EVar (Ident varName))) = do
-  addScen $ "web3.utils.sha3(web3.utils.asciiToHex(" ++ varName ++ 
-    "_val) + web3.utils.asciiToHex(" ++ varName ++ "_nonce).substring(2))"
+  addScen $ "web3.utils.sha3(web3.utils.toHex(" ++ varName ++ 
+    "_val).substr(2) + web3.utils.toHex(" ++ varName ++ "_nonce))"
 
 scExp (EValOf (EVar (Ident varName))) = do
   addScen $ varName ++ "_val"
 
 scExp (EVerS (EVar (Ident key)) (EVar (Ident sigName)) args) = do
   addScen $ "web3.eth.accounts.recover(_ver_msg, " ++ 
-    sigName ++ ".v, " ++ sigName ++ ".r, " ++ sigName ++ ".s).toUpperCase() == " ++
-    key ++ ".toUpperCase()"
+    sigName ++ ".v, " ++ sigName ++ ".r, " ++ sigName ++ ".s).toLowerCase() == " ++
+    key ++ ".toLowerCase()"
 
 scExp (EStr str) = do
   addScen "\""
@@ -190,9 +190,9 @@ concatExp (EVar (Ident varName)) = do
   typ <- ethFindType (Ident varName)
   case typ of
     Just TAddr ->
-      addScen $ varName ++ ".substr(2)"
+      addScen $ varName ++ ".toLowerCase().substr(2)"
     Just (TUInt _) ->
-      addScen $ "web3.utils.padLeft(" ++ varName ++ ", 2)"
+      addScen $ "web3.utils.padLeft(web3.utils.toHex(" ++ varName ++ ").substr(2), 2)"
     Just THash ->
       addScen varName
     Just t ->
