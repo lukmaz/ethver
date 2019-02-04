@@ -79,7 +79,7 @@ scenario M {
   bool endM;
   bool signature_verified;
   
-  address merchantAddress = getMyAddress();
+  address merchantAddress = MY_ADDRESS;
 
   r1_cmt.randomCommitment();
 
@@ -94,7 +94,7 @@ scenario M {
       r1_val = valueOf(r1_cmt);
       if (r1_val == r2_loc) { 
         winM = true;
-        release.sendTransaction(r1_cmt, r2_loc, hashOf(r1_cmt), sigma_loc, {from: merchantAddress, value: 0});
+        release.sendTransaction(r1_cmt, r2_loc, hashOf(r1_cmt), sigma_loc, {from: MY_ADDRESS, value: 0});
       }
     }
   }

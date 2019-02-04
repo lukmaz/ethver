@@ -50,3 +50,38 @@ verSigArgsFromCond cond =
     ENot a -> verSigArgsFromCond a
     EVerS _ _ args -> args
     _ -> []
+
+rankExp :: Exp -> Integer
+rankExp exp = 
+  case exp of
+    EOr _ _     -> 0
+    EAnd _ _    -> 1
+    EEq _ _     -> 2 
+    ENe _ _     -> 2  
+    ELt _ _     -> 3  
+    ELe _ _     -> 3  
+    EGt _ _     -> 3  
+    EGe _ _     -> 3  
+    EAdd _ _    -> 4 
+    ESub _ _    -> 4 
+    EMul _ _    -> 5 
+    EDiv _ _    -> 5 
+    EMod _ _    -> 5 
+    ENeg _      -> 6 
+    ENot _      -> 6 
+    EArray _ _  -> 7
+    ERand _     -> 7
+    ESign _     -> 7
+    EVerS _ _ _ -> 7
+    EVerC _ _   -> 7
+    EValOf _    -> 7
+    EHashOf _   -> 7
+    EVar _      -> 7
+    EValue      -> 7
+    ESender     -> 7
+    EStr _      -> 7
+    EInt _      -> 7
+    EFinney _   -> 7
+    ETrue       -> 7
+    EFalse      -> 7
+    EGetMy      -> 7

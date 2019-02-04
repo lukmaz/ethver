@@ -129,19 +129,19 @@ scStm stm = do
 scExp :: Exp -> EthRes ()
 
 -- MATH
-scExp (EAnd e1 e2) = scBinOp "&&" e1 e2
-scExp (EOr e1 e2) = scBinOp "||" e1 e2
-scExp (EEq e1 e2) = scBinOp "==" e1 e2
-scExp (ENe e1 e2) = scBinOp "!=" e1 e2
-scExp (ELt e1 e2) = scBinOp "<" e1 e2
-scExp (ELe e1 e2) = scBinOp "<=" e1 e2
-scExp (EGt e1 e2) = scBinOp ">" e1 e2
-scExp (EGe e1 e2) = scBinOp ">=" e1 e2
-scExp (EAdd e1 e2) = scBinOp "+" e1 e2
-scExp (ESub e1 e2) = scBinOp "-" e1 e2
-scExp (EMul e1 e2) = scBinOp "*" e1 e2
-scExp (EDiv e1 e2) = scBinOp "/" e1 e2
-scExp (EMod e1 e2) = scBinOp "%" e1 e2
+scExp e@(EAnd e1 e2) = scBinOp "&&" e1 e2 $ rankExp e
+scExp e@(EOr e1 e2) = scBinOp "||" e1 e2 $ rankExp e
+scExp e@(EEq e1 e2) = scBinOp "==" e1 e2 $ rankExp e
+scExp e@(ENe e1 e2) = scBinOp "!=" e1 e2 $ rankExp e
+scExp e@(ELt e1 e2) = scBinOp "<" e1 e2 $ rankExp e
+scExp e@(ELe e1 e2) = scBinOp "<=" e1 e2 $ rankExp e
+scExp e@(EGt e1 e2) = scBinOp ">" e1 e2 $ rankExp e
+scExp e@(EGe e1 e2) = scBinOp ">=" e1 e2 $ rankExp e
+scExp e@(EAdd e1 e2) = scBinOp "+" e1 e2 $ rankExp e
+scExp e@(ESub e1 e2) = scBinOp "-" e1 e2 $ rankExp e
+scExp e@(EMul e1 e2) = scBinOp "*" e1 e2 $ rankExp e
+scExp e@(EDiv e1 e2) = scBinOp "/" e1 e2 $ rankExp e
+scExp e@(EMod e1 e2) = scBinOp "%" e1 e2 $ rankExp e
 scExp (ENeg e) = scUnOp "-" e
 scExp (ENot e) = scUnOp "!" e
 
@@ -222,16 +222,30 @@ scCond cond =
       addScen "\n\n"
 
       addScen "_ver_msg = \"msg\" + web3.utils.sha3(_ver_concat)\n\n"
- 
+
+scUnOp :: String -> Exp -> EthRes ()
 scUnOp op e = do
-  addScen $ op ++ " "
+  addScen $ op ++ "("
   scExp e
+  addScen ")"
 
-scBinOp op e1 e2 = do
-  scExp e1
+scBinOp :: String -> Exp -> Exp -> Integer -> EthRes ()
+scBinOp op e1 e2 rank = do
+  if rankExp e1 < rank
+    then do
+      addScen "("
+      scExp e1
+      addScen ")"
+    else
+      scExp e1
   addScen $ " " ++ op ++ " "
-  scExp e2
-
+  if rankExp e2 < rank
+    then do
+      addScen "("
+      scExp e2
+      addScen ")"
+    else
+      scExp e2
 
 scDecl :: Decl -> EthRes ()
 

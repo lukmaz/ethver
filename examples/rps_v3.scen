@@ -5,19 +5,19 @@
 cmtA_val = web3.utils.randomHex(6) % 3
 cmtA_nonce = web3.utils.randomHex(32)
 
-player_input.sendTransaction(web3.utils.sha3(web3.utils.toHex(cmtA_val).substr(2) + web3.utils.toHex(cmtA_nonce)), {from: "A", value: 1})
+player_input.sendTransaction(web3.utils.sha3(web3.utils.toHex(cmtA_val).substr(2) + web3.utils.toHex(cmtA_nonce)), {from: <MY_ADDRESS>, value: 1})
 
 <WAIT UNTIL (num_players == 2) IS TRUE OR 1 TIME_DELTA(s) HAS PASSED>
 
 if (num_players == 2)
 {
-open.sendTransaction(cmtA_val, cmtA_nonce, {from: "A", value: 0})
+open.sendTransaction(cmtA_val, cmtA_nonce, {from: <MY_ADDRESS>, value: 0})
 
 <WAIT UNTIL (has_revealed[0] && has_revealed[1]) IS TRUE OR 2 TIME_DELTA(s) HAS PASSED>
 
 }
 
-finalize.sendTransaction({from: "A", value: 0})
+finalize.sendTransaction({from: <MY_ADDRESS>, value: 0})
 
 endA = true
 
@@ -28,19 +28,19 @@ endA = true
 cmtB_val = web3.utils.randomHex(6) % 3
 cmtB_nonce = web3.utils.randomHex(32)
 
-player_input.sendTransaction(web3.utils.sha3(web3.utils.toHex(cmtB_val).substr(2) + web3.utils.toHex(cmtB_nonce)), {from: "B", value: 1})
+player_input.sendTransaction(web3.utils.sha3(web3.utils.toHex(cmtB_val).substr(2) + web3.utils.toHex(cmtB_nonce)), {from: <MY_ADDRESS>, value: 1})
 
 <WAIT UNTIL (num_players == 2) IS TRUE OR 1 TIME_DELTA(s) HAS PASSED>
 
 if (num_players == 2)
 {
-open.sendTransaction(cmtB_val, cmtB_nonce, {from: "B", value: 0})
+open.sendTransaction(cmtB_val, cmtB_nonce, {from: <MY_ADDRESS>, value: 0})
 
 <WAIT UNTIL (has_revealed[0] && has_revealed[1]) IS TRUE OR 2 TIME_DELTA(s) HAS PASSED>
 
 }
 
-finalize.sendTransaction({from: "B", value: 0})
+finalize.sendTransaction({from: <MY_ADDRESS>, value: 0})
 
 endB = true
 

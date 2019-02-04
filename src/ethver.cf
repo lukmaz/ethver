@@ -95,7 +95,7 @@ EInt.    Exp7 ::= Integer ;
 EFinney. Exp7 ::= "finney" "(" Integer ")" ;
 ETrue.   Exp7 ::= "true" ;
 EFalse.  Exp7 ::= "false" ;
-EGetMy.  Exp7 ::= "getMyAddress" "(" ")" ;
+EGetMy.  Exp7 ::= "MY_ADDRESS" ;
 
 _. Exp   ::= Exp1 ;
 _. Exp1  ::= Exp2 ;

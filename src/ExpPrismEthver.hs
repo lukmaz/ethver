@@ -907,6 +907,9 @@ verValExp _ ETrue =
 verValExp _ EFalse =
   return EFalse
 
+verValExp modifyModule exp = do
+  mod <- modifyModule id
+  return $ EInt $ number mod
 
 ------------
 -- Random --

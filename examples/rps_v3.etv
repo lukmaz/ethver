@@ -8,7 +8,6 @@ USER0_BALANCE_INIT = 1;
 USER1_BALANCE_INIT = 2;
 MAX_VALUE = 1;
 MAX_TIME = 2;
-MAX_COMMITMENTS = 2;
 TIME_DELTA = 3600;
 
 contract RPS {
@@ -36,7 +35,7 @@ contract RPS {
       reward = reward + msg.value;
       player_address[num_players] = msg.sender;
       commitment[num_players] = h;
-      committed[num_players] = true; // TODO: potrzebne?
+      committed[num_players] = true;
       num_players = num_players + 1;
     }
   }
@@ -84,13 +83,13 @@ scenario A {
   cmt_uint(3) cmtA;
   cmtA.randomCommitment();
 
-  player_input.sendTransaction(hashOf(cmtA), {from: "A", value: 1});
+  player_input.sendTransaction(hashOf(cmtA), {from: MY_ADDRESS, value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
-    open.sendTransaction(cmtA, {from: "A", value: 0});
+    open.sendTransaction(cmtA, {from: MY_ADDRESS, value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }
-  finalize.sendTransaction({from: "A", value: 0});
+  finalize.sendTransaction({from: MY_ADDRESS, value: 0});
   endA = true;
 }
 
@@ -99,12 +98,12 @@ scenario B {
   cmt_uint(3) cmtB;
   cmtB.randomCommitment();
 
-  player_input.sendTransaction(hashOf(cmtB), {from: "B", value: 1});
+  player_input.sendTransaction(hashOf(cmtB), {from: MY_ADDRESS, value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
-    open.sendTransaction(cmtB, {from: "B", value: 0});
+    open.sendTransaction(cmtB, {from: MY_ADDRESS, value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }
-  finalize.sendTransaction({from: "B", value: 0});
+  finalize.sendTransaction({from: MY_ADDRESS, value: 0});
   endB = true;
 }

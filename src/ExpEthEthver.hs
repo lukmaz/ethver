@@ -94,19 +94,19 @@ ethStm stm = do
 
 ethExp :: Exp -> EthRes ()
 -- MATH
-ethExp (EAnd e1 e2) = ethBinOp "&&" e1 e2
-ethExp (EOr e1 e2) = ethBinOp "||" e1 e2
-ethExp (EEq e1 e2) = ethBinOp "==" e1 e2
-ethExp (ENe e1 e2) = ethBinOp "!=" e1 e2
-ethExp (ELt e1 e2) = ethBinOp "<" e1 e2
-ethExp (ELe e1 e2) = ethBinOp "<=" e1 e2
-ethExp (EGt e1 e2) = ethBinOp ">" e1 e2
-ethExp (EGe e1 e2) = ethBinOp ">=" e1 e2
-ethExp (EAdd e1 e2) = ethBinOp "+" e1 e2
-ethExp (ESub e1 e2) = ethBinOp "-" e1 e2
-ethExp (EMul e1 e2) = ethBinOp "*" e1 e2
-ethExp (EDiv e1 e2) = ethBinOp "/" e1 e2
-ethExp (EMod e1 e2) = ethBinOpWithOnePar "%" e1 e2
+ethExp e@(EAnd e1 e2) = ethBinOp "&&" e1 e2 $ rankExp e
+ethExp e@(EOr e1 e2) = ethBinOp "||" e1 e2 $ rankExp e
+ethExp e@(EEq e1 e2) = ethBinOp "==" e1 e2 $ rankExp e
+ethExp e@(ENe e1 e2) = ethBinOp "!=" e1 e2 $ rankExp e
+ethExp e@(ELt e1 e2) = ethBinOp "<" e1 e2 $ rankExp e
+ethExp e@(ELe e1 e2) = ethBinOp "<=" e1 e2 $ rankExp e
+ethExp e@(EGt e1 e2) = ethBinOp ">" e1 e2 $ rankExp e
+ethExp e@(EGe e1 e2) = ethBinOp ">=" e1 e2 $ rankExp e
+ethExp e@(EAdd e1 e2) = ethBinOp "+" e1 e2 $ rankExp e
+ethExp e@(ESub e1 e2) = ethBinOp "-" e1 e2 $ rankExp e
+ethExp e@(EMul e1 e2) = ethBinOp "*" e1 e2 $ rankExp e
+ethExp e@(EDiv e1 e2) = ethBinOp "/" e1 e2 $ rankExp e
+ethExp e@(EMod e1 e2) = ethBinOp "%" e1 e2 $ rankExp e
 ethExp (ENeg e) = ethUnOp "-" e
 ethExp (ENot e) = ethUnOp "!" e
 
@@ -180,22 +180,29 @@ ethCond cond =
         (tail args)
       addContr solCondSuffix
     
-
+ethUnOp :: String -> Exp -> EthRes ()
 ethUnOp op e = do
-  addContr $ op ++ " "
+  addContr $ op ++ "("
   ethExp e
+  addContr ")"
 
--- TODO: hack only for %
-ethBinOpWithOnePar op e1 e2 = do
-  addContr "("
-  ethExp e1
-  addContr $ ") " ++ op ++ " "
-  ethExp e2
-
-ethBinOp op e1 e2 = do
-  ethExp e1
+ethBinOp :: String -> Exp -> Exp -> Integer -> EthRes ()
+ethBinOp op e1 e2 rank = do
+  if rankExp e1 < rank
+    then do
+      addContr "("
+      ethExp e1
+      addContr ")"
+    else
+      ethExp e1
   addContr $ " " ++ op ++ " "
-  ethExp e2
+  if rankExp e2 < rank
+    then do
+      addContr "("
+      ethExp e2
+      addContr ")"
+    else
+      ethExp e2
 
 ethInteger :: Integer -> EthRes ()
 ethInteger x =

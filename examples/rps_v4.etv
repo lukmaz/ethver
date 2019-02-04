@@ -96,15 +96,13 @@ scenario A {
   cmt_uint(3) cmtA;
   cmtA.randomCommitment();
 
-  player_input.sendTransaction(hashOf(cmtA), {from: "A", value: 1});
+  player_input.sendTransaction(hashOf(cmtA), {from: MY_ADDRESS, value: 1});
   wait(num_players == 2, 1);
-  if (num_players == 2 && (player_address[0] == 0 || player_address[1] == 0)) {
-    // opening of commitment takes place inside valueOf
-    //cmtA.openCommitment();
-    open.sendTransaction(cmtA, {from: "A", value: 0});
+  if (num_players == 2 && (player_address[0] == MY_ADDRESS || player_address[1] == MY_ADDRESS)) {
+    open.sendTransaction(cmtA, {from: MY_ADDRESS, value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }
-  finalize.sendTransaction({from: "A", value: 0});
+  finalize.sendTransaction({from: MY_ADDRESS, value: 0});
   endA = true;
 }
 
@@ -113,14 +111,12 @@ scenario B {
   cmt_uint(3) cmtB;
   cmtB.randomCommitment();
 
-  player_input.sendTransaction(hashOf(cmtB), {from: "B", value: 1});
+  player_input.sendTransaction(hashOf(cmtB), {from: MY_ADDRESS, value: 1});
   wait(num_players == 2, 1);
-  if (num_players == 2 && (player_address[0] == 1 || player_address[1] == 1)) {
-    // opening of commitment takes place inside valueOf
-    //cmtB.openCommitment();
-    open.sendTransaction(cmtB, {from: "B", value: 0});
+  if (num_players == 2 && (player_address[0] == MY_ADDRESS || player_address[1] == MY_ADDRESS)) {
+    open.sendTransaction(cmtB, {from: MY_ADDRESS, value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }
-  finalize.sendTransaction({from: "B", value: 0});
+  finalize.sendTransaction({from: MY_ADDRESS, value: 0});
   endB = true;
 }
