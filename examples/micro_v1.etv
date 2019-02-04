@@ -47,7 +47,7 @@ communication {
     payment_requested = true;
   }
 
-  function payment_issuance(hash iss_c_hash, uint(2) iss_r2, uint(2) iss_a) {
+  function payment_issuance(hash iss_c_hash, uint(2) iss_r2, address iss_a) {
     comm_r2 = iss_r2;
     comm_sigma = sign(iss_c_hash, iss_r2, iss_a);
     payment_issued = true;

@@ -24,7 +24,7 @@ ethProgram (Prog _ constants contract communication scenarios) = do
 
   ethCommunication communication
   
-  mapM_ scScenario scenarios
+  scScenarios scenarios
 
 -- Contract
 
@@ -166,8 +166,8 @@ ethFun (FunVL limit ident args stms) =
 -- Communication --
 -------------------
 
--- TODO
 ethCommunication :: Communication -> EthRes ()
-ethCommunication _ = return ()
-
+ethCommunication (Comm decls funs) = do
+  mapM_ scDecl decls
+  mapM_ addEthFun funs
 

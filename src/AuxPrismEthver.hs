@@ -32,6 +32,8 @@ maxRealTypeValue (TCUInt x) = EInt 1
 maxRealTypeValue TBool = ETrue
 maxRealTypeValue THash = EInt 1
 maxRealTypeValue (TSig _) = EInt 1
+maxRealTypeValue TAddr = EInt 1
+maxRealTypeValue t = error $ "type " ++ show t ++ " not supported by maxRealTypeValue"
 
 -- identFromComp
 

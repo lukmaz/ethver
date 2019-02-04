@@ -13,7 +13,8 @@ type EthRes a = State EthWorld a
 data EthWorld = EthWorld {
   contr :: String,
   scen :: String,
-  ethTypes :: Map.Map Ident Type
+  ethTypes :: Map.Map Ident Type,
+  ethFuns :: Map.Map Ident Function
 }
 
 
@@ -21,7 +22,9 @@ data EthWorld = EthWorld {
 
 emptyEthWorld :: EthWorld
 emptyEthWorld = EthWorld {contr = "", scen = "",
-  ethTypes = Map.empty}
+  ethTypes = Map.empty,
+  ethFuns = Map.empty
+  }
 
 
 -- WORLD MODIFICATION --
@@ -41,6 +44,13 @@ addEthVar ident typ = do
   world <- get
   put (world {ethTypes = Map.insert ident typ (ethTypes world)})
 
+addEthFun :: Function -> EthRes ()
+addEthFun fun@(Fun funIdent args stms) = do
+  mapM_ (\(Ar typ ident) -> addEthVar ident typ) args
+  
+  world <- get
+  put (world {ethFuns = Map.insert funIdent fun (ethFuns world)})
+
 -- AUX --
 
 commaList :: (a -> EthRes ()) -> (String -> EthRes ()) -> [a] -> EthRes ()
@@ -59,3 +69,9 @@ ethFindType :: Ident -> EthRes (Maybe Type)
 ethFindType ident = do
   world <- get
   return $ Map.lookup ident (ethTypes world)
+
+ethFindFun :: Ident -> EthRes (Maybe Function)
+ethFindFun ident = do
+  world <- get
+  return $ Map.lookup ident (ethFuns world)
+

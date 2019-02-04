@@ -8,6 +8,22 @@ import AuxEthEthver
 -- Scenario --
 --------------
 
+scScenarios :: [Scenario] -> EthRes ()
+scScenarios [scenario0, scenario1] = do
+  addScen $ "" ++
+    "---------------------------\n" ++
+    "-- First player scenario --\n" ++
+    "---------------------------\n\n"
+
+  scScenario scenario0
+
+  addScen $ "" ++
+    "----------------------------\n" ++
+    "-- Second player scenario --\n" ++
+    "----------------------------\n\n"
+
+  scScenario scenario1
+
 scScenario :: Scenario -> EthRes ()
 scScenario (Scen userName decls stms) = do
   mapM_ scDecl decls
@@ -25,6 +41,21 @@ scStm (SAss ident (ERand range)) = do
   addScen $ " =  web3.utils.randomHex(32) % "
   scExp range
   addScen "\n\n"
+
+scStm (SAss sigIdent (ESign args)) = do
+  addScen "_sign_concat = "
+  concatExp $ head args
+  mapM_
+    (\arg -> do
+      addScen " + "
+      concatExp arg)
+    (tail args)
+  addScen "\n\n"
+
+  addScen "_sign_msg = \"msg\" + web3.utils.sha3(_sign_concat)\n\n"
+
+  scIdent sigIdent
+  addScen $ " = web3.eth.accounts.sign(_sign_msg, <MY PRIVATE KEY>)\n\n"
 
 scStm (SAss ident exp) = do
   scIdent ident
@@ -64,16 +95,20 @@ scStm (SSendT (EVar funIdent) callArgs) = do
     (tail callArgs)
   addScen ")\n\n"
 
--- TODO
 scStm (SSendC (EVar funIdent) args) = do
-  addScen $ "TODO: " ++ show funIdent ++ ".sendCommunication not implemented.\n"
+  fun <- ethFindFun funIdent
+  case fun of
+    Just (Fun _ funArgs stms) -> do
+      mapM_ scAssignArg (zip funArgs args)
+      mapM_ scStm stms
+
 
 scStm (SWait cond time) = do
-  addScen $ "< WAIT UNTIL ("
+  addScen $ "<WAIT UNTIL ("
   scExp cond
   addScen $ ") IS TRUE OR "
   scExp time
-  addScen $ " TIME_DELTA(s) HAS PASSED >\n\n"
+  addScen $ " TIME_DELTA(s) HAS PASSED>\n\n"
 
 scStm (SRCmt (EVar (Ident varName))) = do
   typ <- ethFindType (Ident varName)
@@ -121,8 +156,8 @@ scExp (EValOf (EVar (Ident varName))) = do
   addScen $ varName ++ "_val"
 
 scExp (EVerS (EVar (Ident key)) (EVar (Ident sigName)) args) = do
-  addScen $ "web3.eth.accounts.recover(_msg, " ++ 
-    sigName ++ ".v, " ++ sigName ++ ".r" ++ sigName ++ ".s).toUpperCase() == " ++
+  addScen $ "web3.eth.accounts.recover(_ver_msg, " ++ 
+    sigName ++ ".v, " ++ sigName ++ ".r, " ++ sigName ++ ".s).toUpperCase() == " ++
     key ++ ".toUpperCase()"
 
 scExp (EStr str) = do
@@ -136,7 +171,8 @@ scExp (EInt x) = do
 scExp ETrue = addScen "true"
 scExp EFalse = addScen "false"
 
-scExp EGetMy = addScen "< MY_ADDRESS >"
+scExp EGetMy = addScen "<MY_ADDRESS>"
+scExp ESender = addScen "<MY_ADDRESS>"
 
 scExp exp = do
   error $ "scExp not implemented for: " ++ show exp
@@ -157,6 +193,8 @@ concatExp (EVar (Ident varName)) = do
       addScen $ varName ++ ".substr(2)"
     Just (TUInt _) ->
       addScen $ "web3.utils.padLeft(" ++ varName ++ ", 2)"
+    Just THash ->
+      addScen varName
     Just t ->
       error $ "Type " ++ show t ++ " not supported by concatExp."
     Nothing ->
@@ -168,16 +206,16 @@ scCond cond =
   case verSigArgsFromCond cond of
     [] -> return ()
     args -> do
-      addScen "_concat = "
+      addScen "_ver_concat = "
       concatExp $ head args
       mapM_
         (\arg -> do
           addScen " + "
           concatExp arg)
         (tail args)
-      addScen "\n"
+      addScen "\n\n"
 
-      addScen "_msg = \"msg\" + web3.utils.sha3(_concat)\n\n"
+      addScen "_ver_msg = \"msg\" + web3.utils.sha3(_ver_concat)\n\n"
  
 scUnOp op e = do
   addScen $ op ++ " "
@@ -202,8 +240,10 @@ scDecl x =
   error $ "scDecl not implemented for " ++ show x
 
 -- CallArg
-scCallArg (AExp exp) = do
-  scExp exp
+scCallArg :: CallArg -> EthRes ()
+
+scCallArg (AExp exp) =
+  scCallArgExp exp
 
 scCallArg (ABra from value) = do
   addScen "{from: "
@@ -211,6 +251,21 @@ scCallArg (ABra from value) = do
   addScen ", value: "
   scExp value
   addScen "}"
+
+scCallArgExp :: Exp -> EthRes ()
+
+scCallArgExp (EVar varIdent@(Ident varName)) = do
+  typ <- ethFindType varIdent
+  case typ of
+    Just (TCUInt _) ->
+      addScen $ varName ++ "_val, " ++ varName ++ "_nonce"
+    Just (TSig _) -> do
+      addScen $ varName ++ ".v, " ++ varName ++ ".r, " ++ varName ++ ".s"
+    _ ->
+      scExp $ EVar varIdent
+
+scCallArgExp (EHashOf (EVar varIdent)) = do
+  scExp (EHashOf (EVar varIdent))
 
 
 -- Ident
@@ -227,3 +282,9 @@ scIdents (h:t) = do
 scIdent :: Ident -> EthRes ()
 scIdent (Ident ident) = do
   addScen ident
+
+scAssignArg :: (Arg, Exp) -> EthRes ()
+scAssignArg ((Ar typ ident), arg) = do
+  case typ of
+    _ -> do
+      scStm (SAss ident arg)
