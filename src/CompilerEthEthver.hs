@@ -81,18 +81,14 @@ ethConstructor (Constr stms) isTimed = do
 ethDecl :: Decl -> EthRes ()
 ethDecl (Dec typ ident) = do
   ethType typ
-  case typ of 
-    TAddr -> addContr " payable"
-    _ -> return ()
+  addPayable typ
   addContr " public "
   ethIdent ident
   addContr ";\n"
 
 ethDecl (DecInit typ ident value) = do
   ethType typ
-  case typ of 
-    TAddr -> addContr " payable"
-    _ -> return ()
+  addPayable typ
   addContr " public "
   ethIdent ident
   addContr " = "
@@ -101,19 +97,28 @@ ethDecl (DecInit typ ident value) = do
 
 ethDecl (ArrDec typ ident size) = do
   ethType typ
+  addPayable typ
   addContr "["
   ethInteger size
-  addContr "] public "
+  addContr "]"
+  addContr " public "
   ethIdent ident
   addContr ";\n"
 
 ethDecl (MapDec typ ident) = do
   addContr "mapping(address => "
   ethType typ
-  addContr ") public "
+  addContr ")"
+  addContr " public "
   ethIdent ident
   addContr ";\n"
 
+addPayable :: Type -> EthRes ()
+addPayable typ = do
+  case typ of 
+    TAddr -> addContr " payable"
+    _ -> return ()
+    
 ethArg :: Arg -> EthRes ()
 ethArg (Ar (TCUInt x) ident) = do
   addContr "uint8 "

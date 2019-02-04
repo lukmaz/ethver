@@ -7,7 +7,7 @@ import ConstantsEthver
 
 ethType :: Type -> EthRes ()
 ethType (TUInt x) = do
-  addContr "uint8"
+  addContr "uint"
 
 ethType TBool = do
   addContr "bool"
@@ -78,7 +78,11 @@ ethStm (SSend receiver value) = do
 
   addContr ".transfer("
   ethExp value
-  addContr " finney);\n"
+  case value of
+    EValue -> return ()
+    EInt _ -> addContr " finney"
+    _ -> return ()
+  addContr ");\n"
 
 ethStm stm = do
   error $ (show stm) ++ ": ethStm not implemented for this statement"
