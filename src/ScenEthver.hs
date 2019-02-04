@@ -148,6 +148,12 @@ scExp (ENot e) = scUnOp "!" e
 scExp (EVar ident) = do
   scIdent ident
 
+scExp (EArray ident index) = do
+  scIdent ident
+  addScen "["
+  scExp index
+  addScen "]"
+
 scExp (EHashOf (EVar (Ident varName))) = do
   addScen $ "web3.utils.sha3(web3.utils.toHex(" ++ varName ++ 
     "_val).substr(2) + web3.utils.toHex(" ++ varName ++ "_nonce))"

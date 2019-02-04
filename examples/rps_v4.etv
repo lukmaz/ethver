@@ -23,6 +23,10 @@ contract RPS {
   bool committed[2]; // 0 - player who first joined the game
   bool has_revealed[2];
   mapping(address => bool) in_game;
+  
+  constructor() {
+
+  }
 
   function_with_value player_input(hash h) {
     if (num_players >= 2 || msg.value != finney(1) || time_elapsed > 0) {
