@@ -13,21 +13,27 @@ USER0_BALANCE_INIT = 0;
 USER1_BALANCE_INIT = 0;
 MAX_VALUE = 1;
 MAX_TIME = 2;
+TIME_DELTA = 3600;
 
 contract Micropay {
   uint(2) pot = 1;
   uint(2) r1_loc;
+  address escrowAddress;
+
   uint(3) winning_tickets = 0;
   uint(3) deposit = 2;
+  
+  constructor() {
+    escrowAddress = msg.sender;
+  }
 
   function_limit 2 release(cmt_uint(2) rel_c_cmt, uint(2) rel_r2, hash rel_c_hash, signature(cmt_uint(2), uint(2), uint(2)) rel_sigma) {
     r1_loc = valueOf(rel_c_cmt);
     if (verCommitment(rel_c_cmt, rel_c_hash) && (r1_loc == rel_r2) &&
-        verSig(0, rel_sigma, (rel_c_hash, rel_r2, msg.sender))) {
+        verSig(escrowAddress, rel_sigma, (rel_c_hash, rel_r2, msg.sender))) {
       if (winning_tickets < 2) {
         winning_tickets = winning_tickets + 1;
       }
-      // TODO: czy ten if jest potrzebny?
       if (pot > 0) {
         msg.sender.send(1);
         pot = pot - 1;
@@ -44,8 +50,7 @@ contract Micropay {
 
   function release_deposit() {
     if (time_elapsed >= 2 && deposit >= 2) {
-      // TODO: to 0 brzydko wygląda
-      0.send(2);
+      escrowAddress.send(2);
       deposit = deposit - 2;
     }
   }
@@ -68,7 +73,7 @@ communication {
     payment_requested = true;
   }
 
-  function payment_issuance(hash iss_c_hash, uint(2) iss_r2, uint(2) iss_a) {
+  function payment_issuance(hash iss_c_hash, uint(2) iss_r2, address iss_a) {
     comm_r2 = iss_r2;
     comm_sigma = sign(iss_c_hash, iss_r2, iss_a);
     payment_issued = true;
@@ -100,6 +105,8 @@ scenario M {
   bool winM;
   bool endM;
   bool signature_verified;
+  
+  address merchantAddress = getMyAddress();
 
   r1_cmt.randomCommitment();
 
@@ -109,12 +116,12 @@ scenario M {
     r2_loc = comm_r2;
     sigma_loc = comm_sigma;
     // TODO: moj adres jest wpisany na sztywno. Da sie zrobić coś w stylu msg.sender w scenariuszu?
-    if (verSig(0, sigma_loc, (hashOf(r1_cmt), r2_loc, 1))) {
+    if (verSig(escrowAddress, sigma_loc, (hashOf(r1_cmt), r2_loc, merchantAddress))) {
       signature_verified = true;
       r1_val = valueOf(r1_cmt);
       if (r1_val == r2_loc) { 
         winM = true;
-        release.sendTransaction(r1_cmt, r2_loc, hashOf(r1_cmt), sigma_loc, {from: "M", value: 0});
+        release.sendTransaction(r1_cmt, r2_loc, hashOf(r1_cmt), sigma_loc, {from: merchantAddress, value: 0});
         wait(balance1 >= 1, 1);
         if ((balance1 < 1) && (winning_tickets >= 2)) {
           burn.sendTransaction({from: "M", value: 0});

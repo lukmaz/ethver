@@ -8,6 +8,7 @@ USER0_BALANCE_INIT = 0;
 USER1_BALANCE_INIT = 0;
 MAX_VALUE = 1;
 MAX_TIME = 2;
+TIME_DELTA = 3600;
 
 contract Micropay {
   uint(2) pot = 1;
@@ -58,8 +59,7 @@ communication {
 scenario U {
   uint(2) r2;
   bool endU;
-  address userAddress;
-  
+
   wait(payment_requested, 1);
   // TODO: && time_elapsed < 1?
   if (payment_requested) {
@@ -89,7 +89,6 @@ scenario M {
     r2_loc = comm_r2;
     sigma_loc = comm_sigma;
     // TODO: moj adres jest wpisany na sztywno. Da sie zrobić coś w stylu msg.sender w scenariuszu?
-    // Chyba wystarczy address[0]
     if (verSig(escrowAddress, sigma_loc, (hashOf(r1_cmt), r2_loc, merchantAddress))) {
       signature_verified = true;
       r1_val = valueOf(r1_cmt);

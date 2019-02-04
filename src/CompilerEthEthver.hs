@@ -81,12 +81,18 @@ ethConstructor (Constr stms) isTimed = do
 ethDecl :: Decl -> EthRes ()
 ethDecl (Dec typ ident) = do
   ethType typ
+  case typ of 
+    TAddr -> addContr " payable"
+    _ -> return ()
   addContr " public "
   ethIdent ident
   addContr ";\n"
 
 ethDecl (DecInit typ ident value) = do
   ethType typ
+  case typ of 
+    TAddr -> addContr " payable"
+    _ -> return ()
   addContr " public "
   ethIdent ident
   addContr " = "

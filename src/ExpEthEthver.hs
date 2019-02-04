@@ -72,7 +72,10 @@ ethStm (SReturn exp) = do
   addContr ";\n"
 
 ethStm (SSend receiver value) = do
-  ethExp receiver
+  case receiver of
+    (EStr "null") -> addContr "address(uint160(0))"
+    _ -> ethExp receiver
+
   addContr ".transfer("
   ethExp value
   addContr " finney);\n"
