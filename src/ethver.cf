@@ -114,6 +114,7 @@ AExp.   CallArg ::= Exp ;
 ABra.   CallArg ::= "{" "from" ":" Exp "," "value" ":" Exp "}" ;
 
 TUInt.   Type ::= "uint" "(" Integer ")" ;
+TCash.   Type ::= "cash" "(" Integer ")" ;
 TBool.   Type ::= "bool" ;
 TCUInt.  Type ::= "cmt_uint" "(" Integer ")" ;
 TSig.    Type ::= "signature" "(" [Type] ")" ;

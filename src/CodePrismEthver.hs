@@ -205,6 +205,7 @@ prismUpdate senderIdent (ident, exp) =
 
 prismShowType :: Type -> String
 prismShowType (TUInt x) = "[0.." ++ (show $ x - 1) ++ "]" 
+prismShowType (TCash x) = prismShowType (TUInt x)
 prismShowType (TCUInt x) = "[0.." ++ (show $ x + 1) ++ "]"
 prismShowType (TSig x) = "[0.." ++ (show x) ++ "]"
 --prismShowType TSig = "[0.." ++ (show sMaxSignatures) ++ "]"
@@ -270,6 +271,9 @@ prismShowExp _ (EArray ident (EInt x)) =
 
 prismShowExp _ (EInt x) = 
   show x
+
+prismShowExp senderIdent (EFinney x) =
+  prismShowExp senderIdent (EInt x)
 
 prismShowExp _ (EStr s) =
   s

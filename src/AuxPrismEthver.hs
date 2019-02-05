@@ -11,6 +11,7 @@ minTypeValue :: Type -> Integer
 minTypeValue typ = 
   case typ of
     (TUInt x) -> 0
+    (TCash x) -> 0
     (TCUInt x) -> 0
     (TSig x) ->  0
     TBool ->  0
@@ -19,6 +20,7 @@ minTypeValue typ =
 
 maxTypeValue :: Type -> Integer
 maxTypeValue (TUInt x) = (x - 1)
+maxTypeValue (TCash x) = (x - 1)
 maxTypeValue (TCUInt x) = (x + 1)
 maxTypeValue TBool = 1
 maxTypeValue TAddr = 1
@@ -28,6 +30,7 @@ maxTypeValue (TSig _) = error $ "maxTypeValue should not be used with TSig _"
 
 maxRealTypeValue :: Type -> Exp
 maxRealTypeValue (TUInt x) = EInt (x - 1)
+maxRealTypeValue (TCash x) = EInt (x - 1)
 maxRealTypeValue (TCUInt x) = EInt 1
 maxRealTypeValue TBool = ETrue
 maxRealTypeValue THash = EInt 1

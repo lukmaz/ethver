@@ -11,7 +11,7 @@ MAX_TIME = 2;
 TIME_DELTA = 3600;
 
 contract Micropay {
-  uint(2) pot = 1;
+  cash(2) pot = finney(1);
   uint(2) r1_loc;
   address escrowAddress;
 
@@ -24,8 +24,8 @@ contract Micropay {
     if (verCommitment(rel_c_cmt, rel_c_hash) && (r1_loc == rel_r2) &&
         verSig(escrowAddress, rel_sigma, (rel_c_hash, rel_r2, msg.sender))) {
       if (pot > 0) {
-        msg.sender.send(1);
-        pot = pot - 1;
+        msg.sender.send(finney(1));
+        pot = pot - finney(1);
       }
     }
   }

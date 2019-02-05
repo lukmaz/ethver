@@ -7,6 +7,9 @@ import ConstantsEthver
 
 ethType :: Type -> EthRes ()
 ethType (TUInt x) = do
+  addContr "uint8"
+
+ethType (TCash x) = do
   addContr "uint"
 
 ethType TBool = do
