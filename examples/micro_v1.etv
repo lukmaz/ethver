@@ -40,8 +40,6 @@ communication {
   address comm_a;
   signature(cmt_uint(2), uint(2), uint(2)) comm_sigma;
 
-  // function copy_commitment?
-
   function payment_request(hash req_c_hash) {
     comm_c_hash = req_c_hash;
     comm_a = msg.sender;
@@ -61,7 +59,6 @@ scenario U {
   bool endU;
 
   wait(payment_requested, 1);
-  // TODO: && time_elapsed < 1?
   if (payment_requested) {
     r2 = random(2);
     payment_issuance.sendCommunication(comm_c_hash, r2, comm_a);
@@ -88,7 +85,6 @@ scenario M {
   if (payment_issued && time_elapsed < 1) {
     r2_loc = comm_r2;
     sigma_loc = comm_sigma;
-    // TODO: moj adres jest wpisany na sztywno. Da sie zrobić coś w stylu msg.sender w scenariuszu?
     if (verSig(escrowAddress, sigma_loc, (hashOf(r1_cmt), r2_loc, merchantAddress))) {
       signature_verified = true;
       r1_val = valueOf(r1_cmt);

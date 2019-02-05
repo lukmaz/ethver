@@ -1,8 +1,8 @@
-Pmin=? [ F endM&balance1>=1 ]
+Pmin=? [ F endM & balance1 >= 1 ]
 
-Pmax=? [ F endM&balance1>=1 ]
+Pmax=? [ F endM & balance1 >= 1 ]
 
-Pmax=? [ F balance1>=1 ]
+Pmax=? [ F balance1 >= 1 ]
 
-Pmax=? [ F endM&signature_verified&balance1<1&balance0>=2 ]
+Pmax=? [ F endM & signature_verified & balance1 < 1 & balance0 >= 2 ]
 

@@ -17,11 +17,6 @@ contract RPS {
   uint(3) p0;
   uint(3) p1;
   cash(3) reward;
-  uint(2) player_num;
-  hash commitment[2];
-
-  bool committed[2]; // 0 - player who first joined the game
-  bool has_revealed[2];
 
   constructor() {
 

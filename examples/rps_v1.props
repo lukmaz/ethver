@@ -1,4 +1,4 @@
-Pmin=? [ F endA&balance0>=2 ]
+Pmin=? [ F endA & balance0 >= 2 ]
 
-Pmin=? [ F endA&balance0>=1 ]
+Pmin=? [ F endA & balance0 >= 1 ]
 
