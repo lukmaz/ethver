@@ -33,7 +33,7 @@ contract RPS {
 
 	function finalize() {
     if (time_elapsed > 0 && num_players == 1) {
-      player_address[0].send(1);
+      player_address[0].send(reward);
     }
     if (num_players == 2) {
       p0 = player_choice[0];

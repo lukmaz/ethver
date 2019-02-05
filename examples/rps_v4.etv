@@ -64,10 +64,10 @@ contract RPS {
       player_address[1].send(reward);
     }
     else if (time_elapsed > 0 && committed[0] && !committed[1]) {
-      player_address[0].send(1);
+      player_address[0].send(reward);
     }
     else if (time_elapsed > 0 && !committed[0] && committed[1]) {
-      player_address[1].send(1);
+      player_address[1].send(reward);
     }
     
     else if (has_revealed[0] && has_revealed[1]) {
