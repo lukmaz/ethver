@@ -14,9 +14,9 @@ contract RPS {
   uint(3) num_players;
   address player_address[2];
   uint(3) player_choice[2];
-  uint(3) p0; // player who first joined the game
+  uint(3) p0;
   uint(3) p1;
-  uint(3) reward;
+  cash(3) reward;
   uint(2) player_num;
   hash commitment[2];
 
