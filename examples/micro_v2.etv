@@ -18,6 +18,8 @@ contract Micropay {
   uint(3) winning_tickets = 0;
   cash(3) deposit = finney(2);
   
+  hash winning_hash;
+  
   constructor() {
     escrowAddress = msg.sender;
   }
@@ -26,8 +28,12 @@ contract Micropay {
     r1_loc = valueOf(rel_c_cmt);
     if (verCommitment(rel_c_cmt, rel_c_hash) && (r1_loc == rel_r2) &&
         verSig(escrowAddress, rel_sigma, (rel_c_hash, rel_r2, msg.sender))) {
-      if (winning_tickets < 2) {
-        winning_tickets = winning_tickets + 1;
+      if (winning_tickets == 0) {
+        winning_tickets = 1;
+        winning_hash = rel_c_hash;
+      }
+      if (winning_tickets == 1 && rel_c_hash != winning_hash) {
+        winning_tickets = 2;
       }
       if (pot > 0) {
         msg.sender.send(finney(1));
