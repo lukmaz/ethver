@@ -161,23 +161,6 @@ verStm modifyModule (SWhile cond whileBlock) = do
 
   return ()
 
-verStm modifyModule (SBreak) = do
-  mod <- modifyModule id
-  addCustomTrans
-    modifyModule
-    ""
-    (currState mod)
-    (head $ breakStates mod)
-    []
-    -- TODO: Alive?
-    [([], [Alive])]
-
-  mod <- modifyModule id
-  let newState = numStates mod + 1
-  modifyModule (setCurrState newState)
-  modifyModule (setNumStates newState)
-  return ()
-
 verStm modifyModule (SBlock stms) = do
   mapM_ (verStm modifyModule) stms
 
@@ -273,9 +256,6 @@ verStm modifyModule (SRCmt (EArray arrIdent ESender)) = do
     nr = senderNumber world
     varIdent = Ident $ unident arrIdent ++ "_" ++ show nr
   verStm modifyModule (SRCmt (EVar varIdent))
-
--- SOCmt not used directly; moved to ValueOf
-{-verStm modifyModule (SOCmt (EVar cmtVar)) = do -}
 
 verStm modifyModule (SWait cond time) = do
   evalCond <- verExp modifyModule cond
