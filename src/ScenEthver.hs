@@ -287,6 +287,8 @@ scCallArgExp (EVar varIdent@(Ident varName)) = do
 scCallArgExp (EHashOf (EVar varIdent)) = do
   scExp (EHashOf (EVar varIdent))
 
+scCallArgExp (EInt x) = do
+  scExp $ EInt x
 
 -- Ident
 

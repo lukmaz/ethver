@@ -27,9 +27,9 @@ contract RPS {
 
   }
 
-  function_with_value player_input(hash h) {
+  function player_input(hash h) public payable {
     if (num_players >= 2 || msg.value != finney(1) || time_elapsed > 0) {
-      msg.sender.send(msg.value);
+      msg.sender.transfer(msg.value);
     }
     else if (num_players < 2 && msg.value == finney(1) && time_elapsed == 0) {
       reward = reward + msg.value;
@@ -40,7 +40,7 @@ contract RPS {
     }
   }
 
-  function open(cmt_uint(3) cmt) {
+  function open(cmt_uint(3) cmt) public {
     if (msg.sender == player_address[0]) {
       player_num = 0;
     }
@@ -53,25 +53,25 @@ contract RPS {
     }
   }
 
-	function finalize() {
+	function finalize() public {
     if (time_elapsed > 0 && committed[0] && !committed[1]) {
-      player_address[0].send(reward);
+      player_address[0].transfer(reward);
     }
     else if (time_elapsed > 0 && !committed[0] && committed[1]) {
-      player_address[1].send(reward);
+      player_address[1].transfer(reward);
     }
     else if (has_revealed[0] && has_revealed[1]) {
       p0 = player_choice[0];
       p1 = player_choice[1];
       if ((((3 + p0) - p1) % 3) == 1) {
-        player_address[0].send(reward);
+        player_address[0].transfer(reward);
       }
       if ((((3 + p0) - p1) % 3) == 2) {
-        player_address[1].send(reward);
+        player_address[1].transfer(reward);
       }
       if ((((3 + p0) - p1) % 3) == 0) {
-        player_address[0].send(reward/2);
-        player_address[1].send(reward/2);
+        player_address[0].transfer(reward/2);
+        player_address[1].transfer(reward/2);
       }
     }
   }

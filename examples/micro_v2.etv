@@ -17,41 +17,46 @@ contract Micropay {
 
   uint(3) winning_tickets = 0;
   cash(3) deposit = finney(2);
-  
   hash winning_hash;
   
   constructor() {
     escrowAddress = msg.sender;
   }
 
-  function release(cmt_uint(2) rel_c_cmt, uint(2) rel_r2, hash rel_c_hash, signature(cmt_uint(2), uint(2), uint(2)) rel_sigma) {
+  function release(cmt_uint(2) rel_c_cmt, uint(2) rel_r2, 
+      hash rel_c_hash, 
+      signature(cmt_uint(2), uint(2), uint(2)) rel_sigma) 
+      public {
     r1_loc = valueOf(rel_c_cmt);
-    if (verCommitment(rel_c_cmt, rel_c_hash) && (r1_loc == rel_r2) &&
-        verSig(escrowAddress, rel_sigma, (rel_c_hash, rel_r2, msg.sender))) {
+    if (verCommitment(rel_c_cmt, rel_c_hash) && 
+        (r1_loc == rel_r2) &&
+        verSig(escrowAddress, rel_sigma, (rel_c_hash, rel_r2, 
+          msg.sender))) {
       if (winning_tickets == 0) {
         winning_tickets = 1;
         winning_hash = rel_c_hash;
       }
-      if (winning_tickets == 1 && rel_c_hash != winning_hash) {
+      if (winning_tickets == 1 && rel_c_hash != winning_hash) 
+      {
         winning_tickets = 2;
       }
       if (pot > 0) {
-        msg.sender.send(finney(1));
+        msg.sender.transfer(finney(1));
         pot = pot - finney(1);
       }
     }
   }
 
-  function burn() {
+  function burn() public {
     if ((winning_tickets >= 2) && (deposit >= finney(2))) {
-      "null".send(finney(2));
+      "null".transfer(finney(2));
       deposit = deposit - finney(2);
     }
   }
 
-  function release_deposit() {
+  function release_deposit() public {
     if (time_elapsed >= 2 && deposit >= finney(2)) {
-      escrowAddress.send(finney(2));
+      escrowAddress.transfer(finney(2));
       deposit = deposit - finney(2);
     }
   }
@@ -66,13 +71,14 @@ communication {
   address comm_a;
   signature(cmt_uint(2), uint(2), uint(2)) comm_sigma;
 
-  function payment_request(hash req_c_hash) {
+  function payment_request(hash req_c_hash) public {
     comm_c_hash = req_c_hash;
     comm_a = msg.sender;
     payment_requested = true;
   }
 
-  function payment_issuance(hash iss_c_hash, uint(2) iss_r2, address iss_a) {
+  function payment_issuance(hash iss_c_hash, uint(2) iss_r2, 
+      address iss_a) public {
     comm_r2 = iss_r2;
     comm_sigma = sign(iss_c_hash, iss_r2, iss_a);
     payment_issued = true;
@@ -87,10 +93,12 @@ scenario U {
   wait(payment_requested, 1);
   if (payment_requested) {
     r2 = random(2);
-    payment_issuance.sendCommunication(comm_c_hash, r2, comm_a);
+    payment_issuance.sendCommunication(comm_c_hash, r2, 
+      comm_a);
   }
   wait(false, 2);
-  release_deposit.sendTransaction({from: MY_ADDRESS, value: 0});
+  release_deposit.sendTransaction({from: MY_ADDRESS, 
+    value: 0});
 
   endU = true;
 }
@@ -113,12 +121,15 @@ scenario M {
   if (payment_issued && time_elapsed < 1) {
     r2_loc = comm_r2;
     sigma_loc = comm_sigma;
-    if (verSig(escrowAddress, sigma_loc, (hashOf(r1_cmt), r2_loc, merchantAddress))) {
+    if (verSig(escrowAddress, sigma_loc, (hashOf(r1_cmt), 
+        r2_loc, merchantAddress))) {
       signature_verified = true;
       r1_val = valueOf(r1_cmt);
       if (r1_val == r2_loc) { 
         winM = true;
-        release.sendTransaction(r1_cmt, r2_loc, hashOf(r1_cmt), sigma_loc, {from: MY_ADDRESS, value: 0});
+        release.sendTransaction(r1_cmt, r2_loc, 
+            hashOf(r1_cmt), sigma_loc, 
+            {from: MY_ADDRESS, value: 0});
         wait(balance1 >= 1, 1);
         if ((balance1 < 1) && (winning_tickets >= 2)) {
           burn.sendTransaction({from: MY_ADDRESS, value: 0});

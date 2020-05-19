@@ -36,9 +36,9 @@ Comm.  Communication ::= "communication" "{" [Decl] [Function] "}" ;
 
 Scen.  Scenario ::= "scenario" Ident "{" [Decl] [Stm] "}" ;
 
-Fun.      Function ::= "function" Ident "(" [Arg] ")" "{" [Stm] "}" ;
+Fun.      Function ::= "function" Ident "(" [Arg] ")" "public" "{" [Stm] "}" ;
 FunL.     Function ::= "function_limit" Integer Ident "(" [Arg] ")" "{" [Stm] "}" ;
-FunV.     Function ::= "function_with_value" Ident "(" [Arg] ")" "{" [Stm] "}" ;
+FunV.     Function ::= "function" Ident "(" [Arg] ")" "public" "payable" "{" [Stm] "}" ;
 FunVL.    Function ::= "function_with_value_limit" Integer Ident "(" [Arg] ")" "{" [Stm] "}" ;
 
 Ar.   Arg  ::= Type Ident ;
@@ -53,7 +53,7 @@ SIf.     Stm ::= "if" "(" Exp ")" Stm ;
 SIfElse. Stm ::= "if" "(" Exp ")" Stm "else" Stm ;
 SWhile.  Stm ::= "while" "(" Exp ")" Stm ;
 SReturn. Stm ::= "return" Exp  ";" ;
-SSend.   Stm ::= Exp "." "send" "(" Exp ")" ";" ;
+SSend.   Stm ::= Exp "." "transfer" "(" Exp ")" ";" ;
 SSendT.  Stm ::= Exp "." "sendTransaction" "(" [CallArg] ")" ";" ;
 SSendC.  Stm ::= Exp "." "sendCommunication" "(" [Exp] ")" ";" ;
 SRCmt.   Stm ::= Exp "." "randomCommitment" "(" ")" ";" ;

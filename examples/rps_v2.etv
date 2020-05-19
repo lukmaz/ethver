@@ -22,9 +22,9 @@ contract RPS {
 
   }
 
-  function_with_value player_input(uint(3) choice) {
+  function player_input(uint(3) choice) public payable {
     if (num_players >= 2 || msg.value != finney(1)) {
-      msg.sender.send(msg.value);
+      msg.sender.transfer(msg.value);
     }
     if (num_players < 2 && msg.value == finney(1)) {
       reward = reward + msg.value;
@@ -34,22 +34,22 @@ contract RPS {
     }
   }
 
-	function finalize() {
+  function finalize() public {
     if (time_elapsed > 0 && num_players == 1) {
-      player_address[0].send(reward);
+      player_address[0].transfer(reward);
     }
     if (num_players == 2) {
       p0 = player_choice[0];
       p1 = player_choice[1];
       if ((((3 + p0) - p1) % 3) == 1) {
-        player_address[0].send(reward);
+        player_address[0].transfer(reward);
       }
       if ((((3 + p0) - p1) % 3) == 2) {
-        player_address[1].send(reward);
+        player_address[1].transfer(reward);
       }
       if ((((3 + p0) - p1) % 3) == 0) {
-        player_address[0].send(reward/2);
-        player_address[1].send(reward/2);
+        player_address[0].transfer(reward/2);
+        player_address[1].transfer(reward/2);
       }
     }
   }
@@ -63,7 +63,8 @@ scenario A {
   bool endA;
   uint(3) choiceA;
   choiceA = random(3);
-  player_input.sendTransaction(choiceA, {from: MY_ADDRESS, value: 1});
+  player_input.sendTransaction(choiceA, 
+    {from: MY_ADDRESS, value: 1});
   wait(num_players == 2, 1);
   finalize.sendTransaction({from: MY_ADDRESS, value: 0});
   endA = true;
@@ -73,7 +74,8 @@ scenario B {
   bool endB;
   uint(3) choiceB;
   choiceB = random(3);
-  player_input.sendTransaction(choiceB, {from: MY_ADDRESS, value: 1});
+  player_input.sendTransaction(choiceB, 
+    {from: MY_ADDRESS, value: 1});
   wait(num_players == 2, 1);
   finalize.sendTransaction({from: MY_ADDRESS, value: 0});
   endB = true;
