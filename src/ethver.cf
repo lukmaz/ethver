@@ -49,7 +49,6 @@ SArrAss. Stm ::= Ident "[" Exp "]" "=" Exp ";" ;
 SIf.     Stm ::= "if" "(" Exp ")" Stm ;
 SIfElse. Stm ::= "if" "(" Exp ")" Stm "else" Stm ;
 SWhile.  Stm ::= "while" "(" Exp ")" Stm ;
-SReturn. Stm ::= "return" Exp  ";" ;
 SSend.   Stm ::= Exp "." "transfer" "(" Exp ")" ";" ;
 SSendT.  Stm ::= Exp "." "sendTransaction" "(" [CallArg] ")" ";" ;
 SSendC.  Stm ::= Exp "." "sendCommunication" "(" [Exp] ")" ";" ;

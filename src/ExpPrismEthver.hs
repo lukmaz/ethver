@@ -28,11 +28,6 @@ verStm modifyModule (SAss ident exp) =
 verStm modifyModule (SArrAss ident index exp) =
   verFullAss modifyModule (SArrAss ident index exp)
 
-verStm modifyModule (SReturn exp) = do
-  evalExp <- verExp modifyModule exp 
-  world <- get 
-  verStm modifyModule (SAss (head $ returnVar world) evalExp)
-
 -- TODO: zrobić, żeby return wychodziło z wykonania bieżącej funkcji
 verStm modifyModule (SIf cond ifBlock) = do
   evalCond <- verExp modifyModule cond

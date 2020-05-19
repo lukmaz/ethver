@@ -69,11 +69,6 @@ ethStm (SIfElse cond stm1 stm2) = do
   addContr "else\n"
   ethStm stm2
 
-ethStm (SReturn exp) = do
-  addContr "return "
-  ethExp exp
-  addContr ";\n"
-
 ethStm (SSend receiver value) = do
   case receiver of
     (EStr "null") -> addContr "address(uint160(0))"
