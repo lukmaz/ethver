@@ -43,7 +43,6 @@ Ar.   Arg  ::= Type Ident ;
 
 separator  Arg "," ;
 
--- SExp.    Stm ::= Exp ";" ;
 SBlock.  Stm ::= "{" [Stm] "}" ;
 SAss.    Stm ::= Ident "=" Exp ";" ;
 SArrAss. Stm ::= Ident "[" Exp "]" "=" Exp ";" ;
@@ -78,7 +77,6 @@ EMod.    Exp5 ::= Exp5 "%" Exp6 ;
 ENeg.    Exp6 ::= "-" Exp7 ;
 ENot.    Exp6 ::= "!" Exp7 ;
 EArray.  Exp7 ::= Ident "[" Exp "]" ;
---ECall.   Exp7 ::= Ident "." "call" "(" [Exp] ")" ;
 ERand.   Exp7 ::= "random" "(" Exp ")" ;
 ESign.   Exp7 ::= "sign" "(" [Exp] ")" ;
 EVerS.   Exp7 ::= "verSig" "(" Exp "," Exp "," "(" [Exp] ")" ")" ;
@@ -95,17 +93,7 @@ ETrue.   Exp7 ::= "true" ;
 EFalse.  Exp7 ::= "false" ;
 EGetMy.  Exp7 ::= "MY_ADDRESS" ;
 
-_. Exp   ::= Exp1 ;
-_. Exp1  ::= Exp2 ;
-_. Exp2  ::= Exp3 ;
-_. Exp3  ::= Exp4 ;
-_. Exp4  ::= Exp5 ;
-_. Exp5  ::= Exp6 ;
-_. Exp6  ::= Exp7 ;
-_. Exp7  ::= Exp8 ;
--- _. Exp8  ::= "(" Exp ")" ;
-
-coercions Exp 8 ;
+coercions Exp 7 ;
 separator CallArg "," ;
 
 AExp.   CallArg ::= Exp ;
