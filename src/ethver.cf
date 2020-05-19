@@ -37,9 +37,7 @@ Comm.  Communication ::= "communication" "{" [Decl] [Function] "}" ;
 Scen.  Scenario ::= "scenario" Ident "{" [Decl] [Stm] "}" ;
 
 Fun.      Function ::= "function" Ident "(" [Arg] ")" "public" "{" [Stm] "}" ;
-FunL.     Function ::= "function_limit" Integer Ident "(" [Arg] ")" "{" [Stm] "}" ;
 FunV.     Function ::= "function" Ident "(" [Arg] ")" "public" "payable" "{" [Stm] "}" ;
-FunVL.    Function ::= "function_with_value_limit" Integer Ident "(" [Arg] ")" "{" [Stm] "}" ;
 
 Ar.   Arg  ::= Type Ident ;
 

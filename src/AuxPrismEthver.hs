@@ -157,13 +157,7 @@ generateValueUpdates :: Function -> Integer -> Exp -> [[(Ident, Exp)]]
 generateValueUpdates (Fun funName _ _) _ _ = 
   [[]]
 
-generateValueUpdates (FunL _ funName _ _) _ _ =
-  [[]]
-
-generateValueUpdates (FunV funName args stms) nr value =
-  generateValueUpdates (FunVL (-1) funName args stms) nr value
-
-generateValueUpdates (FunVL _ funName _ _) nr value =
+generateValueUpdates (FunV funName _ _) nr value =
   [[(Ident $ unident funName ++ sValueSuffix ++ (show nr), value)]]
   
 expFromBool :: Bool -> Exp
@@ -178,22 +172,16 @@ intFromExp (EInt x) = Just x
 intFromExp _ = Nothing
 
 getFunName :: Function -> Ident
-getFunName (FunVL _ name _ _) = name
-getFunName (FunL _ name _ _) = name
 getFunName (FunV name _ _) = name
 getFunName (Fun name _ _) = name
 
 getFunArgs :: Function -> [Arg]
-getFunArgs (FunVL _ _ args _) = args
-getFunArgs (FunL _ _ args _) = args
 getFunArgs (FunV _ args _) = args
 getFunArgs (Fun _ args _) = args
 
 commitmentInArguments :: Function -> Bool
 
 commitmentInArguments (FunV name args stms) = commitmentInArguments (Fun name args stms)
-commitmentInArguments (FunL _ name args stms) = commitmentInArguments (Fun name args stms)
-commitmentInArguments (FunVL _ name args stms) = commitmentInArguments (Fun name args stms)
 
 commitmentInArguments (Fun _ args _) = 
   any 
@@ -206,8 +194,6 @@ commitmentInArguments (Fun _ args _) =
 commitmentFromArguments :: Function -> Ident
 
 commitmentFromArguments (FunV name args stms) = commitmentFromArguments (Fun name args stms)
-commitmentFromArguments (FunL _ name args stms) = commitmentFromArguments (Fun name args stms)
-commitmentFromArguments (FunVL _ name args stms) = commitmentFromArguments (Fun name args stms)
 
 commitmentFromArguments (Fun _ args _) = 
   case filter 
@@ -222,8 +208,6 @@ commitmentFromArguments (Fun _ args _) =
 hashInArguments :: Function -> Bool
 
 hashInArguments (FunV name args stms) = hashInArguments (Fun name args stms)
-hashInArguments (FunL _ name args stms) = hashInArguments (Fun name args stms)
-hashInArguments (FunVL _ name args stms) = hashInArguments (Fun name args stms)
 
 hashInArguments (Fun _ args _) = 
   any 
@@ -236,8 +220,6 @@ hashInArguments (Fun _ args _) =
 signatureInArguments :: Function -> Bool
 
 signatureInArguments (FunV name args stms) = signatureInArguments (Fun name args stms)
-signatureInArguments (FunL _ name args stms) = signatureInArguments (Fun name args stms)
-signatureInArguments (FunVL _ name args stms) = signatureInArguments (Fun name args stms)
 
 signatureInArguments (Fun _ args _) = 
   any 
@@ -250,8 +232,6 @@ signatureInArguments (Fun _ args _) =
 signatureFromArguments :: Function -> Ident
 
 signatureFromArguments (FunV name args stms) = signatureFromArguments (Fun name args stms)
-signatureFromArguments (FunL _ name args stms) = signatureFromArguments (Fun name args stms)
-signatureFromArguments (FunVL _ name args stms) = signatureFromArguments (Fun name args stms)
 
 signatureFromArguments (Fun _ args _) = 
   case filter 

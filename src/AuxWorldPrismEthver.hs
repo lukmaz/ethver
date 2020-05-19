@@ -268,17 +268,11 @@ addAdversarialTranss funs whichPrefix whichState = do
 
 addAdversarialTranssToPlayer :: ModifyModuleType -> String -> Ident -> Function -> VerRes ()
 
-addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunV (Ident funName) args stms) = do
-  addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunVL (-1) (Ident funName) args stms)
+addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunV (Ident funName) args _) = do
+  generateAdvTranssNew modifyModule whichPrefix whichState True (-1) funName args
 
-addAdversarialTranssToPlayer modifyModule whichPrefix whichState (Fun (Ident funName) args x) = 
-  addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunL (-1) (Ident funName) args x)
-
-addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunVL limit (Ident funName) args _) = do
-  generateAdvTranssNew modifyModule whichPrefix whichState True limit funName args
-
-addAdversarialTranssToPlayer modifyModule whichPrefix whichState (FunL limit (Ident funName) args _) = do
-  generateAdvTranssNew modifyModule whichPrefix whichState False limit funName args
+addAdversarialTranssToPlayer modifyModule whichPrefix whichState (Fun (Ident funName) args _) = do
+  generateAdvTranssNew modifyModule whichPrefix whichState False (-1) funName args
 
 generateAdvTranssNew :: ModifyModuleType -> String -> Ident -> Bool -> Integer -> String -> [Arg] -> VerRes ()
 generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName argsOrig = do

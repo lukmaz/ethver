@@ -26,9 +26,7 @@ signaturesInFunction :: Function -> Bool
 signaturesInFunction fun =
   case fun of
     Fun _ args _ -> checkArgs args 
-    FunL _ _ args _ -> checkArgs args 
     FunV _ args _ -> checkArgs args 
-    FunVL _ _ args _ -> checkArgs args 
     where
       checkArgs :: [Arg] -> Bool
       checkArgs args = any signaturesInArg args
