@@ -60,9 +60,9 @@ scenario A {
   bool endA;
   uint(3) choiceA;
   choiceA = random(3);
-  player_input.sendTransaction(choiceA, {from: MY_ADDRESS, value: 1});
+  player_input.sendTransaction(choiceA, {value: 1});
   wait(num_players == 2, 1);
-  finalize.sendTransaction({from: MY_ADDRESS, value: 0});
+  finalize.sendTransaction({value: 0});
   endA = true;
 }
 
@@ -70,8 +70,8 @@ scenario B {
   bool endB;
   uint(3) choiceB;
   choiceB = random(3);
-  player_input.sendTransaction(choiceB, {from: MY_ADDRESS, value: 1});
+  player_input.sendTransaction(choiceB, {value: 1});
   wait(num_players == 2, 1);
-  finalize.sendTransaction({from: MY_ADDRESS, value: 0});
+  finalize.sendTransaction({value: 0});
   endB = true;
 }

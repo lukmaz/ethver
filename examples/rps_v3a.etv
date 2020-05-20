@@ -86,13 +86,13 @@ scenario A {
   cmt_uint(3) cmtA;
   cmtA.randomCommitment();
 
-  player_input.sendTransaction(hashOf(cmtA), {from: MY_ADDRESS, value: 1});
+  player_input.sendTransaction(hashOf(cmtA), {value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
-    open.sendTransaction(cmtA, {from: MY_ADDRESS, value: 0});
+    open.sendTransaction(cmtA, {value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }
-  finalize.sendTransaction({from: MY_ADDRESS, value: 0});
+  finalize.sendTransaction({value: 0});
   endA = true;
 }
 
@@ -101,12 +101,12 @@ scenario B {
   cmt_uint(3) cmtB;
   cmtB.randomCommitment();
 
-  player_input.sendTransaction(hashOf(cmtB), {from: MY_ADDRESS, value: 1});
+  player_input.sendTransaction(hashOf(cmtB), {value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
-    open.sendTransaction(cmtB, {from: MY_ADDRESS, value: 0});
+    open.sendTransaction(cmtB, {value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }
-  finalize.sendTransaction({from: MY_ADDRESS, value: 0});
+  finalize.sendTransaction({value: 0});
   endB = true;
 }

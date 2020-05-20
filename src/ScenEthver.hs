@@ -265,9 +265,9 @@ scCallArg :: CallArg -> EthRes ()
 scCallArg (AExp exp) =
   scCallArgExp exp
 
-scCallArg (ABra from value) = do
+scCallArg (ABra value) = do
   addScen "{from: "
-  scExp from
+  scExp EGetMy
   addScen ", value: "
   scExp value
   addScen "}"

@@ -968,7 +968,7 @@ verSendTAux modifyModule funName argsVals = do
         expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
         value = 
           case (last argsVals) of 
-            (ABra _ value) -> value
+            (ABra value) -> value
         updates0 = generateValueUpdates fun (number mod) value
         addAssignment acc (argName, argVal) = acc ++ createAssignments (number mod) funName argName argVal
       

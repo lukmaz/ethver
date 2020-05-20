@@ -94,7 +94,7 @@ coercions Exp 7 ;
 separator CallArg "," ;
 
 AExp.   CallArg ::= Exp ;
-ABra.   CallArg ::= "{" "from" ":" Exp "," "value" ":" Exp "}" ;
+ABra.   CallArg ::= "{" "value" ":" Exp "}" ;
 
 TUInt.   Type ::= "uint" "(" Integer ")" ;
 TCash.   Type ::= "cash" "(" Integer ")" ;

@@ -99,7 +99,7 @@ scenario M {
         winM = true;
         release.sendTransaction(r1_cmt, r2_loc, 
             hashOf(r1_cmt), sigma_loc, 
-            {from: MY_ADDRESS, value: 0});
+            {value: 0});
       }
     }
   }
