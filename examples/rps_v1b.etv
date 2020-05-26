@@ -23,7 +23,7 @@ contract RPS {
   }
 
   function player_input(uint(3) choice) public payable {
-    if (num_players < 2 && msg.value == finney(1)) {
+    if ((num_players < 2) && msg.value == finney(1)) {
       reward = reward + msg.value;
       player_address[num_players] = msg.sender;
       player_choice[num_players] = choice;
@@ -32,7 +32,7 @@ contract RPS {
   }
 
 	function finalize() public {
-    if (time_elapsed > 0 && num_players == 1) {
+    if ((time_elapsed > 0) && num_players == 1) {
       player_address[0].transfer(reward);
     }
     if (num_players == 2) {

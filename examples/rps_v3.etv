@@ -28,10 +28,10 @@ contract RPS {
   }
 
   function player_input(hash h) public payable {
-    if (num_players >= 2 || msg.value != finney(1)) {
+    if ((num_players >= 2) || msg.value != finney(1)) {
       msg.sender.transfer(msg.value);
     }
-    else if (num_players < 2 && msg.value == finney(1)) {
+    else if ((num_players < 2) && msg.value == finney(1)) {
       reward = reward + msg.value;
       player_address[num_players] = msg.sender;
       commitment[num_players] = h;
@@ -47,15 +47,15 @@ contract RPS {
     else if (msg.sender == player_address[1]) {
       player_num = 1;
     }
-    if (committed[player_num] && !has_revealed[player_num] 
+    if (committed[player_num] && (!has_revealed[player_num]) 
         && verCommitment(cmt, commitment[player_num])) {
       has_revealed[player_num] = true;
-      player_choice[player_num] = valueOf(cmt);
+      player_choice[player_num] = cmt.val;
     }
   }
 
   function finalize() public {
-    if (time_elapsed > 0 && num_players == 1) {
+    if ((time_elapsed > 0) && num_players == 1) {
       player_address[0].transfer(reward);
     }
     if (has_revealed[0] && has_revealed[1]) {
@@ -84,7 +84,7 @@ scenario A {
   cmt_uint(3) cmtA;
   cmtA.randomCommitment();
 
-  player_input.sendTransaction(hashOf(cmtA), 
+  player_input.sendTransaction(cmtA.hash, 
     {value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
@@ -100,7 +100,7 @@ scenario B {
   cmt_uint(3) cmtB;
   cmtB.randomCommitment();
 
-  player_input.sendTransaction(hashOf(cmtB), 
+  player_input.sendTransaction(cmtB.hash, 
     {value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
