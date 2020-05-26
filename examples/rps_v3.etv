@@ -88,7 +88,7 @@ scenario A {
     {value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
-    //cmtA.reveal();
+    cmtA.reveal();
     open.sendTransaction(cmtA, {value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }
@@ -105,7 +105,7 @@ scenario B {
     {value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
-    //cmtB.reveal();
+    cmtB.reveal();
     open.sendTransaction(cmtB, {value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }

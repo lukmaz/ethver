@@ -108,6 +108,7 @@ scenario A {
   wait(num_players == 2, 1);
   if ((num_players == 2) && ((player_address[0] == MY_ADDRESS) 
       || (player_address[1] == MY_ADDRESS))) {
+    cmtA.reveal();
     open.sendTransaction(cmtA, {value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }
@@ -125,6 +126,7 @@ scenario B {
   wait(num_players == 2, 1);
   if ((num_players == 2) && ((player_address[0] == MY_ADDRESS) 
       || (player_address[1] == MY_ADDRESS))) {
+    cmtB.reveal();
     open.sendTransaction(cmtB, {value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }
