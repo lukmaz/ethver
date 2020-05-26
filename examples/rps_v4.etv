@@ -22,7 +22,6 @@ contract RPS {
 
   bool committed[2];
   bool has_revealed[2];
-  mapping(address => bool) in_game;
   
   constructor() {
 
@@ -40,7 +39,6 @@ contract RPS {
       commitment[num_players] = h;
       committed[num_players] = true;
       num_players = num_players + 1;
-      in_game[msg.sender] = true;
     }
   }
 
@@ -101,7 +99,6 @@ communication {
 scenario A {
   bool endA;
   bool joinedA;
-  bool revealingA;
   cmt_uint(3) cmtA;
   cmtA.randomCommitment();
 
@@ -111,7 +108,6 @@ scenario A {
   if ((num_players == 2) && ((player_address[0] == MY_ADDRESS) 
       || (player_address[1] == MY_ADDRESS))) {
     joinedA = true;
-    revealingA = true;
     cmtA.reveal();
     open.sendTransaction(cmtA, {value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);

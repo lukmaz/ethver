@@ -16,7 +16,7 @@ contract Micropay {
   address escrowAddress;
 
   constructor() {
-    escrowAddress = msg_sender;
+    escrowAddress = msg.sender;
   }
 
   function release(cmt_uint(2) rel_c_cmt, uint(2) rel_r2, 
@@ -26,9 +26,9 @@ contract Micropay {
     r1_loc = valueOf(rel_c_cmt);
     if (verCommitment(rel_c_cmt, rel_c_hash) && 
         (r1_loc == rel_r2) && verSig(escrowAddress, rel_sigma, 
-          (rel_c_hash, rel_r2, msg_sender))) {
+          (rel_c_hash, rel_r2, msg.sender))) {
       if (pot > 0) {
-        msg_sender.transfer(finney(1));
+        msg.sender.transfer(finney(1));
         pot = pot - finney(1);
       }
     }
@@ -46,7 +46,7 @@ communication {
 
   function payment_request(hash req_c_hash) public {
     comm_c_hash = req_c_hash;
-    comm_a = msg_sender;
+    comm_a = msg.sender;
     payment_requested = true;
   }
 
