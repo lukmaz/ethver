@@ -50,7 +50,7 @@ contract RPS {
     if (committed[player_num] && (!has_revealed[player_num]) 
         && verCommitment(cmt, commitment[player_num])) {
       has_revealed[player_num] = true;
-      player_choice[player_num] = cmt.val;
+      player_choice[player_num] = valueOf(cmt);
     }
   }
 
@@ -84,10 +84,11 @@ scenario A {
   cmt_uint(3) cmtA;
   cmtA.randomCommitment();
 
-  player_input.sendTransaction(cmtA.hash, 
+  player_input.sendTransaction(hashOf(cmtA), 
     {value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
+    //cmtA.reveal();
     open.sendTransaction(cmtA, {value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }
@@ -100,10 +101,11 @@ scenario B {
   cmt_uint(3) cmtB;
   cmtB.randomCommitment();
 
-  player_input.sendTransaction(cmtB.hash, 
+  player_input.sendTransaction(hashOf(cmtB), 
     {value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
+    //cmtB.reveal();
     open.sendTransaction(cmtB, {value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }

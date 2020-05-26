@@ -53,6 +53,7 @@ SSend.   Stm ::= Exp "." "transfer" "(" Exp ")" ";" ;
 SSendT.  Stm ::= Exp "." "sendTransaction" "(" [CallArg] ")" ";" ;
 SSendC.  Stm ::= Exp "." "sendCommunication" "(" [Exp] ")" ";" ;
 SRCmt.   Stm ::= Exp "." "randomCommitment" "(" ")" ";" ;
+SRRev.   Stm ::= Exp "." "reveal" "(" ")" ";" ;
 SWait.   Stm ::= "wait" "(" Exp "," Exp ")" ";" ;
 
 terminator Stm "" ;
@@ -74,13 +75,13 @@ EMod.    Exp5 ::= Exp5 "%" Exp6 ;
 ENeg.    Exp6 ::= "-" Exp6 ;
 ENot.    Exp6 ::= "!" Exp6 ;
 ERand.   Exp6 ::= "random" "(" Exp6 ")" ;
-ESign.   Exp6 ::= "sign" "(" [Exp6] ")" ;
+ESign.   Exp6 ::= "sign" "(" [Exp] ")" ;
 EVerS.   Exp6 ::= "verSig" "(" Exp "," Exp "," "(" [Exp] ")" ")" ;
 EVerC.   Exp6 ::= "verCommitment" "(" Exp "," Exp ")" ;
 EFinney. Exp6 ::= "finney" "(" Integer ")" ;
 EArray.  Exp7 ::= Ident "[" Exp "]" ;
-EValOf.  Exp7 ::= Exp7 "." "val" ;
-EHashOf. Exp7 ::= Exp7 "." "hash" ;
+EValOf.  Exp7 ::= "valueOf" "(" Exp7 ")" ;
+EHashOf. Exp7 ::= "hashOf" "(" Exp7 ")" ;
 EValue.  Exp8 ::= "msg.value" ;
 ESender. Exp8 ::= "msg.sender" ;
 EVar.    Exp8 ::= Ident ;
@@ -89,6 +90,15 @@ EInt.    Exp8 ::= Integer ;
 ETrue.   Exp8 ::= "true" ;
 EFalse.  Exp8 ::= "false" ;
 EGetMy.  Exp8 ::= "MY_ADDRESS" ;
+
+_. Exp   ::= Exp1 ;
+_. Exp1  ::= Exp2 ;
+_. Exp2  ::= Exp3 ;
+_. Exp3  ::= Exp4 ;
+_. Exp4  ::= Exp5 ;
+_. Exp5  ::= Exp6 ;
+_. Exp6  ::= Exp7 ;
+_. Exp7  ::= Exp8 ;
 
 _.       Exp8 ::= "(" Exp ")" ;
 
