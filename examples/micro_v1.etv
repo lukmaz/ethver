@@ -95,7 +95,6 @@ scenario M {
         r2_loc, merchantAddress))) {
       signature_verified = true;
       //r1_cmt.reveal();
-      r1_cmt.randomCommitment();
       r1_val = valueOf(r1_cmt);
       if (r1_val == r2_loc) { 
         winM = true;
