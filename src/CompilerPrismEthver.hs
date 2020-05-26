@@ -452,13 +452,14 @@ verScenario modifyModule decls stms = do
   -- Extra transs added manually without CS --
   --------------------------------------------
 
-  case cmtRange world of
+  -- TODO: no longer needed with new commitments
+  {-case cmtRange world of
     Just _ -> do
       -- add openCommitment transactions without commstate=1 etc.
-      -- TODO: no longer needed with new commitments
       -- addHonestOpenCmtTrans modifyModule
     Nothing ->
       return ()
+  -}
 
   case sigType world of
     Just _ -> do
