@@ -23,7 +23,7 @@ contract Micropay {
       hash rel_c_hash, 
       signature(cmt_uint(2), uint(2), uint(2)) rel_sigma) 
       public {
-    r1_loc = valueOf(rel_c_cmt);
+    r1_loc = rel_c_cmt.val;
     if (verCommitment(rel_c_cmt, rel_c_hash) && 
         (r1_loc == rel_r2) && verSig(escrowAddress, rel_sigma, 
           (rel_c_hash, rel_r2, msg.sender))) {
@@ -86,19 +86,19 @@ scenario M {
 
   r1_cmt.randomCommitment();
 
-  payment_request.sendCommunication(hashOf(r1_cmt));
+  payment_request.sendCommunication(r1_cmt.hash);
   wait(payment_issued, 1);
   if (payment_issued && time_elapsed < 1) {
     r2_loc = comm_r2;
     sigma_loc = comm_sigma;
-    if (verSig(escrowAddress, sigma_loc, (hashOf(r1_cmt), 
+    if (verSig(escrowAddress, sigma_loc, (r1_cmt.hash, 
         r2_loc, merchantAddress))) {
       signature_verified = true;
-      r1_val = valueOf(r1_cmt);
+      r1_val = r1_cmt.val;
       if (r1_val == r2_loc) { 
         winM = true;
         release.sendTransaction(r1_cmt, r2_loc, 
-            hashOf(r1_cmt), sigma_loc, 
+            r1_cmt.hash, sigma_loc, 
             {value: 0});
       }
     }
