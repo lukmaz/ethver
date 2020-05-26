@@ -99,6 +99,9 @@ verDecl modifyModule (Dec (TCUInt range) varIdent) = do
   addCmtIdVar modifyModule varIdent
   addInitialValue modifyModule varIdent (EInt $ number mod)
 
+  -- add a bool variable to save the info if the commitment is revealed
+  addVar modifyModule TBool $ Ident $ unident varIdent ++ sRevealedSuffix 
+
 verDecl modifyModule (Dec (TSig sigTypes) varIdent) = do
   addGlobalSignatures (TSig sigTypes)
 

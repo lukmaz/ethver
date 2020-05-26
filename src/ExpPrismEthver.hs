@@ -315,7 +315,7 @@ verWithCommitment modifyModule cmtVar stmFromIdent = do
 
 -- TODO: cmtExp is ignored and sender opens his own commitment
 verReveal :: ModifyModuleType -> Exp -> VerRes ()
-verReveal modifyModule _ = do
+verReveal modifyModule (EVar varIdent) = do
   mod <- modifyModule id
   world <- get
   let
@@ -324,7 +324,9 @@ verReveal modifyModule _ = do
 
   case cmtRange world of
     Just range -> do
-      let newState = numStates mod + 1
+      let
+        newState = numStates mod + 1
+        revealed = Ident $ unident varIdent ++ sRevealedSuffix
 
       -- committed -> random
       addCustomTrans
@@ -334,7 +336,7 @@ verReveal modifyModule _ = do
         newState
         [EEq (EVar cmtIdent) (EInt range)]
         (foldl
-          (\acc x -> acc ++ [([(cmtIdent, EInt x)], [Alive])])
+          (\acc x -> acc ++ [([(cmtIdent, EInt x), (revealed, ETrue)], [Alive])])
           []
           [0..(range - 1)]
         )
