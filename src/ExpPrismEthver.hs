@@ -279,6 +279,9 @@ verStm modifyModule (SWait cond time) = do
     -- TODO: Alive?
     [([], [Alive])]
 
+verStm modifyModule (SRev exp) =
+  verReveal exp
+
 verStm _ exp = do
   error $ "verStm " ++ show exp ++ " not implemented."
 
@@ -309,8 +312,8 @@ verWithCommitment modifyModule cmtVar stmFromIdent = do
 -- - addHonestOpenCmtTrans is for calling valueOf from contract code
 -- - verValOfAssContr assumes the global_commitments_0 is set by the synced trans is player0.
 --     addHonestOpenCmtTrans must set global_commitments_0 manually
-verValOfAssPlayer :: ModifyModuleType -> Ident -> VerRes ()
-verValOfAssPlayer modifyModule varIdent = do
+verReveal :: ModifyModuleType -> Ident -> VerRes ()
+verReveal modifyModule varIdent = do
   mod <- modifyModule id
   world <- get
   let
@@ -356,14 +359,15 @@ verValOfAssContr modifyModule varIdent = do
 
   case senderNumber world of
     Just nr -> do
+      -- TODO: no longer needed in new_commitments
       -- open the appropriate commitment
-      addTransToNewState
+      {-addTransToNewState
         modifyModule
         (sOpenCommitment ++ (show $ nr))
         []
         -- TODO: Alive?
         [([], [Alive])]
-
+      -}
 
       -- assign the value of the commitment
       

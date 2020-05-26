@@ -455,7 +455,8 @@ verScenario modifyModule decls stms = do
   case cmtRange world of
     Just _ -> do
       -- add openCommitment transactions without commstate=1 etc.
-      addHonestOpenCmtTrans modifyModule
+      -- TODO: no longer needed with new commitments
+      -- addHonestOpenCmtTrans modifyModule
     Nothing ->
       return ()
 
