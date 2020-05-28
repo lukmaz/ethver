@@ -94,6 +94,8 @@ sValueSuffix = "_value"
 sBroadcastPrefix = "broadcast_"
 sCommunicatePrefix = "communicate_"
 
+sRevealedSuffix = "_revealed"
+
 sCriticalSection = "critical_section"
 sCriticalSection0 = "critical_section0"
 sCriticalSection1 = "critical_section1"

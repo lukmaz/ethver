@@ -99,6 +99,9 @@ verDecl modifyModule (Dec (TCUInt range) varIdent) = do
   addCmtIdVar modifyModule varIdent
   addInitialValue modifyModule varIdent (EInt $ number mod)
 
+  -- add a bool variable to save the info if the commitment is revealed
+  addVar modifyModule TBool $ Ident $ unident varIdent ++ sRevealedSuffix 
+
 verDecl modifyModule (Dec (TSig sigTypes) varIdent) = do
   addGlobalSignatures (TSig sigTypes)
 
@@ -452,12 +455,14 @@ verScenario modifyModule decls stms = do
   -- Extra transs added manually without CS --
   --------------------------------------------
 
-  case cmtRange world of
+  -- TODO: no longer needed with new commitments
+  {-case cmtRange world of
     Just _ -> do
       -- add openCommitment transactions without commstate=1 etc.
-      addHonestOpenCmtTrans modifyModule
+      -- addHonestOpenCmtTrans modifyModule
     Nothing ->
       return ()
+  -}
 
   case sigType world of
     Just _ -> do

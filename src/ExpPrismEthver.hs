@@ -279,6 +279,9 @@ verStm modifyModule (SWait cond time) = do
     -- TODO: Alive?
     [([], [Alive])]
 
+verStm modifyModule (SRev exp) =
+  verReveal modifyModule exp
+
 verStm _ exp = do
   error $ "verStm " ++ show exp ++ " not implemented."
 
@@ -309,8 +312,10 @@ verWithCommitment modifyModule cmtVar stmFromIdent = do
 -- - addHonestOpenCmtTrans is for calling valueOf from contract code
 -- - verValOfAssContr assumes the global_commitments_0 is set by the synced trans is player0.
 --     addHonestOpenCmtTrans must set global_commitments_0 manually
-verValOfAssPlayer :: ModifyModuleType -> Ident -> VerRes ()
-verValOfAssPlayer modifyModule varIdent = do
+
+-- TODO: cmtExp is ignored and sender opens his own commitment
+verReveal :: ModifyModuleType -> Exp -> VerRes ()
+verReveal modifyModule (EVar varIdent) = do
   mod <- modifyModule id
   world <- get
   let
@@ -319,7 +324,9 @@ verValOfAssPlayer modifyModule varIdent = do
 
   case cmtRange world of
     Just range -> do
-      let newState = numStates mod + 1
+      let
+        newState = numStates mod + 1
+        revealed = Ident $ unident varIdent ++ sRevealedSuffix
 
       -- committed -> random
       addCustomTrans
@@ -329,7 +336,7 @@ verValOfAssPlayer modifyModule varIdent = do
         newState
         [EEq (EVar cmtIdent) (EInt range)]
         (foldl
-          (\acc x -> acc ++ [([(varIdent, EInt x), (cmtIdent, EInt x)], [Alive])])
+          (\acc x -> acc ++ [([(cmtIdent, EInt x), (revealed, ETrue)], [Alive])])
           []
           [0..(range - 1)]
         )
@@ -341,7 +348,7 @@ verValOfAssPlayer modifyModule varIdent = do
         (currState mod)
         newState
         [ELt (EVar cmtIdent) (EInt range)]
-        [([(varIdent, EVar cmtIdent)], [Alive])]
+        [([], [Alive])]
 
       _ <- modifyModule (setCurrState newState)
       _ <- modifyModule (setNumStates newState)
@@ -350,33 +357,28 @@ verValOfAssPlayer modifyModule varIdent = do
       error $ "Commitment range not set at the moment of calling valueOf"
 
 
-verValOfAssContr :: ModifyModuleType -> Ident -> VerRes ()
-verValOfAssContr modifyModule varIdent = do
+verValOfAss :: ModifyModuleType -> Ident -> VerRes ()
+verValOfAss modifyModule varIdent = do
   world <- get
 
   case senderNumber world of
     Just nr -> do
-      -- open the appropriate commitment
-      addTransToNewState
-        modifyModule
-        (sOpenCommitment ++ (show $ nr))
-        []
-        -- TODO: Alive?
-        [([], [Alive])]
-
-
-      -- assign the value of the commitment
+      verValOfAssNr modifyModule varIdent nr
+    Nothing -> do
+      mod <- modifyModule id
+      verValOfAssNr modifyModule varIdent (number mod)
       
-      let cmtIdent = Ident $ sGlobalCommitments ++ "_" ++ (show $ nr)
-      (guards, updates) <- generateSimpleAss modifyModule (SAss varIdent (EVar cmtIdent))
-          
-      addTransToNewState
-        modifyModule
-        ""
-        guards
-        -- TODO: Alive?
-        [(updates, [Alive])]
-    Nothing -> error $ "Cannot determine player number"
+
+verValOfAssNr :: ModifyModuleType -> Ident -> Integer -> VerRes ()
+verValOfAssNr modifyModule varIdent nr = do
+  let cmtIdent = Ident $ sGlobalCommitments ++ "_" ++ (show $ nr)
+  (guards, updates) <- generateSimpleAss modifyModule (SAss varIdent (EVar cmtIdent))
+  addTransToNewState
+    modifyModule
+    ""
+    guards
+    -- TODO: Alive?
+    [(updates, [Alive])]
 
 verFullAss :: ModifyModuleType -> Stm -> VerRes ()
 verFullAss modifyModule (SAss varIdent (EValOf (EVar cmtVar))) = do
@@ -384,13 +386,7 @@ verFullAss modifyModule (SAss varIdent (EValOf (EVar cmtVar))) = do
   -- cmtVar is in fact ignored. The player opens his own commitment and assigns the id of it to varIdent
   -- Isn't it a problem in micro? Maybe not. Let's allow only to open own commitment and to copy commitment
   -- from the oponent.
-
-  -- different behavior when called from a contract or from a scenario
-  mod <- modifyModule id
-
-  if moduleName mod == sContrModule
-    then verValOfAssContr modifyModule varIdent
-    else verValOfAssPlayer modifyModule varIdent
+  verValOfAss modifyModule varIdent
     
 -- cmtVar is nevertheless ignored, so for EArray works the same as for EVar
 verFullAss modifyModule (SAss varIdent (EValOf (EArray ident ESender))) = do

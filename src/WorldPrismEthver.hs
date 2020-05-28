@@ -579,7 +579,8 @@ setCmtRange range = do
         then error $ "Commitment range changed"
         else return ()
 
-addHonestOpenCmtTrans :: ModifyModuleType -> VerRes ()
+-- TODO: no longer needed with new commitments
+{-addHonestOpenCmtTrans :: ModifyModuleType -> VerRes ()
 addHonestOpenCmtTrans modifyModule = do
   mod <- modifyModule id
   world <- get
@@ -609,7 +610,7 @@ addHonestOpenCmtTrans modifyModule = do
         [([], [Alive])]
     _ ->
       error $ "Commitment range not set at the moment of calling valueOf"
-
+-}
 
 addAdvOpenCmtTrans :: ModifyModuleType -> VerRes ()
 addAdvOpenCmtTrans modifyModule = do

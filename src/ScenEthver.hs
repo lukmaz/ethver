@@ -119,6 +119,16 @@ scStm (SRCmt (EVar (Ident varName))) = do
     _ -> 
       error $ "randomCommitment() can be called on TCUIint type only."
 
+scStm (SRev _) =
+  return ()
+
+
+
+
+
+
+
+
 scStm stm = do
   error $ "scStm not implemented for: " ++ show stm
 
