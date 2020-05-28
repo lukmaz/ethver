@@ -47,7 +47,7 @@ contract RPS {
     else if (msg.sender == player_address[1]) {
       player_num = 1;
     }
-    if (committed[player_num] && (!has_revealed[player_num]) && verCommitment(cmt, commitment[player_num])) {
+    if (committed[player_num] && (!has_revealed[player_num]) && verCmt(cmt, commitment[player_num])) {
       has_revealed[player_num] = true;
       player_choice[player_num] = valueOf(cmt);
     }
@@ -84,12 +84,12 @@ communication {
 scenario A {
   bool endA;
   cmt_uint(3) cmtA;
-  cmtA.randomCommitment();
+  cmtA.randomCmt();
 
   player_input.sendTransaction(hashOf(cmtA), {value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
-    cmtA.reveal();
+    cmtA.revealCmt();
     open.sendTransaction(cmtA, {value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }
@@ -100,12 +100,12 @@ scenario A {
 scenario B {
   bool endB;
   cmt_uint(3) cmtB;
-  cmtB.randomCommitment();
+  cmtB.randomCmt();
 
   player_input.sendTransaction(hashOf(cmtB), {value: 1});
   wait(num_players == 2, 1);
   if (num_players == 2) {
-    cmtB.reveal();
+    cmtB.revealCmt();
     open.sendTransaction(cmtB, {value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);
   }
