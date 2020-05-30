@@ -89,7 +89,7 @@ EStr.    Exp8 ::= String ;
 EInt.    Exp8 ::= Integer ;
 ETrue.   Exp8 ::= "true" ;
 EFalse.  Exp8 ::= "false" ;
-EGetMy.  Exp8 ::= "MY_ADDRESS" ;
+EGetMy.  Exp8 ::= "this" ;
 
 _. Exp   ::= Exp1 ;
 _. Exp1  ::= Exp2 ;

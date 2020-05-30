@@ -111,7 +111,7 @@ scenario M {
   bool endM;
   bool signature_verified;
   
-  address merchantAddress = MY_ADDRESS;
+  address merchantAddress = this;
 
   r1_cmt.randomCmt();
 
