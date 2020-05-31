@@ -178,16 +178,16 @@ solSigDefaultFunctions =
   "}\n" ++
   "\n" ++
   "function _hexToBytes(bytes32 str) public pure returns (bytes memory) {\n" ++
-  "    bytes memory bytesArray = new bytes(64);\n" ++
-  "    uint8 t1;\n" ++
-  "    uint8 t2;\n" ++
-  "    for (uint i = 0; i < 32; i++) {\n" ++
-  "        t1 = _charToHexAscii(uint8(str[i]) >> 4);\n" ++
-  "        t2 = _charToHexAscii(uint8(str[i]) & 0xf);\n" ++
-  "        bytesArray[2 * i] = byte((t1 / 10) * 16 + t1 % 10);\n" ++
-  "        bytesArray[2 * i + 1] = byte((t2 / 10) * 16 + t2 % 10);\n" ++
-  "    }\n" ++
-  "    return bytesArray;\n" ++
+  "  bytes memory bytesArray = new bytes(64);\n" ++
+  "  uint8 t1;\n" ++
+  "  uint8 t2;\n" ++
+  "  for (uint i = 0; i < 32; i++) {\n" ++
+  "    t1 = _charToHexAscii(uint8(str[i]) >> 4);\n" ++
+  "    t2 = _charToHexAscii(uint8(str[i]) & 0xf);\n" ++
+  "    bytesArray[2 * i] = byte((t1 / 10) * 16 + t1 % 10);\n" ++
+  "    bytesArray[2 * i + 1] = byte((t2 / 10) * 16 + t2 % 10);\n" ++
+  "  }\n" ++
+  "  return bytesArray;\n" ++
   "}\n" ++
   "\n"
 
