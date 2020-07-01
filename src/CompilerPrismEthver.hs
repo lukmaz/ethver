@@ -71,7 +71,6 @@ verContract (Contr name _ _ funs) = do
 
   -- adds to contract module  all commands generated from a particular function definition
   
-  --mapM_ verDFSFunContract funs
   mapM_ verOldFunContract funs
 
 -------------------
@@ -138,7 +137,6 @@ verFunBroadcast modifyModule (FunV name args stms) =
   verFunBroadcast modifyModule (Fun name args stms)
 
 verFunBroadcast modifyModule (Fun name args stms) = do
-  --TODO: argumenty
   mod <- modifyModule id
   addTransNoState
     modifyBlockchain 
@@ -193,7 +191,6 @@ verFunExecute modifyModule (FunV name args stms) = do
         [(iValue, EVar $ Ident $ unident name ++ sValueSuffix 
           ++ (show $ number mod))]
       ]
-  -- TODO: Alive?
     updates = [(foldl (addAssignmentToUpdates name (number mod)) (head updates1) args, [Alive])]
 
   addTransNoState
@@ -218,7 +215,6 @@ verFunExecute modifyModule (FunV name args stms) = do
           (EVar $ Ident $ sBalancePrefix ++ (show $ number mod))
       ]
     )
-    -- TODO: Alive?
     [
       ([(Ident $ unident name ++ sStatusSuffix ++ (show $ number mod), EVar iTInvalidated)], [Alive])
     ]
@@ -234,7 +230,6 @@ verFunExecute modifyModule (Fun name args stms) = do
         updates0 ++
         [(iValue, EInt 0)]
       ]
-    -- TODO: Alive?
     updates = [(foldl (addAssignmentToUpdates name (number mod)) (head updates1) args, [Alive])]
 
   addTransNoState
@@ -260,7 +255,6 @@ verExecTransaction modifyModule = do
       EGe (EVar $ Ident $ sBalancePrefix ++ (show $ number mod)) (EVar iValue),
       ELe (EAdd (EVar iContractBalance) (EVar iValue)) (EVar iMaxContractBalance)
     ]
-    -- TODO: Alive?
     [
       ([
         (iContrState, EVar $ iNextState),
@@ -286,7 +280,6 @@ verFunAux modifyModule commonFun fun = do
 verOldFunContractOrCommunication :: ModifyModuleType -> (Function -> VerRes ()) -> Function -> VerRes ()
 
 verOldFunContractOrCommunication modifyModule commonfun (FunV name args stm) = do
-  -- TODO: skąd wziąć zakres val - rozwiązane na razie jednym MAX_VALUE
   world <- get
   let maxValue = case Map.lookup (Ident sMaxValue) $ constants world of
         Just value -> value
@@ -354,7 +347,6 @@ commonVerFunContract (Fun name args stms) = do
     1
     0
     []
-    -- TODO: Alive?
     [([(iNextState, EInt $ numStates mod + 1)], [Alive])]
   
   modifyContract (\mod -> mod {currState = numStates mod + 1, numStates = numStates mod + 1})
@@ -406,7 +398,6 @@ verOldFunCommunication fun = do
 
 verScenarios :: [Scenario] -> VerRes ()
 verScenarios [(Scen userName0 decls0 stms0), (Scen userName1 decls1 stms1)] = do
-  --TODO: przepadają userName'y
   mapM_ (verDecl modifyPlayer0) decls0
   mapM_ (verDecl modifyPlayer1) decls1
 
@@ -455,15 +446,6 @@ verScenario modifyModule decls stms = do
   -- Extra transs added manually without CS --
   --------------------------------------------
 
-  -- TODO: no longer needed with new commitments
-  {-case cmtRange world of
-    Just _ -> do
-      -- add openCommitment transactions without commstate=1 etc.
-      -- addHonestOpenCmtTrans modifyModule
-    Nothing ->
-      return ()
-  -}
-
   case sigType world of
     Just _ -> do
       -- add updateSignature transactions without commstate=1 etc.
@@ -471,14 +453,12 @@ verScenario modifyModule decls stms = do
     Nothing ->
       return ()
 
-  -- TODO: zmienić 0 i 1 na stałe
   addFirstCustomTrans
     modifyModule
     ""
     0
     1
     [ENe (EVar iAdversaryFlag) (EInt $ number mod)]
-    -- TODO: Alive?
     [([], [Alive])]
 
   addCustomTrans
@@ -487,7 +467,6 @@ verScenario modifyModule decls stms = do
     0
     (-1)
     [EEq (EVar iAdversaryFlag) (EInt $ number mod)]
-    -- TODO: Alive?
     [([], [Alive])]
 
   -- allow ADV to push the timelock at any time

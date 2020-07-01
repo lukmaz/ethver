@@ -17,8 +17,6 @@ ethTree prog =
 
 ethProgram :: Program -> EthRes ()
 ethProgram (Prog _ constants contract communication scenarios) = do
-  -- TODO: users?
-  -- TODO: constants
   addContr solPragma
   ethContract constants contract
 
@@ -28,7 +26,6 @@ ethProgram (Prog _ constants contract communication scenarios) = do
 
 -- Contract
 
--- TODO: UserDecl
 ethContract :: [ConstantDecl] -> Contract -> EthRes ()
 ethContract constants (Contr ident decls constr funs) = do
   addContr "contract "

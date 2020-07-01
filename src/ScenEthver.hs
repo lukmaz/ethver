@@ -27,7 +27,6 @@ scScenarios [scenario0, scenario1] = do
 scScenario :: Scenario -> EthRes ()
 scScenario (Scen userName decls stms) = do
   mapM_ scDecl decls
-  -- TODO: userName obsłużyć
   mapM_ scStm stms
 
 ---------
@@ -121,13 +120,6 @@ scStm (SRCmt (EVar (Ident varName))) = do
 
 scStm (SRev _) =
   return ()
-
-
-
-
-
-
-
 
 scStm stm = do
   error $ "scStm not implemented for: " ++ show stm

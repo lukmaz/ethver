@@ -84,7 +84,6 @@ ethStm (SSend receiver value) = do
 
 ethStm stm = do
   error $ (show stm) ++ ": ethStm not implemented for this statement"
--- Ass
 
 ---------
 -- Exp --

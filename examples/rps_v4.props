@@ -1,4 +1,4 @@
-filter(min, Pmin=? [ F balance0>=2 ], joinedA & !cmtA_revealed)
+filter(min, Pmin=? [ F balance0>=2 ], joinedA & !cmtA_revealed & !cmtB_revealed)
 
 Pmin=? [ F endA&balance0>=1 ]
 

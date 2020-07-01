@@ -105,8 +105,8 @@ scenario A {
   player_input.sendTransaction(hashOf(cmtA), 
     {value: 1});
   wait(num_players == 2, 1);
-  if ((num_players == 2) && ((player_address[0] == MY_ADDRESS) 
-      || (player_address[1] == MY_ADDRESS))) {
+  if ((num_players == 2) && ((player_address[0] == this) 
+      || (player_address[1] == this))) {
     joinedA = true;
     cmtA.revealCmt();
     open.sendTransaction(cmtA, {value: 0});
@@ -124,8 +124,8 @@ scenario B {
   player_input.sendTransaction(hashOf(cmtB), 
     {value: 1});
   wait(num_players == 2, 1);
-  if ((num_players == 2) && ((player_address[0] == MY_ADDRESS) 
-      || (player_address[1] == MY_ADDRESS))) {
+  if ((num_players == 2) && ((player_address[0] == this) 
+      || (player_address[1] == this))) {
     cmtB.revealCmt();
     open.sendTransaction(cmtB, {value: 0});
     wait(has_revealed[0] && has_revealed[1], 2);

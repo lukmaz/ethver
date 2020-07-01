@@ -6,8 +6,6 @@ import AbsEthver
 -- NUMBERS --
 -------------
 
-nMaxRuns = 2 -- ???
-
 nMaxCommitments = 2
 nMaxSignatures = 2
 
@@ -41,7 +39,6 @@ sNumCommStates = "NUM_COMMUNICATION_STATES"
 sNumP0States = "NUM_PLAYER0_STATES"
 sNumP1States = "NUM_PLAYER1_STATES"
 
--- TODO: wymagać, żeby było w .etv:
 sInitContractBalance = "CONTRACT_BALANCE_INIT"
 sInitUser0Balance = "USER0_BALANCE_INIT"
 sInitUser1Balance = "USER1_BALANCE_INIT"
@@ -59,7 +56,6 @@ sStatePrefix = "state"
 sStatusSuffix = "_status"
 sAttrSuffix = "_attr"
 sKeySuffix = "_key"
--- TODO: To remove
 sRunsSuffix = "_runs"
 sEmptyState = "empty_state"
 sEmptySender = "empty_sender"

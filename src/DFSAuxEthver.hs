@@ -12,11 +12,6 @@ import ConstantsEthver
 import WorldPrismEthver
 
 
----
--- TODO: TU TEZ MOZNA WYWALIC VerRes?
----
-
-
 -----------------
 -- applyToList --
 -----------------
@@ -35,7 +30,6 @@ applyToList fun trs = do
 -- deduction of values --
 -------------------------
 
--- TODO: multi-branch updates
 deduceVarValueFromBranch :: Ident -> Branch -> Maybe Exp
 deduceVarValueFromBranch varIdent (updatesBranch, _) =
   let
@@ -60,8 +54,6 @@ deduceVarValueFromGuards varIdent guards =
       (h:t) -> h
       _ -> Nothing
 
--- TODO: Assumption: only Eq guards
--- TODO: Does not support bool operators different than And. (Needed?)
 valueFromCond :: Ident -> Exp -> Maybe Exp
 valueFromCond varIdent cond = 
   case cond of
@@ -127,7 +119,6 @@ applyCond (ENot (ENe e1 e2)) tr =
 
 -- EAnd, EOr
 
--- TODO: Or został stary, może pójść w stronę AND? Zobaczyć, jak z optymalnością
 applyCond (EOr cond1 cond2) tr = do
   if (isLeftComp $ makeLeft cond1) && (isLeftComp $ makeLeft cond2)
     then
@@ -259,7 +250,6 @@ applyCondToBranchAndDeducedAux ifCase compFun ((br, liv), deducedVal) =
         else (br, Dead:liv)
 
 -- applyCondToGuards
--- TODO: da sie zoptymalizowac?
 
 applyCondToGuards :: Exp -> [Exp] -> [Exp]
 applyCondToGuards cond guards = cond:guards
@@ -277,7 +267,6 @@ dfsTransferMoney from to maxTo amount tr@(trName, guards, updates) = do
   let 
     newGuards1 = applyCondToGuards (EGe (EVar from) amount) guards
     newGuards2 = applyCondToGuards (ELe (EAdd (EVar to) amount) maxTo) newGuards1
-  -- TODO: czy wystarczy addSimpleAssesToTr? (cf. zalozenia przed def. f. addSimple...)
     updates1 = addAssToUpdates from (ESub (EVar from) amount) updates
     updates2 = addAssToUpdates to (EAdd (EVar to) amount) updates1
   return [(trName, newGuards2, updates2)]
@@ -293,7 +282,6 @@ dfsBurnMoney amount tr@(trName, guards, updates) = do
 -- Ass --
 ---------
 -- adds an assignment to a single transition
--- male TODO: to jest sztuczne, że zwraca [Trans], a nie Trans
 addAssToTr :: Ident -> Exp -> Trans -> VerRes [Trans]
 
 addAssToTr varIdent value (trName, guards, updates) = do

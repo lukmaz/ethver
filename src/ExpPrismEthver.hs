@@ -28,7 +28,6 @@ verStm modifyModule (SAss ident exp) =
 verStm modifyModule (SArrAss ident index exp) =
   verFullAss modifyModule (SArrAss ident index exp)
 
--- TODO: zrobić, żeby return wychodziło z wykonania bieżącej funkcji
 verStm modifyModule (SIf cond ifBlock) = do
   evalCond <- verExp modifyModule cond
   mod <- modifyModule id
@@ -37,7 +36,6 @@ verStm modifyModule (SIf cond ifBlock) = do
     modifyModule
     ""  
     [evalCond]
-    -- TODO: Alive?
     [([], [Alive])]
   verStm modifyModule ifBlock
   mod <- modifyModule id
@@ -47,7 +45,6 @@ verStm modifyModule (SIf cond ifBlock) = do
     ifState
     (currState mod)
     [negateExp evalCond]
-    -- TODO: Alive?
     [([], [Alive])]
 
 verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
@@ -58,7 +55,6 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
     modifyModule
     ""  
     [evalCond]
-    -- TODO: Alive?
     [([], [Alive])]
   verStm modifyModule ifBlock
   mod <- modifyModule id
@@ -69,7 +65,6 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
     ifState
     (numStates mod + 1)
     [negateExp evalCond]
-    -- TODO: Alive?
     [([], [Alive])]
   mod <- modifyModule id
   let newState = numStates mod + 1
@@ -83,7 +78,6 @@ verStm modifyModule (SIfElse cond ifBlock elseBlock) = do
     (currState mod)
     endIfState
     []
-    -- TODO: Alive?
     [([], [Alive])]
   _ <- modifyModule (setCurrState endIfState)
   return ()
@@ -102,7 +96,6 @@ verStm modifyModule (SWhile cond whileBlock) = do
     (currState mod)
     whileState
     []
-    -- TODO: Alive?
     [([], [Alive])]
 
   modifyModule (setCurrState whileState)
@@ -114,7 +107,6 @@ verStm modifyModule (SWhile cond whileBlock) = do
     modifyModule
     ""  
     [evalCond]
-    -- TODO: Alive?
     [([], [Alive])]
 
   verStm modifyModule whileBlock
@@ -127,7 +119,6 @@ verStm modifyModule (SWhile cond whileBlock) = do
     (currState mod)
     whileState
     []
-    -- TODO: Alive?
     [([], [Alive])]
 
   mod <- modifyModule id
@@ -139,7 +130,6 @@ verStm modifyModule (SWhile cond whileBlock) = do
     whileState
     (numStates mod + 1)
     [negateExp evalCond]
-    -- TODO: Alive?
     [([], [Alive])]
 
   -- escape from breakState
@@ -149,7 +139,6 @@ verStm modifyModule (SWhile cond whileBlock) = do
     breakState
     (numStates mod + 1)
     []
-    -- TODO: Alive?
     [([], [Alive])]
 
   mod <- modifyModule id
@@ -244,10 +233,8 @@ verStm modifyModule (SRCmt (EVar cmtVar)) = do
     Just range -> do
       addTransToNewState
         modifyModule
-        -- (sRandomCommitment ++ (show $ nr))
         ""
         [EEq (EVar cmtIdent) (EInt $ range + 1)]
-        -- TODO: Alive?
         [([(cmtIdent, EInt range)], [Alive])]
 
 verStm modifyModule (SRCmt (EArray arrIdent ESender)) = do
@@ -276,7 +263,6 @@ verStm modifyModule (SWait cond time) = do
     modifyModule
     ""
     [EOr evalCond $ EGe (EVar $ Ident sTimeElapsed) time]
-    -- TODO: Alive?
     [([], [Alive])]
 
 verStm modifyModule (SRev exp) =
@@ -313,7 +299,7 @@ verWithCommitment modifyModule cmtVar stmFromIdent = do
 -- - verValOfAssContr assumes the global_commitments_0 is set by the synced trans is player0.
 --     addHonestOpenCmtTrans must set global_commitments_0 manually
 
--- TODO: cmtExp is ignored and sender opens his own commitment
+-- cmtExp is ignored and sender opens his own commitment
 verReveal :: ModifyModuleType -> Exp -> VerRes ()
 verReveal modifyModule (EVar varIdent) = do
   mod <- modifyModule id
@@ -377,15 +363,11 @@ verValOfAssNr modifyModule varIdent nr = do
     modifyModule
     ""
     guards
-    -- TODO: Alive?
     [(updates, [Alive])]
 
 verFullAss :: ModifyModuleType -> Stm -> VerRes ()
 verFullAss modifyModule (SAss varIdent (EValOf (EVar cmtVar))) = do
-  -- TODO: 
-  -- cmtVar is in fact ignored. The player opens his own commitment and assigns the id of it to varIdent
-  -- Isn't it a problem in micro? Maybe not. Let's allow only to open own commitment and to copy commitment
-  -- from the oponent.
+  -- The player opens his own commitment and assigns the id of it to varIdent
   verValOfAss modifyModule varIdent
     
 -- cmtVar is nevertheless ignored, so for EArray works the same as for EVar
@@ -427,25 +409,6 @@ verFullAss modifyModule (SAss lVarIdent (ESign args)) = do
         []
         [([], [Alive])]
     
--- TODO: to jest stare
-{-  let 
-    keyIdent = Ident $ unident varIdent ++ sSigSuffix ++ sKeySuffix
-  world <- get
-  case senderNumber world of
-    Just nr -> verStm modifyModule (SAss keyIdent $ EInt nr)
-  argsVars <- mapM toVar args
-  
-  varTyp <- findVarType varIdent
-  case varTyp of
-    Just (TSig sigTypes) -> do
-      mapM_ (signOne varIdent) (zip (zip [0..] sigTypes) argsVars)
-        where
-          signOne :: Ident -> ((Integer, Type), Exp) -> VerRes ()
-          signOne varIdent ((nr, sigTyp), (EVar rIdent)) = do
-            let 
-              newIdent = Ident $ unident varIdent ++ sSigSuffix ++ show nr
-            verStm modifyModule (SAss newIdent $ EVar rIdent)
--}
 
 verFullAss modifyModule (SAss lVarIdent EGetMy) = do
   mod <- modifyModule id
@@ -453,15 +416,6 @@ verFullAss modifyModule (SAss lVarIdent EGetMy) = do
 
 verFullAss modifyModule (SAss lVarIdent rExp) = do
   lVarTyp <- findVarType lVarIdent
-
-  {- TODO DEBUG
-  if lVarIdent == Ident "sigma_loc"
-    then do
-      mod <- modifyPlayer1 id
-      error $ (show lVarTyp) ++ (show $ Map.toList $ vars mod)
-    else
-      return ()
-  -}
 
   case lVarTyp of
     Just (TCUInt x) ->
@@ -476,7 +430,6 @@ verFullAss modifyModule (SAss lVarIdent rExp) = do
         modifyModule
         ""
         guards
-        -- TODO: Alive?
         [(updates, [Alive])]
 
 verFullAss modifyModule (SArrAss (Ident ident) index exp) = do
@@ -527,7 +480,6 @@ generateSimpleAss modifyModule (SAss ident exp) = do
 
 generateSimpleAss modifyModule (SArrAss (Ident ident) index exp) = do
   case index of
-    -- TODO: ESender (zmienić też verFullAss)
     EStr indexAddress -> do
       indexNumber <- getPlayerNumber indexAddress
       let indexVar = Ident $ ident ++ "_" ++ (show indexNumber)
@@ -615,18 +567,6 @@ addAdvUpdateSignatureTranss modifyModule = do
           (\(_, nr) -> EVar $ Ident $ sCommSignature ++ sAttrSuffix ++ show nr)
           (zip sigTypes [0..])
         
-        {- These extra guards decrease #transs by 30% but increase time by 8%
-        lKey = EVar $ Ident $ globalName ++ sKeySuffix
-        lAttrs = map
-          (\(_, nr) -> EVar $ Ident $ globalName ++ sAttrSuffix ++ show nr)
-          (zip sigTypes [0..])
-
-        extraGuards = foldl
-          (\acc (lAttr, rAttr) -> EOr acc (ENe lAttr rAttr))
-          (ENe lKey rKey)
-          (zip lAttrs rAttrs)
-        -}
-
       (guards, updates) <-
         generateSigAss modifyModule sigTypes globalName rKey rAttrs playerNr
       
@@ -636,7 +576,6 @@ addAdvUpdateSignatureTranss modifyModule = do
         (-1)
         (-1)
         (guards)
-        {-(guards ++ [extraGuards])-}
         [(updates, [Alive])]
 
 
@@ -801,8 +740,6 @@ verMathExp modifyModule (EMod exp1 exp2) = do
 -- ValExp --
 ------------
 
--- TODO: automatyczna generacja standardowego przejścia na nast. stan
--- TODO: na razie tylko P0
 verValExp :: ModifyModuleType -> Exp -> VerRes Exp
 
 verValExp modifyModule (EVar ident) = do
@@ -811,7 +748,6 @@ verValExp modifyModule (EVar ident) = do
 verValExp modifyModule (EArray (Ident ident) index) = do
   mod <- modifyModule id
   let localVarName = (moduleName mod) ++ sLocalSuffix ++ (show $ numLocals mod)
-  -- TODO: liczba graczy = 2
   maybeType <- findVarType $ Ident $ ident ++ "_0"
   
   case index of
@@ -847,15 +783,9 @@ verValExp modifyModule (EArray (Ident ident) index) = do
       verExp modifyModule $ EVar indexVar
       return $ EVar $ indexVar
 
--- Should not be called directly. EHashOf handled by verStm in all cases.
-{-
-verValExp modifyModule (EHashOf (EVar cmtVar)) = do
--}
-
 verValExp modifyModule EValue = do
   return EValue
 
--- czy na pewno tak można?
 verValExp modifyModule ESender = do
   world <- get
   case senderNumber world of
@@ -894,7 +824,6 @@ verRandom modifyModule (EInt range) = do
     modifyModule 
     ""
     []
-    -- TODO: Alive?
     (foldl
       (\acc x -> acc ++ [([(Ident localVarName, EInt x)], [Alive])])
       []
@@ -960,7 +889,6 @@ verSendTAux modifyModule funName argsVals = do
     Just fun -> do
       let 
         argNames = getFunArgs fun
-        -- TODO: olewamy "from", bo sender jest wiadomy ze scenariusza
         expArgsVals = map (\(AExp exp) -> exp) (init argsVals)
         value = 
           case (last argsVals) of 
@@ -970,7 +898,6 @@ verSendTAux modifyModule funName argsVals = do
       
       evalArgsVals <- mapM (evalArg modifyModule) expArgsVals
       let 
-        --TODO: Alive?
         updates1Root = foldl addAssignment (head updates0) $ zip argNames evalArgsVals
         updates2 = [(updates1Root, [Alive])]
       
@@ -988,7 +915,6 @@ verSendTAux modifyModule funName argsVals = do
             (EVar (Ident (unident funName ++ sStatusSuffix ++ (show $ number mod)))) 
             (EVar iTExecuted)
         ]
-        --TODO: Alive?
         [([], [Alive])]
 
 -----------
@@ -1005,7 +931,6 @@ verSendCAux modifyModule funName expArgsVals = do
       evalArgsVals <- mapM (evalArg modifyModule) expArgsVals
 
       let addAssignment acc (argName, argVal) = acc ++ createAssignments (number mod) funName argName argVal
-      --TODO: Alive?
       let updates1Root = foldl addAssignment [] $ zip argNames evalArgsVals
       
       let updates2 = [(updates1Root, [Alive])]
@@ -1020,11 +945,9 @@ verSendCAux modifyModule funName expArgsVals = do
         modifyModule
         (sCommunicatePrefix ++ (unident funName) ++ (show $ number mod))
         []
-        --TODO: Alive?
         [([], [Alive])]
     _ -> error $ "Function " ++ (unident funName) ++ " not found in (funs world)"
 
--- TODO: adds function name in prefix of a variable name
 createAssignments :: Integer -> Ident -> Arg -> Exp -> [(Ident, Exp)]
 createAssignments playerNumber funName (Ar (TCUInt _) varName) (EInt x) =
   [(Ident $ unident varName ++ (show playerNumber), EInt x)]

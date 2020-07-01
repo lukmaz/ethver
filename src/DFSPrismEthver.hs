@@ -23,7 +23,6 @@ verDFSFun modifyModule (Fun funName args stms) = do
   let
     stVar = Ident $ stateVar mod
     initGuards = [EEq (EVar stVar) (EInt $ currState mod)]
-    --TODO: Alive?
     initUpdates = [([(stVar, EInt 1)], [Alive])]
   trs <- verDFSStm modifyModule (SBlock stms) [("", initGuards, initUpdates)]
   mapM_
@@ -35,7 +34,6 @@ verDFSFun modifyModule (Fun funName args stms) = do
 ---------------
 
 
--- Tu VerRes musi zostać, zeby dedukować typ zmiennej
 verDFSStm :: ModifyModuleType -> Stm -> [Trans] -> VerRes [Trans]
 
 verDFSStm modifyModule (SBlock []) trs = do
@@ -45,15 +43,7 @@ verDFSStm modifyModule (SBlock (stmH:stmT)) trs = do
   verDFSStm modifyModule stmH trs >>= 
     verDFSStm modifyModule (SBlock stmT)
 
--- For a moment it returns only single Trans (and works for only simple ass)
--- nowe TODO: prawdopodobnie nie obsługuje bardziej skomplikowanych assow
 verDFSStm modifyModule (SAss varIdent value) oldTrs = do
-  --TODO: tak powinno być, ale nie działa z randomami
-  {-applyToList 
-    (\tr -> return [addSimpleAssesToTr [(varIdent, value)] tr]) 
-    oldTrs
-  -}
-  -- TODO: tak działa z randomami
   applyToList (addAssToTr varIdent value) oldTrs
 
 verDFSStm modifyModule (SIf cond ifBlock) trs = do

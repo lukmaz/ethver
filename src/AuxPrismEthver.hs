@@ -114,7 +114,6 @@ negateExp (ENot exp) = exp
 negateExp exp = ENot exp
 
 
--- TODO: Only support types with minimal value 0
 generateValsList :: Exp -> [Arg] -> [[Exp]]
 generateValsList maxValVal args =
   let maxVals = maxValVal:(map (\(Ar typ _) -> maxRealTypeValue typ) args) in

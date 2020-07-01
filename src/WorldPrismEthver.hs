@@ -120,8 +120,6 @@ addAutoVars = do
   -- blockchain:
 
   addVar modifyBlockchain (TUInt 2) iContrSender
-  -- TODO: skąd wziąć zakres value?
-  -- ODP: Z (constants world). A tam wczytać z kodu źródłowego
   case Map.lookup iMaxValue (constants world) of
     Nothing -> error $ sMaxValue ++ " constant definition not found in the source file.\n"
     Just maxValue -> do
@@ -138,12 +136,9 @@ addAutoVars = do
         _ -> error $ sInitContractBalance ++ "not found in (constants world)"
     _ -> error $ sMaxContractBalance ++ " not found in (constants world)"
   
-  -- scenarios
-  -- TODO: move rest of variables from contractPream etc. to here.
 
   -- communication:
   
-  -- TODO: only 2 players
   addVar modifyCommunication (TUInt 2) iCommSender
 
 ------------------------
@@ -178,48 +173,20 @@ addLocal modifyModule typ = do
   _ <- modifyModule (\mod -> mod {numLocals = numLocals mod + 1})
   return ()
 
--- TODO: OLD sig
 -- General addVar
 addVar :: ModifyModuleType -> Type -> Ident -> VerRes ()
 addVar modifyModule typ ident = do
   case typ of
-    -- TSig dodajemy standardowo
-    {-TSig types -> do
-      error $ "addVar should not be called with TSig?"
-      --_ <- modifyModule (addVarToModule typ ident)
-      --addSignatureVar modifyModule types ident
-    -}
     TCUInt range -> do
-      -- też niepotrzebne?
       addCmtIdVar modifyModule ident 
     _ -> do
       _ <- modifyModule (addVarToModule typ ident)
       return ()
 
-{- TODO: OLD
-addSignatureVar :: ModifyModuleType -> [Type] -> Ident -> VerRes ()
-addSignatureVar modifyModule types varIdent = do
-  addVar modifyModule (TUInt 2) $ Ident $ unident varIdent ++ sSigSuffix ++ sKeySuffix
-  mapM_ 
-    (addSignatureVarAux modifyModule varIdent)
-    (zip [0..] types)
-
-addSignatureVarAux :: ModifyModuleType -> Ident -> (Integer, Type) -> VerRes ()
-addSignatureVarAux modifyModule varIdent (nr, typ) = do
-  let newIdent = Ident $ unident varIdent ++ sSigSuffix ++ show nr
-  case typ of
-    TCUInt x -> do
-      world <- get
-      addVar modifyModule (TUInt 2) newIdent
-    TUInt x -> 
-      addVar modifyModule typ newIdent
--}
-
 addSigIdVar :: ModifyModuleType -> Type -> Ident -> VerRes ()
 addSigIdVar modifyModule typ varIdent = do
   addVar modifyModule typ varIdent
 
--- TODO: czy nie powinno byc z prawdziwym typem, tak jak w addSigIdVar wyzej?
 addCmtIdVar :: ModifyModuleType -> Ident -> VerRes ()
 addCmtIdVar modifyModule varIdent = do
   addVar modifyModule (TUInt nMaxCommitments) varIdent
@@ -271,17 +238,16 @@ clearCondRandoms = do
   world <- get
   put (world {condRandoms = Set.empty, condRandomArrays = Map.empty, lazyRandoms = Set.empty})
 
--- TODO: adds function name as a prefix of a variable name
+-- adds function name as a prefix of a variable name
 createScenarioArgumentName :: String -> Ident -> Ident -> Integer -> Ident
 createScenarioArgumentName suffix (Ident funName) (Ident varName) playerName = 
     Ident $ varName ++ (show playerName) ++ suffix
 
--- TODO: does not add function name as a prefix
+-- does not add function name as a prefix
 createCoArgumentName :: String -> Ident -> Ident -> Ident
 createCoArgumentName suffix (Ident funName) (Ident varName) = 
     Ident $ varName ++ suffix
 
--- TODO: with prefix or not? Now: funName ignored
 addNoPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
 addNoPlayerArg modifyModule (Ident funName) (Ar (TCUInt range) varIdent) = do
   addCmtIdVar modifyModule varIdent
@@ -294,7 +260,6 @@ addNoPlayerArg modifyModule (Ident funName) (Ar (TSig sigTypes) varIdent) = do
 addNoPlayerArg modifyModule (Ident funName) (Ar typ varIdent) = do
   addVar modifyModule typ varIdent
 
--- TODO: with prefix of not?
 addPlayerArg :: ModifyModuleType -> Ident -> Arg -> VerRes ()
 addPlayerArg modifyModule funName (Ar (TCUInt range) varIdent) = do
   mod <- modifyModule id
@@ -355,7 +320,6 @@ deducePlayerNumber modifyModule = do
         then error $ "Cannot determine the player number"
         else number mod
  
--- TODO: stos dla zagnieżdżonych wywołań?
 addReturnVar :: Ident -> VerRes ()
 addReturnVar ident = do
   world <- get
@@ -548,7 +512,6 @@ newCustomTrans stateVar transName fromState toState guards updates =
   newTransNoState
     transName
     ((EEq (EVar (Ident stateVar)) (EInt fromState)):guards)
-    -- TODO: Alive?
     (map (applyToBranch ((Ident stateVar, EInt toState):)) updates)
   
 
@@ -578,39 +541,6 @@ setCmtRange range = do
       if old_range /= range
         then error $ "Commitment range changed"
         else return ()
-
--- TODO: no longer needed with new commitments
-{-addHonestOpenCmtTrans :: ModifyModuleType -> VerRes ()
-addHonestOpenCmtTrans modifyModule = do
-  mod <- modifyModule id
-  world <- get
-  let 
-    nr = show $ number mod
-    cmtIdent = Ident $ sGlobalCommitments ++ "_" ++ nr
-  
-  case cmtRange world of
-    Just range -> do 
-      -- committed -> random (honest, sync with contract ValueOf)
-      addTransNoState
-        modifyModule
-        (sOpenCommitment ++ nr)
-        [EEq (EVar cmtIdent) (EInt range)]
-        (foldl
-          (\acc x -> acc ++ [([(cmtIdent, EInt x)], [Alive])])
-          []
-          [0..(range - 1)]
-        )
-      
-      -- opened -> the same (honest, sync with contract ValueOf)
-      -- Not needed?
-      addTransNoState
-        modifyModule
-        (sOpenCommitment ++ nr)
-        [ELt (EVar cmtIdent) (EInt range)]
-        [([], [Alive])]
-    _ ->
-      error $ "Commitment range not set at the moment of calling valueOf"
--}
 
 addAdvOpenCmtTrans :: ModifyModuleType -> VerRes ()
 addAdvOpenCmtTrans modifyModule = do

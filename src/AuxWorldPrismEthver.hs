@@ -99,7 +99,7 @@ addUser (UDec name) = do
 -- Trans --
 -----------
 
--- TODO: similar things are in verFunExecute for contract
+-- similar to verFunExecute for contract
 addCommunicateOnePlayer :: Ident -> [Arg] -> Integer -> VerRes ()
 addCommunicateOnePlayer funName args playerNumber = do
   mod <- modifyCommunication id
@@ -112,7 +112,6 @@ addCommunicateOnePlayer funName args playerNumber = do
     addAssignment acc (Ar _ varName) = acc ++
         [(createCoArgumentName "" funName varName, 
           EVar $ createScenarioArgumentName "" funName varName playerNumber)]
-  -- TODO: Alive?
     updates = [(foldl addAssignment [] args, [Alive])]
 
   -- first trans to set sender
@@ -137,8 +136,6 @@ addCommunicateOnePlayer funName args playerNumber = do
 ----------------------
 -- Critical section --
 ----------------------
-
--- TODO: remove? probably not used because of CS2
 
 -- converts all commands in a module by adding critical section stuff
 addCS :: Module -> Module
@@ -248,7 +245,6 @@ addAdversarialBlockchainTranss = do
             (contractFuns world)
           )   
     )   
-    -- TODO: Alive?
     [([(Ident sTimeElapsed, EAdd (EVar $ Ident sTimeElapsed) (EInt 1))], [Alive])]
 
 addAdversarialContrTranss :: Contract -> VerRes ()
@@ -312,8 +308,6 @@ generateAdvTranssNew modifyModule whichPrefix whichState withVal limit funName a
                 sigArgVar = Ident $ (unident $ signatureFromArguments (Fun (Ident "") argsOrig []))
                     ++ (show $ number mod)
               in
-                -- TODO: ograniczyc mozliwosc odpalania funkcji z sig w argumencie?
-                -- moze jakos sprawdzac, czy zostal podpisany?
                 ([], [(sigArgVar, EInt $ number mod)])
         else
           ([], [])
@@ -374,7 +368,6 @@ generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName a
           ++ 
           (if (limit > -1) then [ELt (EVar runsIdent) (EInt limit)] else [])
         )
-        -- TODO: Alive?
         [(extraUpdates ++ (if (limit > -1) then [(runsIdent, EAdd (EVar runsIdent) (EInt 1))] else []), [Alive])]
     maxValsList -> do
       forM_
@@ -399,7 +392,6 @@ generateAdvTranssAux modifyModule whichPrefix whichState withVal limit funName a
             ++
             (if (limit > -1) then [ELt (EVar runsIdent) (EInt limit)] else [])
           )
-          -- TODO: Alive?
           (map 
             (\x -> (x ++ extraUpdates ++ (if (limit > -1) then [(runsIdent, EAdd (EVar runsIdent) (EInt 1))] else []), [Alive]))
             (advUpdates withVal (number mod) (Ident funName) args vals)
@@ -424,7 +416,6 @@ advTransAux modifyModule guards updates = do
 -- MONEY TRANSFERS --
 ---------------------
 
--- TODO: one MAX_USER_BALANCE for all users
 transferFromContract :: Ident -> Exp -> VerRes ()
 transferFromContract to value = do
   transferMoney iContractBalance to (EVar iMaxUserBalance) value
@@ -454,14 +445,11 @@ transferMoney from to maxTo value = do
   
   -- succeed if enough money and max balance of recipient high enough
   addTransToNewState
-    --TODO: czy to przypadkiem nie ma być w BC?
     modifyContract
     ""
     [EGe (EVar from) value, ELe (EAdd (EVar to) value) maxTo]
-    -- TODO: Alive?
     [([(from, ESub (EVar from) value), (to, EAdd (EVar to) value)], [Alive])]
 
--- TODO: one MAX_USER_BALANCE for all users
 smartTransferFromContract :: Ident -> Exp -> VerRes [[(Ident, Exp)]]
 smartTransferFromContract to value = do
   smartTransferMoney iContractBalance to (EVar iMaxUserBalance) value

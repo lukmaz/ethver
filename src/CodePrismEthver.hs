@@ -52,7 +52,6 @@ contractPream =
 
 communicationPream :: String
 communicationPream = 
-  -- TODO: state 0 not used
   "  " ++ sCommState ++ " : [0.." ++ sNumCommStates ++ "] init " ++ (show nInitCommState) ++ ";\n" 
 
 player0Pream :: String
@@ -103,7 +102,6 @@ prismVars senderIdent vars initialValues  =
         TSig _ ->
           code ++ "  " ++ (unident ident) 
             ++ " : " ++ (prismShowType TAddr) ++ ";\n"
-        -- TODO: shouldn't TCUInt be added to vars as-is and then generated id var here, like Tsig?
         TCUInt x ->
           code
         _ -> 
@@ -189,7 +187,6 @@ prismUpdates senderIdent (h:t) =
 
 prismUpdatesDeterm :: Ident -> Branch -> String
 prismUpdatesDeterm senderIdent ((h:t), liv) = 
-  --(show liv) ++
   (prismUpdate senderIdent h) ++ 
   foldl
     (\acc update -> acc ++ "\n  & " ++ (prismUpdate senderIdent update))
@@ -213,8 +210,6 @@ prismShowType (TAddr) = "[0..1]"
 prismShowType TBool = "bool"
 prismShowType THash = "[0..1]"
 
--- TODO: porównanie w PRISM jest =, a w Solidity jest ==. Ale chyba będą i tak dwie różne
--- funkcje w CompilerEth i CompilerPrism. Wspólny chcemy mieć tylko typ Exp.
 prismShowExp :: Ident -> Exp -> String
 
 prismShowExp senderIdent (EEq e1 e2) = 
@@ -262,7 +257,6 @@ prismShowExp senderIdent (ENot e1) =
 prismShowExp senderIdent (ENeg e1) =
   "-" ++ prismShowExp senderIdent e1
 
--- TODO: szukać dokładniej, jeśli nazwy lok/glob się przekrywają
 prismShowExp _ (EVar ident) =
   unident ident
 
