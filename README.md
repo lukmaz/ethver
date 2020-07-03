@@ -6,7 +6,7 @@ In order to use EthVer, you need to install `ghc`, `happy`, `alex` and `bnfc`.
 
 ## Quick start guide
 
-To build EthVer run
+To build EthVer, run:
 ```bash
 ./build.sh
 ```
@@ -17,9 +17,9 @@ To compile example contract, run `./MakeEthver` on one of the `.etv` files from 
 ```
 
 As a result, EthVer will produce 3 files:
-* `micro_v1.sol` --- a Solidity file with the code of the contract which can be deployed in Ethereum
-* `micro_v1.scen` --- a scenario file with web3.js commands that executes the contract
-* `micro_v1.prism` --- a file that can be opened in PRISM and verified against the properties from `micro_v.prism`
+* `micro_v1.sol` --- a Solidity file with the code of the contract which can be deployed in Ethereum,
+* `micro_v1.scen` --- a scenario file with web3.js commands to execute the contract,
+* `micro_v1.prism` --- a file that can be opened in PRISM and verified against the properties from `micro_v.prism`.
 
 ## The lexical structure of ETV 
 
