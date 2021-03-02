@@ -1,3 +1,8 @@
+# The paper
+
+The extended version of the paper describing the EthVer compiler can be found in [paper_extended.pdf](paper_extended.pdf) file
+
+
 # The EthVer compiler
 
 ## Requirements
